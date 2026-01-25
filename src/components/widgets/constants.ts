@@ -1,4 +1,8 @@
 import type { WidgetType } from '../../types';
+import alertsIcon from '../../assets/icons/alerts.svg';
+import hurricaneIcon from '../../assets/icons/hurricane.svg';
+import planeIcon from '../../assets/icons/plane.svg';
+import stocksIcon from '../../assets/icons/stocks.svg';
 
 // Widget colors and icons - defined separately to avoid circular dependencies
 export const WIDGET_COLORS: Record<WidgetType, string> = {
@@ -9,8 +13,8 @@ export const WIDGET_COLORS: Record<WidgetType, string> = {
 };
 
 export const WIDGET_ICONS: Record<WidgetType, string> = {
-  weather: '🌤️',
-  'flight-tracker': '✈️',
-  alerts: '🔔',
-  stocks: '📈',
+  weather: hurricaneIcon,
+  'flight-tracker': planeIcon,
+  alerts: alertsIcon,
+  stocks: stocksIcon,
 };

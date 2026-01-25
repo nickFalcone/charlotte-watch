@@ -126,8 +126,12 @@ export const AlertTitleRow = styled.div`
 `;
 
 export const AlertSourceIcon = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 14px;
   flex-shrink: 0;
+  color: ${props => props.theme.colors.text};
 `;
 
 export const AlertTitle = styled.div`
@@ -195,8 +199,21 @@ export const NoAlertsContainer = styled.div`
   text-align: center;
 `;
 
-export const NoAlertsIcon = styled.div`
-  font-size: 40px;
+export const NoAlertsIcon = styled.img`
+  width: 40px;
+  height: 40px;
+  opacity: 0.6;
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+`;
+
+/** For emoji/text fallback when no img src (img cannot have children). */
+export const NoAlertsIconFallback = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  font-size: 24px;
   opacity: 0.6;
 `;
 
@@ -241,8 +258,10 @@ export const LoadingContainer = styled.div`
   gap: 12px;
 `;
 
-export const LoadingIcon = styled.div`
-  font-size: 32px;
+export const LoadingIcon = styled.img`
+  width: 32px;
+  height: 32px;
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
 `;
 
 export const LoadingText = styled.span`
@@ -261,9 +280,11 @@ export const ErrorContainer = styled.div`
   text-align: center;
 `;
 
-export const ErrorIcon = styled.div`
-  font-size: 32px;
+export const ErrorIcon = styled.img`
+  width: 32px;
+  height: 32px;
   opacity: 0.5;
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
 `;
 
 export const ErrorText = styled.span`
@@ -446,6 +467,13 @@ export const AlertModalTitleText = styled.h3`
   color: ${props => props.theme.colors.text};
 `;
 
+export const AlertModalCloseIcon = styled.img`
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+`;
+
 export const AlertModalClose = styled.button`
   display: flex;
   align-items: center;
@@ -512,11 +540,69 @@ export const AISummaryContainer = styled.div`
   flex-shrink: 0;
 `;
 
+export const AISummaryRow = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+`;
+
 export const AISummaryText = styled.div`
   font-size: 16px;
   color: ${props => props.theme.colors.text};
   line-height: 1.2;
   flex: 1;
+  min-width: 0;
+`;
+
+export const AISummaryInfoIcon = styled.img`
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+`;
+
+export const AISummaryInfoTrigger = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: ${props => props.theme.colors.textMuted};
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+
+  &:hover {
+    color: ${props => props.theme.colors.text};
+    background: ${props => props.theme.colors.backgroundSecondary};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.colors.primary};
+    outline-offset: 2px;
+  }
+`;
+
+export const AISummaryPopoverContent = styled.div`
+  padding: 10px 12px;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  line-height: 1.45;
+  color: ${props => props.theme.colors.text};
+  max-width: 260px;
+  z-index: 3000;
 `;
 
 export const AISummarySkeleton = styled.div`

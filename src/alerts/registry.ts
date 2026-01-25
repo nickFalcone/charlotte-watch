@@ -12,7 +12,6 @@ import {
 export interface AlertSourceDefinition {
   id: AlertSource;
   label: string;
-  icon: string;
   fetch: (signal?: AbortSignal) => Promise<GenericAlert[]>;
   staleTime?: number;
 }

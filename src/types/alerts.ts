@@ -159,31 +159,6 @@ export const getAlertSeverityConfig = (
 // Legacy export for backwards compatibility - uses dark theme colors
 export const ALERT_SEVERITY_CONFIG = getAlertSeverityConfig({ name: 'dark' } as Theme);
 
-// Category icons
-export const ALERT_CATEGORY_ICONS: Record<AlertCategory, string> = {
-  weather: '🌦️',
-  aviation: '✈️',
-  power: '⚡',
-  traffic: '🚗',
-  transit: '🚇',
-  system: '⚙️',
-  other: '📢',
-};
-
-// Source icons
-export const ALERT_SOURCE_ICONS: Record<AlertSource, string> = {
-  nws: '🌤️',
-  faa: '✈️',
-  duke: '⚡',
-  ncdot: '🚧',
-  cats: '🚇',
-  cmpd: '🚔',
-  'here-flow': '🚗',
-  traffic: '🚦',
-  system: '💻',
-  custom: '📌',
-};
-
 // Helper to map NWS severity to generic severity
 export function mapNWSSeverity(nwsSeverity: string): AlertSeverity {
   switch (nwsSeverity) {

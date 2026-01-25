@@ -27,9 +27,10 @@ export const LoadingContainer = styled.div`
   gap: 12px;
 `;
 
-export const LoadingIcon = styled.div`
-  font-size: 48px;
-  line-height: 1;
+export const LoadingIcon = styled.img`
+  width: 48px;
+  height: 48px;
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
 `;
 
 export const LoadingText = styled.span`
@@ -48,9 +49,11 @@ export const ErrorContainer = styled.div`
   text-align: center;
 `;
 
-export const ErrorIcon = styled.div`
-  font-size: 32px;
+export const ErrorIcon = styled.img`
+  width: 32px;
+  height: 32px;
   opacity: 0.5;
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
 `;
 
 export const ErrorText = styled.span`

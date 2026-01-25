@@ -174,6 +174,13 @@ const MapControlButton = styled.button`
   }
 `;
 
+export const ResetButtonIcon = styled.img`
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+`;
+
 export const ResetButton = MapControlButton;
 
 export const LegendItem = styled.div<{ $color: string }>`

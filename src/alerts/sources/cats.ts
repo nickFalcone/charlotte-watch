@@ -6,7 +6,6 @@ import { convertCATSAlertsToGeneric } from '../converters';
 export const catsSource: AlertSourceDefinition = {
   id: 'cats',
   label: 'CATS',
-  icon: '🚇',
   fetch: async (signal?: AbortSignal): Promise<GenericAlert[]> => {
     const alerts = await fetchCATSAlerts(signal);
     return convertCATSAlertsToGeneric(alerts);

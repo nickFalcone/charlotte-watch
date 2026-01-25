@@ -6,7 +6,6 @@ import { convertNWSAlertsToGeneric } from '../converters';
 export const nwsSource: AlertSourceDefinition = {
   id: 'nws',
   label: 'NWS',
-  icon: '🌤️',
   fetch: async (signal?: AbortSignal): Promise<GenericAlert[]> => {
     const response = await fetchAlertsForLocation(DEFAULT_LOCATION, signal);
     return convertNWSAlertsToGeneric(response);

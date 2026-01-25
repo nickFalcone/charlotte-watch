@@ -6,7 +6,6 @@ import { convertDukeOutagesToGeneric } from '../converters';
 export const dukeSource: AlertSourceDefinition = {
   id: 'duke',
   label: 'Duke',
-  icon: '⚡',
   fetch: async (signal?: AbortSignal): Promise<GenericAlert[]> => {
     const outages = await fetchDukeOutages(signal);
     return convertDukeOutagesToGeneric(outages);

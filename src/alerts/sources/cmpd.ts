@@ -6,7 +6,6 @@ import { convertCMPDEventsToGeneric } from '../converters';
 export const cmpdSource: AlertSourceDefinition = {
   id: 'cmpd',
   label: 'CMPD',
-  icon: '🚔',
   fetch: async (signal?: AbortSignal): Promise<GenericAlert[]> => {
     const events = await fetchCMPDTrafficEvents(signal);
     return convertCMPDEventsToGeneric(events);

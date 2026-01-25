@@ -13,7 +13,6 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { WidgetProps } from '../../types';
-import { getWeatherInfo } from '../../types';
 import {
   fetchCurrentWeather,
   fetchAirQuality,
@@ -28,11 +27,9 @@ import { useWidgetMetadata } from '../Widget';
 import {
   WeatherContainer,
   CurrentWeather,
-  WeatherIcon,
   WeatherMain,
   Temperature,
   FeelsLike,
-  Condition,
   WeatherDetails,
   DetailItem,
   DetailLabel,
@@ -40,7 +37,6 @@ import {
   LoadingContainer,
   LoadingText,
   ErrorContainer,
-  ErrorIcon,
   ErrorText,
   RetryButton,
   HourlyForecast,
@@ -193,7 +189,7 @@ export function WeatherWidget(_props: WidgetProps) {
   if (isLoading) {
     return (
       <LoadingContainer>
-        <WeatherIcon>🌤️</WeatherIcon>
+        {/* <WeatherIcon src={planeIcon} alt="Loading weather" /> */}
         <LoadingText>Loading weather...</LoadingText>
       </LoadingContainer>
     );
@@ -207,7 +203,6 @@ export function WeatherWidget(_props: WidgetProps) {
 
     return (
       <ErrorContainer>
-        <ErrorIcon>⚠️</ErrorIcon>
         <ErrorText>{error instanceof Error ? error.message : 'Failed to load weather'}</ErrorText>
         <RetryButton onClick={handleRetry}>Retry</RetryButton>
       </ErrorContainer>
@@ -219,7 +214,6 @@ export function WeatherWidget(_props: WidgetProps) {
   }
 
   const current = weather.current;
-  const weatherInfo = getWeatherInfo(current.weather_code);
   const windDir = getWindDirection(current.wind_direction_10m);
 
   // Format hourly forecast data
@@ -251,11 +245,11 @@ export function WeatherWidget(_props: WidgetProps) {
   return (
     <WeatherContainer>
       <CurrentWeather>
-        <WeatherIcon>{weatherInfo.icon}</WeatherIcon>
+        {/* <WeatherIcon>{weatherInfo.icon}</WeatherIcon> */}
         <WeatherMain>
           <Temperature>{formatTemp(current.temperature_2m)}</Temperature>
           <FeelsLike>Feels like {formatTemp(current.apparent_temperature)}</FeelsLike>
-          <Condition>{weatherInfo.description}</Condition>
+          {/* <Condition>{weatherInfo.description}</Condition> */}
         </WeatherMain>
       </CurrentWeather>
 

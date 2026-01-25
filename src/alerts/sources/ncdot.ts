@@ -6,7 +6,6 @@ import { convertNCDOTIncidentsToGeneric } from '../converters';
 export const ncdotSource: AlertSourceDefinition = {
   id: 'ncdot',
   label: 'NCDOT',
-  icon: '🚧',
   fetch: async (signal?: AbortSignal): Promise<GenericAlert[]> => {
     const incidents = await fetchNCDOTIncidents(signal);
     return convertNCDOTIncidentsToGeneric(incidents);

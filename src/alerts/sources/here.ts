@@ -15,7 +15,6 @@ import { convertHereFlowsToGeneric } from '../converters/here';
 export const hereFlowSource: AlertSourceDefinition = {
   id: 'here-flow',
   label: 'Traffic Flow',
-  icon: '🚗',
   fetch: async (signal?: AbortSignal): Promise<GenericAlert[]> => {
     const flowData = await fetchAllRoutesFlow(signal);
     return convertHereFlowsToGeneric(flowData);

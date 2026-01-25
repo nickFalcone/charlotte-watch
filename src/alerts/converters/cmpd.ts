@@ -1,7 +1,7 @@
 import type { CMPDTrafficEvent } from '../../types/cmpd';
 import type { GenericAlert } from '../../types/alerts';
 import { mapCMPDSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
-import { getCMPDIncidentCategory, getCMPDIncidentIcon } from '../../types/cmpd';
+import { getCMPDIncidentCategory } from '../../types/cmpd';
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
 
 // Format CMPD event time for display
@@ -22,17 +22,16 @@ export function convertCMPDEventToGeneric(event: CMPDTrafficEvent): GenericAlert
     typeDescription: event.typeDescription,
     typeSubDescription: event.typeSubDescription,
   });
-  const icon = getCMPDIncidentIcon(event.typeCode);
   const category = getCMPDIncidentCategory(event.typeCode);
   const timeDisplay = formatCMPDEventTime(event.eventDateTime);
 
-  // Build title with icon and type
+  // Build title from type (AlertIcon shows source/category icon in the UI)
   const typeDisplay = event.typeDescription
     .split('-')
     .map(part => part.trim())
     .map(part => part.charAt(0) + part.slice(1).toLowerCase())
     .join(' - ');
-  const title = `${icon} ${typeDisplay}`;
+  const title = typeDisplay;
 
   // Build summary with location and status
   const summaryParts: string[] = [];

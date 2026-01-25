@@ -83,7 +83,7 @@ export function convertHereFlowToGeneric(flow: HereRouteFlow): GenericAlert | nu
     source: 'here-flow',
     category: 'traffic',
     severity,
-    title: `🚗 ${flow.routeName} Congestion`,
+    title: `${flow.routeName} Congestion`,
     summary: getCongestionSummary(flow),
     description: getCongestionDescription(flow),
     instruction:

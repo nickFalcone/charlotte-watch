@@ -3,19 +3,19 @@ import { format, formatDistanceToNowStrict, isToday } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from 'styled-components';
 import type { WidgetProps } from '../../types';
-import type { GenericAlert, AlertCategory, AlertSource } from '../../types/alerts';
+import type { GenericAlert, AlertSource } from '../../types/alerts';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { useWidgetMetadata } from '../Widget/useWidgetMetadata';
 import { useAlertSummary } from '../../hooks/useAlertSummary';
-import {
-  getAlertSeverityConfig,
-  ALERT_SOURCE_ICONS,
-  ALERT_CATEGORY_ICONS,
-  sortAlertsBySeverity,
-} from '../../types/alerts';
+import { AlertIcon } from '../AlertIcon';
+import { getAlertSeverityConfig, sortAlertsBySeverity } from '../../types/alerts';
 import { fetchAllAlertsWithStatus } from '../../alerts';
 import { queryKeys } from '../../utils/queryKeys';
+import alertsIcon from '../../assets/icons/alerts.svg';
+import closeIcon from '../../assets/icons/close.svg';
+import infoIcon from '../../assets/icons/info.svg';
 import * as Dialog from '@radix-ui/react-dialog';
+import * as Popover from '@radix-ui/react-popover';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import {
@@ -32,9 +32,8 @@ import {
   AlertSummary,
   AlertMeta,
   AlertMetaItem,
-  CategoryBadge,
   NoAlertsContainer,
-  NoAlertsIcon,
+  NoAlertsIconFallback,
   NoAlertsText,
   NoAlertsSubtext,
   SelectAllLink,
@@ -42,7 +41,6 @@ import {
   LoadingIcon,
   LoadingText,
   ErrorContainer,
-  ErrorIcon,
   ErrorText,
   RetryButton,
   SourceToggleGroup,
@@ -56,26 +54,21 @@ import {
   AlertModalTitle,
   AlertModalTitleText,
   AlertModalClose,
+  AlertModalCloseIcon,
   AlertModalBody,
   AlertModalSection,
   AlertModalLabel,
   AlertModalText,
   AISummaryContainer,
+  AISummaryRow,
   AISummaryText,
+  AISummaryInfoIcon,
+  AISummaryInfoTrigger,
+  AISummaryPopoverContent,
   AISummarySkeleton,
   AISummarySkeletonLine,
   AISummaryError,
 } from './AlertsWidget.styles';
-
-const CATEGORY_COLORS: Record<AlertCategory, string> = {
-  weather: '#3b82f6',
-  aviation: '#8b5cf6',
-  power: '#eab308',
-  traffic: '#f59e0b',
-  transit: '#06b6d4',
-  system: '#6b7280',
-  other: '#64748b',
-};
 
 const SOURCE_LABELS: Record<AlertSource, string> = {
   nws: 'NWS',
@@ -219,7 +212,7 @@ export function AlertsWidget(_props: WidgetProps) {
   if (isLoading) {
     return (
       <LoadingContainer>
-        <LoadingIcon>🔔</LoadingIcon>
+        <LoadingIcon src={alertsIcon} alt="Loading alerts" />
         <LoadingText>Checking alerts...</LoadingText>
       </LoadingContainer>
     );
@@ -228,7 +221,6 @@ export function AlertsWidget(_props: WidgetProps) {
   if (isError && !alertsResult) {
     return (
       <ErrorContainer>
-        <ErrorIcon>⚠️</ErrorIcon>
         <ErrorText>{error instanceof Error ? error.message : 'Failed to load alerts'}</ErrorText>
         <RetryButton onClick={() => refetch()}>Retry</RetryButton>
       </ErrorContainer>
@@ -305,7 +297,24 @@ export function AlertsWidget(_props: WidgetProps) {
           ) : isSummaryError ? (
             <AISummaryError>Summary unavailable</AISummaryError>
           ) : summaryData?.summary ? (
-            <AISummaryText>{summaryData.summary}</AISummaryText>
+            <AISummaryRow>
+              <AISummaryText>{summaryData.summary}</AISummaryText>
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <AISummaryInfoTrigger aria-label="About AI summary">
+                    <AISummaryInfoIcon src={infoIcon} alt="" aria-hidden />
+                  </AISummaryInfoTrigger>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content side="top" sideOffset={6} asChild>
+                    <AISummaryPopoverContent>
+                      This is an AI-generated summary of all available alert information. Always
+                      confirm details with source references.
+                    </AISummaryPopoverContent>
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+            </AISummaryRow>
           ) : null}
         </AISummaryContainer>
       )}
@@ -313,7 +322,6 @@ export function AlertsWidget(_props: WidgetProps) {
       {sortedAlerts.length === 0 ? (
         sources && Object.values(sources).some(status => !status.success) ? (
           <NoAlertsContainer>
-            <NoAlertsIcon>⚠️</NoAlertsIcon>
             <NoAlertsText>Alert Sources Unavailable</NoAlertsText>
             <NoAlertsSubtext>
               {(() => {
@@ -328,7 +336,7 @@ export function AlertsWidget(_props: WidgetProps) {
           </NoAlertsContainer>
         ) : (
           <NoAlertsContainer>
-            <NoAlertsIcon>✓</NoAlertsIcon>
+            <NoAlertsIconFallback>✓</NoAlertsIconFallback>
             <NoAlertsText>No Active Alerts</NoAlertsText>
             <NoAlertsSubtext>
               {(() => {
@@ -352,8 +360,6 @@ export function AlertsWidget(_props: WidgetProps) {
         <AlertsList tabIndex={0} role="region" aria-label="Alerts list">
           {sortedAlerts.map(alert => {
             const severityConfig = ALERT_SEVERITY_CONFIG[alert.severity];
-            const sourceIcon = ALERT_SOURCE_ICONS[alert.source];
-            const categoryIcon = ALERT_CATEGORY_ICONS[alert.category];
 
             return (
               <AlertCard
@@ -365,7 +371,9 @@ export function AlertsWidget(_props: WidgetProps) {
               >
                 <AlertCardHeader>
                   <AlertTitleRow>
-                    <AlertSourceIcon>{sourceIcon}</AlertSourceIcon>
+                    <AlertSourceIcon>
+                      <AlertIcon source={alert.source} size={16} />
+                    </AlertSourceIcon>
                     <AlertTitle>{alert.title}</AlertTitle>
                   </AlertTitleRow>
                   <AlertSeverityBadge $color={severityConfig.color} $bg={severityConfig.bgColor}>
@@ -374,12 +382,8 @@ export function AlertsWidget(_props: WidgetProps) {
                 </AlertCardHeader>
                 <AlertSummary>{alert.summary}</AlertSummary>
                 <AlertMeta>
-                  <CategoryBadge $color={CATEGORY_COLORS[alert.category]}>
-                    {categoryIcon} {alert.category}
-                  </CategoryBadge>
                   {alert.affectedArea && (
                     <AlertMetaItem>
-                      <span>📍</span>
                       {alert.affectedArea.length > 160
                         ? `${alert.affectedArea.slice(0, 160)}...`
                         : alert.affectedArea}
@@ -410,7 +414,7 @@ export function AlertsWidget(_props: WidgetProps) {
                       >
                         <AlertModalTitle>
                           <AlertSourceIcon>
-                            {ALERT_SOURCE_ICONS[selectedAlert.source]}
+                            <AlertIcon source={selectedAlert.source} size={20} />
                           </AlertSourceIcon>
                           <Dialog.Title asChild>
                             <AlertModalTitleText>{selectedAlert.title}</AlertModalTitleText>
@@ -424,7 +428,9 @@ export function AlertsWidget(_props: WidgetProps) {
                           </AlertSeverityBadge>
                         </AlertModalTitle>
                         <Dialog.Close asChild>
-                          <AlertModalClose aria-label="Close">✕</AlertModalClose>
+                          <AlertModalClose aria-label="Close">
+                            <AlertModalCloseIcon src={closeIcon} alt="" aria-hidden />
+                          </AlertModalClose>
                         </Dialog.Close>
                       </AlertModalHeader>
                       <AlertModalBody>

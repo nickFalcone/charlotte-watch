@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 import { useThemeStore } from './themeStore';
+import sunIcon from '../assets/icons/sun.svg';
+import moonIcon from '../assets/icons/moon.svg';
 
 const ToggleButton = styled.button`
   background: ${props => props.theme.colors.backgroundSecondary};
@@ -18,16 +20,16 @@ const ToggleButton = styled.button`
 
   &:hover {
     background: ${props => props.theme.colors.backgroundTertiary};
-    border-color: ${props => props.theme.colors.primary};
-    transform: translateY(-1px);
   }
 
-  &:active {
-    transform: translateY(0);
-  }
-
-  span {
-    font-size: 18px;
+  img {
+    width: 18px;
+    height: 18px;
+    filter: ${props => {
+      // Apply filter to make SVG match theme text color
+      // In dark mode, we want lighter icons, in light mode darker
+      return props.theme.name === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)';
+    }};
   }
 `;
 
@@ -41,7 +43,7 @@ export function ThemeToggle() {
       aria-label="Toggle theme"
       title={`Switch to ${isDark ? 'light' : 'dark'} mode`}
     >
-      <span>{isDark ? '☀️' : '🌙'}</span>
+      <img src={isDark ? sunIcon : moonIcon} alt="" />
     </ToggleButton>
   );
 }

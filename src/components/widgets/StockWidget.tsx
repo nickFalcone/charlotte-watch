@@ -9,7 +9,6 @@ import {
   StockContainer,
   TreemapContainer,
   LoadingContainer,
-  LoadingIcon,
   LoadingText,
   ErrorContainer,
   ErrorIcon,
@@ -295,7 +294,7 @@ export function StockWidget(_props: WidgetProps) {
   if (isLoading) {
     return (
       <LoadingContainer>
-        <LoadingIcon>📈</LoadingIcon>
+        {/* <LoadingIcon src={chartIcon} alt="Loading stocks" /> */}
         <LoadingText>Loading stock data...</LoadingText>
       </LoadingContainer>
     );
@@ -304,7 +303,6 @@ export function StockWidget(_props: WidgetProps) {
   if (isError) {
     return (
       <ErrorContainer>
-        <ErrorIcon>⚠️</ErrorIcon>
         <ErrorText>
           {error instanceof Error ? error.message : 'Failed to load stock data'}
         </ErrorText>

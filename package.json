@@ -21,6 +21,7 @@
     "@nivo/core": "^0.99.0",
     "@nivo/treemap": "^0.99.0",
     "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/query-async-storage-persister": "^5.90.22",

@@ -5,6 +5,8 @@ import 'react-resizable/css/styles.css';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 
+import closeIcon from '../../assets/icons/close.svg';
+import resetIcon from '../../assets/icons/reset.svg';
 import { useDashboardLayout } from '../../hooks';
 import { WidgetWrapper } from '../Widget';
 import { widgetRegistry } from '../widgets';
@@ -12,26 +14,28 @@ import { WIDGET_COLORS, WIDGET_ICONS } from '../widgets/constants';
 import { BREAKPOINTS, COLS, ROW_HEIGHT, MARGIN } from '../../utils/layoutDefaults';
 import { ThemeToggle } from '../../theme';
 import {
+  CloseButton,
+  CloseButtonIcon,
   DashboardContainer,
+  ResetIcon,
   DashboardHeader,
   DashboardTitle,
-  HeaderControls,
-  HeaderButton,
-  GridContainer,
-  WidgetDrawer,
-  DrawerOverlay,
   DrawerHeader,
+  DrawerOverlay,
   DrawerTitle,
-  CloseButton,
-  WidgetToggleGroup,
-  WidgetListItem,
-  WidgetListIcon,
-  WidgetListInfo,
-  WidgetListName,
-  WidgetListStatus,
   EmptyState,
   EmptyStateIcon,
   EmptyStateText,
+  GridContainer,
+  HeaderButton,
+  HeaderControls,
+  WidgetDrawer,
+  WidgetListIcon,
+  WidgetListItem,
+  WidgetListInfo,
+  WidgetListName,
+  WidgetListStatus,
+  WidgetToggleGroup,
 } from './Dashboard.styles';
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
@@ -55,24 +59,18 @@ export function Dashboard() {
     <DashboardContainer>
       <Dialog.Root open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
         <DashboardHeader as="header" role="banner">
-          <DashboardTitle as="h1">
-            <span aria-hidden="true">📊</span>
-            Charlotte Watch
-          </DashboardTitle>
+          <DashboardTitle as="h1">Charlotte Watch</DashboardTitle>
           <HeaderControls>
             <ThemeToggle />
             <Dialog.Trigger asChild>
-              <HeaderButton aria-label="Open widgets menu">
-                <span aria-hidden="true">📦</span>
-                Widgets
-              </HeaderButton>
+              <HeaderButton aria-label="Open widgets menu">Widgets</HeaderButton>
             </Dialog.Trigger>
             <HeaderButton
               $variant="secondary"
               onClick={resetLayout}
               aria-label="Reset dashboard layout"
             >
-              <span aria-hidden="true">↻</span>
+              <ResetIcon src={resetIcon} alt="" aria-hidden />
               Reset
             </HeaderButton>
           </HeaderControls>
@@ -135,7 +133,9 @@ export function Dashboard() {
                   <DrawerTitle as="h2">Manage Widgets</DrawerTitle>
                 </Dialog.Title>
                 <Dialog.Close asChild>
-                  <CloseButton aria-label="Close widget manager">✕</CloseButton>
+                  <CloseButton aria-label="Close widget manager">
+                    <CloseButtonIcon src={closeIcon} alt="" aria-hidden />
+                  </CloseButton>
                 </Dialog.Close>
               </DrawerHeader>
               <WidgetToggleGroup
@@ -159,9 +159,7 @@ export function Dashboard() {
                     aria-label={`${widget.title} - ${widget.visible ? 'Visible' : 'Hidden'}. Click to ${widget.visible ? 'hide' : 'show'}`}
                   >
                     <WidgetListItem $isVisible={widget.visible} $color={WIDGET_COLORS[widget.type]}>
-                      <WidgetListIcon aria-hidden="true">
-                        {WIDGET_ICONS[widget.type]}
-                      </WidgetListIcon>
+                      <WidgetListIcon src={WIDGET_ICONS[widget.type]} alt="" aria-hidden="true" />
                       <WidgetListInfo>
                         <WidgetListName>{widget.title}</WidgetListName>
                         <WidgetListStatus $isVisible={widget.visible}>

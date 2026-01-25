@@ -13,11 +13,12 @@ import type { GenericAlert } from '../../types/alerts';
 import type { AlertSourceDefinition } from '../registry';
 import { fetchYourData } from '../../utils/yourApi';
 import { convertYourDataToGeneric } from '../../utils/alertsApi';
+import iconUrl from '../../assets/icons/your-icon.svg';
 
 export const yourSource: AlertSourceDefinition = {
   id: 'yourSource', // Must match AlertSource type
   label: 'Your Source',
-  icon: '🔔', // Pick an appropriate emoji
+  icon: iconUrl, // Import SVG icon from assets/icons
   fetch: async (): Promise<GenericAlert[]> => {
     const data = await fetchYourData();
     return convertYourDataToGeneric(data);
@@ -52,25 +53,14 @@ export const alertSources: AlertSourceDefinition[] = [
 Add your source to the `AlertSource` union type in `src/types/alerts.ts`:
 
 ```typescript
-export type AlertSource = 
-  | 'nws' 
-  | 'faa' 
-  | 'duke' 
-  | 'ncdot' 
-  | 'cats' 
-  | 'cmpd' 
+export type AlertSource =
+  | 'nws'
+  | 'faa'
+  | 'duke'
+  | 'ncdot'
+  | 'cats'
+  | 'cmpd'
   | 'yourSource'; // Add here
-```
-
-Update the icon mapping:
-
-```typescript
-export const ALERT_SOURCE_ICONS: Record<AlertSource, string> = {
-  nws: '🌤️',
-  faa: '✈️',
-  // ... other icons
-  yourSource: '🔔', // Add here
-};
 ```
 
 ### 4. Implement Data Conversion
@@ -112,10 +102,10 @@ The UI will automatically:
 ## Architecture Benefits
 
 Adding a source requires:
-1. Create `src/alerts/sources/yourSource.ts`
+1. Create `src/alerts/sources/yourSource.ts` with SVG icon import
 2. Add to registry array
 3. Update AlertSource union type
-4. Add icon mapping
+4. Create or reuse an SVG icon in `src/assets/icons/`
 
 ## Source Structure Best Practices
 
@@ -179,10 +169,12 @@ fetch: async () => {
 See `src/alerts/sources/cmpd.ts` for a complete real-world example:
 
 ```typescript
+import policeIcon from '../../assets/icons/police.svg';
+
 export const cmpdSource: AlertSourceDefinition = {
   id: 'cmpd',
   label: 'CMPD',
-  icon: '🚔',
+  icon: policeIcon,
   fetch: async (): Promise<GenericAlert[]> => {
     const events = await fetchCMPDTrafficEvents();
     return convertCMPDEventsToGeneric(events);

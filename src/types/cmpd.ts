@@ -56,24 +56,6 @@ export function getCMPDIncidentCategory(typeCode: string): CMPDIncidentCategory 
 }
 
 /**
- * Icon mapping for CMPD incident types
- */
-export const CMPD_INCIDENT_ICONS: Record<CMPDIncidentCategory, string> = {
-  crash: '🚔',
-  traffic_control: '🚦',
-  obstruction: '🚧',
-  other: '🚨',
-};
-
-/**
- * Gets the appropriate icon for a CMPD traffic event
- */
-export function getCMPDIncidentIcon(typeCode: string): string {
-  const category = getCMPDIncidentCategory(typeCode);
-  return CMPD_INCIDENT_ICONS[category];
-}
-
-/**
  * Charlotte-Mecklenburg bounds for filtering (same as used for Duke/NCDOT)
  */
 export const CHARLOTTE_BOUNDS = {

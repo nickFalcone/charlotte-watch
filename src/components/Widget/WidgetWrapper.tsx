@@ -3,6 +3,9 @@ import type { WidgetConfig } from '../../types';
 import { WidgetMetadataProvider } from './WidgetMetadataContext';
 import { useWidgetMetadataValue } from './useWidgetMetadata';
 import { TimeUpdated } from './TimeUpdated';
+import dragIcon from '../../assets/icons/drag.svg';
+import lockedIcon from '../../assets/icons/locked.svg';
+import unlockedIcon from '../../assets/icons/unlocked.svg';
 import {
   WidgetContainer,
   WidgetHeader,
@@ -11,9 +14,12 @@ import {
   WidgetTitle,
   WidgetControls,
   ControlButton,
+  ControlButtonIcon,
+  ControlTooltipContent,
   WidgetContent,
   DragHandle,
 } from './WidgetWrapper.styles';
+import * as Tooltip from '@radix-ui/react-tooltip';
 
 interface WidgetWrapperProps {
   config: WidgetConfig;
@@ -40,22 +46,40 @@ function WidgetWrapperInner({
     <WidgetContainer $accentColor={color}>
       <WidgetHeader>
         <WidgetTitleSection className="widget-drag-handle">
-          <DragHandle />
-          <WidgetIcon>{icon}</WidgetIcon>
+          <DragHandle src={dragIcon} alt="" aria-hidden $locked={config.locked} />
+          <WidgetIcon src={icon} alt="" />
           <WidgetTitle>{config.title}</WidgetTitle>
           <TimeUpdated timestamp={lastUpdated} getPausedReason={getPausedReason} />
         </WidgetTitleSection>
         <WidgetControls>
           {onToggleLock && (
-            <ControlButton
-              onClick={e => {
-                e.stopPropagation();
-                onToggleLock();
-              }}
-              title={config.locked ? 'Unlock widget' : 'Lock widget'}
-            >
-              {config.locked ? '🔒' : '🔓'}
-            </ControlButton>
+            <Tooltip.Provider delayDuration={600}>
+              <Tooltip.Root>
+                <Tooltip.Trigger asChild>
+                  <ControlButton
+                    onClick={e => {
+                      e.stopPropagation();
+                      onToggleLock();
+                    }}
+                  >
+                    <ControlButtonIcon
+                      src={config.locked ? lockedIcon : unlockedIcon}
+                      alt=""
+                      aria-hidden
+                    />
+                  </ControlButton>
+                </Tooltip.Trigger>
+                <Tooltip.Portal>
+                  <Tooltip.Content side="top" sideOffset={5} asChild>
+                    <ControlTooltipContent>
+                      {config.locked
+                        ? 'Unlock widget location and dimensions'
+                        : 'Lock widget location and dimensions'}
+                    </ControlTooltipContent>
+                  </Tooltip.Content>
+                </Tooltip.Portal>
+              </Tooltip.Root>
+            </Tooltip.Provider>
           )}
           {onOpenSettings && (
             <ControlButton

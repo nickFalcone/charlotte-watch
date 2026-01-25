@@ -45,9 +45,13 @@ export const WidgetTitleSection = styled.div`
   flex: 1;
 `;
 
-export const WidgetIcon = styled.span`
-  font-size: 18px;
+export const WidgetIcon = styled.img`
+  width: 26px;
+  height: 26px;
   flex-shrink: 0;
+  object-fit: contain;
+  /* Invert in dark mode so black SVGs stay visible */
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
 `;
 
 export const WidgetTitle = styled.h2`
@@ -65,6 +69,24 @@ export const WidgetControls = styled.div`
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+`;
+
+export const ControlButtonIcon = styled.img`
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+`;
+
+export const ControlTooltipContent = styled.div`
+  padding: 6px 10px;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  line-height: 1.4;
+  color: ${props => props.theme.colors.text};
 `;
 
 export const ControlButton = styled.button<{ $variant?: 'default' | 'danger' }>`
@@ -108,15 +130,11 @@ export const WidgetContent = styled.div`
   color: ${props => props.theme.colors.text};
 `;
 
-export const DragHandle = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: ${props => props.theme.colors.textMuted};
-  font-size: 12px;
-
-  &::before {
-    content: '⋮⋮';
-    letter-spacing: -2px;
-  }
+export const DragHandle = styled.img<{ $locked?: boolean }>`
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  object-fit: contain;
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  opacity: ${props => (props.$locked ? 0.4 : 1)};
 `;
