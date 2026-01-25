@@ -23,14 +23,14 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   if (!symbol) {
     return new Response(JSON.stringify({ error: 'Symbol parameter is required' }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });
   }
 
   if (!isValidSymbol(symbol)) {
     return new Response(JSON.stringify({ error: 'Invalid symbol format' }), {
       status: 400,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
     });
   }
 
@@ -47,7 +47,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     if (!response.ok) {
       return new Response(JSON.stringify({ error: `Finnhub API returned ${response.status}` }), {
         status: response.status,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
       });
     }
 
@@ -68,7 +68,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
       }
     );
   }
