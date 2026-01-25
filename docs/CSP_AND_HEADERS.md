@@ -12,7 +12,7 @@ When you add a **new external origin** that the client loads or fetches from, th
 | New script (e.g. analytics) | `script-src`           |
 | New image or tile host      | `img-src`              |
 
-**Inline scripts:** `index.html` has an inline JSON-LD `<script type="application/ld+json">`. CSP allows it via a `script-src` hash. If you change that JSON-LD, the hash will break; recompute it (browser console or `echo -n '<exact script content>' | openssl dgst -sha256 -binary | openssl base64`) and update the `'sha256-...'` value in `script-src`.
+**JSON-LD:** Structured data lives in `public/schema.json` and is loaded via `<script type="application/ld+json" src="/schema.json">`. Same-origin, so no `script-src` hash is needed. Edit the JSON file when the app description changes.
 
 **For AI agents:** **Ask the user before editing `public/_headers`** to add or change origins. Confirm the exact host(s) to allow.
 

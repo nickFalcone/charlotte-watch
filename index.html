@@ -26,16 +26,8 @@
       content="Real-time Charlotte, NC dashboard: weather, flights, traffic, power outages, transit alerts, and stocks. See what's going on in Charlotte."
     />
 
-    <!-- JSON-LD for rich results -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "Charlotte Watch",
-        "description": "Real-time Charlotte, NC dashboard: weather, flights, traffic, power outages, transit alerts, and stocks.",
-        "applicationCategory": "UtilitiesApplication"
-      }
-    </script>
+    <!-- JSON-LD for rich results (external to avoid CSP inline-script hash) -->
+    <script type="application/ld+json" src="/schema.json"></script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,0 +1,7 @@
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Charlotte Watch",
+  "description": "Real-time Charlotte, NC dashboard: weather, flights, traffic, power outages, transit alerts, and stocks.",
+  "applicationCategory": "UtilitiesApplication"
+}
