@@ -23,7 +23,7 @@ const queryClient = new QueryClient({
 // Create persister to save query cache to localStorage
 const persister = createAsyncStoragePersister({
   storage: window.localStorage,
-  key: 'charlotte-monitor-query-cache',
+  key: 'charlotte-watch-query-cache',
 });
 
 function App() {

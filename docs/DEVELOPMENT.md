@@ -1,6 +1,6 @@
 # Development Workflow
 
-This guide covers the development workflow and quality checks for the Charlotte Monitor project.
+This guide covers the development workflow and quality checks for the Charlotte Watch project.
 
 ## Quick Reference
 

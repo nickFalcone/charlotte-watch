@@ -57,7 +57,7 @@ export function Dashboard() {
         <DashboardHeader as="header" role="banner">
           <DashboardTitle as="h1">
             <span aria-hidden="true">📊</span>
-            Charlotte Monitor
+            Charlotte Watch
           </DashboardTitle>
           <HeaderControls>
             <ThemeToggle />

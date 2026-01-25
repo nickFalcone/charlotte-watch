@@ -32,7 +32,7 @@ const hash2 = computeAlertsHash(alerts); // "1gexrnh" (cache hit!)
 
 The entire React Query cache is persisted to `localStorage` under the key:
 ```
-charlotte-monitor-query-cache
+charlotte-watch-query-cache
 ```
 
 **Key Behavior:**
@@ -98,7 +98,7 @@ const queryClient = new QueryClient({
 // Async persister for localStorage
 const persister = createAsyncStoragePersister({
   storage: window.localStorage,
-  key: 'charlotte-monitor-query-cache',
+  key: 'charlotte-watch-query-cache',
 });
 ```
 
@@ -124,7 +124,7 @@ return useQuery({
 
 ### Test 2: Navigation (In-Memory)
 1. Navigate to another tab/app
-2. Return to the Charlotte Monitor tab
+2. Return to the Charlotte Watch tab
 3. ✅ **Expected:** Summary is still there, no flicker or reload
 
 ### Test 3: Alert Changes (Hash Invalidation)
@@ -145,7 +145,7 @@ return useQuery({
 **Console:**
 ```javascript
 // View the persisted cache
-console.log(localStorage.getItem('charlotte-monitor-query-cache'));
+console.log(localStorage.getItem('charlotte-watch-query-cache'));
 ```
 
 **Network Tab:**
@@ -156,7 +156,7 @@ console.log(localStorage.getItem('charlotte-monitor-query-cache'));
 
 ```javascript
 // Clear just the query cache
-localStorage.removeItem('charlotte-monitor-query-cache');
+localStorage.removeItem('charlotte-watch-query-cache');
 
 // Clear all localStorage
 localStorage.clear();
@@ -233,12 +233,12 @@ If you need to bust all caches after a deployment:
 
 1. Change the cache key in `src/App.tsx`:
    ```typescript
-   key: 'charlotte-monitor-query-cache-v2', // Increment version
+   key: 'charlotte-watch-query-cache-v2', // Increment version
    ```
 
 2. Or programmatically clear on app start (not recommended for production):
    ```typescript
-   localStorage.removeItem('charlotte-monitor-query-cache');
+   localStorage.removeItem('charlotte-watch-query-cache');
    ```
 
 ## References

@@ -1,5 +1,5 @@
-# charlotte-monitor
-what's going on, charlotte?
+# charlotte-watch
+What's going on, Charlotte?
 
 ## Development
 
