@@ -52,7 +52,7 @@ The middleware adds a nonce to this script tag at runtime. With `'strict-dynamic
 
 ## JSON-LD
 
-Structured data lives in `public/schema.json` and is loaded via `<script type="application/ld+json" src="/schema.json">`. The middleware does NOT add a nonce to this tag since it's data, not executable code.
+Structured data is inline in `index.html` as `<script type="application/ld+json">` (Google does not fetch `src=` for `application/ld+json`). The middleware does NOT add a nonce to this tag since it's data, not executable code.
 
 ## Files
 
