@@ -7,7 +7,7 @@ Real-time Charlotte, NC dashboard (weather, flights, traffic, alerts, stocks) bu
 1. **Query keys are centralized** — Always use `src/utils/queryKeys.ts`, never inline strings
 2. **API keys stay server-side** — Use Netlify functions for authenticated APIs, never expose keys in client code
 3. **Ask before adding dependencies** — Prefer existing packages; use caret versions (e.g., `^1.2.3`)
-4. **Ask before editing CSP** — When adding a new external origin (API, script, or image host), `public/_headers` may need to be updated. **Ask the user before editing** `public/_headers`. See [CSP and security headers](./docs/CSP_AND_HEADERS.md).
+4. **Ask before editing CSP** — When adding a new external origin (API or image host), `functions/_middleware.ts` may need to be updated. **Ask the user before editing** the CSP. See [CSP and security headers](./docs/CSP_AND_HEADERS.md).
 5. **No emojis** — Never write emojis in code, markdown, comments, UI strings, or anywhere in the codebase.
 6. **Do not create or modify SVG files** — Unless the user explicitly instructs you to, do not create, edit, or alter any `.svg` files (e.g. in `src/assets/icons/`). Use existing SVGs as-is; if an icon is needed, ask the user or suggest they add one.
 
