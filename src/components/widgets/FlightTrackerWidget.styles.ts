@@ -265,9 +265,11 @@ export const ErrorContainer = styled.div`
   text-align: center;
 `;
 
-export const ErrorIcon = styled.div`
-  font-size: 32px;
+export const ErrorIcon = styled.img`
+  width: 32px;
+  height: 32px;
   opacity: 0.5;
+  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
 `;
 
 export const ErrorText = styled.span`

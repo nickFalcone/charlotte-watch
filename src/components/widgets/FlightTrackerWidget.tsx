@@ -31,6 +31,7 @@ import {
 import { queryKeys } from '../../utils/queryKeys';
 import { useWidgetMetadata } from '../Widget';
 import resetIcon from '../../assets/icons/reset.svg';
+import planeIcon from '../../assets/icons/plane.svg';
 import 'leaflet/dist/leaflet.css';
 import {
   FlightContainer,
@@ -300,7 +301,7 @@ export function FlightTrackerWidget(_props: WidgetProps) {
   if (isError) {
     return (
       <ErrorContainer>
-        <ErrorIcon>📡</ErrorIcon>
+        <ErrorIcon src={planeIcon} alt="" />
         <ErrorText>
           {error instanceof Error ? error.message : 'Failed to fetch aircraft data'}
         </ErrorText>

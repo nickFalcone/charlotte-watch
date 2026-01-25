@@ -21,6 +21,7 @@ import {
   TooltipMarketCap,
   TooltipChange,
 } from './StockWidget.styles';
+import stocksIcon from '../../assets/icons/stocks.svg';
 
 // Use Pages Functions in production, dev proxy in development
 const FINNHUB_QUOTE_URL = import.meta.env.DEV
@@ -314,7 +315,7 @@ export function StockWidget(_props: WidgetProps) {
   if (!quotes || quotes.length === 0 || !profiles) {
     return (
       <ErrorContainer>
-        <ErrorIcon>📊</ErrorIcon>
+        <ErrorIcon src={stocksIcon} alt="" />
         <ErrorText>No stock data available</ErrorText>
         <RetryButton onClick={() => refetch()}>Retry</RetryButton>
       </ErrorContainer>
