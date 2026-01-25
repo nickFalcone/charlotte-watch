@@ -26,7 +26,7 @@ APIs called via `/api/*` or `/proxy/*` are same-origin; only **direct** client f
 
 ## Cloudflare Web Analytics (beacon)
 
-The `beacon.min.js` script from `static.cloudflareinsights.com` is **injected by Cloudflare** when **Web Analytics** (or Browser Insights) is enabled for the Pages project. We do not add it in our code; CSP allows it so it can run when present.
+The `beacon.min.js` script from `static.cloudflareinsights.com` is **injected by Cloudflare** when **Web Analytics** (or Browser Insights) is enabled for the Pages project. Cloudflare may also inject a small **inline** bootstrap script. We do not add these in our code; CSP allows the external script via `script-src https://static.cloudflareinsights.com` and the inline script via a `script-src` hash (e.g. `'sha256-...'`). If the inline script changes when Cloudflare updates their snippet, use the hash from the new CSP error and update `_headers`.
 
 **`ERR_NAME_NOT_RESOLVED` for `static.cloudflareinsights.com`** means the visitor’s DNS or network cannot resolve that hostname (e.g. Pi-hole, corporate DNS, VPN, or strict ad-blockers). The app still works; analytics simply does not load for those users. We cannot fix this from the app.
 
