@@ -102,6 +102,32 @@ functions/
 └── _lib/                 # Shared utilities for functions
 ```
 
+### SVG Icon Styling
+
+The project uses Material Design icons from Google Fonts. Most icons have light fills (`#e3e3e3`) for dark mode visibility.
+
+**For light-fill SVGs** (like those from Material Design), use this filter pattern:
+
+```typescript
+filter: ${props =>
+  props.theme.name === 'dark'
+    ? 'brightness(0) invert(1)'  // Dark mode: black → white
+    : 'brightness(0)'             // Light mode: any color → black
+};
+```
+
+**For black SVGs** (`#000`), use:
+
+```typescript
+filter: ${props =>
+  props.theme.name === 'dark'
+    ? 'invert(1) brightness(0.9)'  // Dark mode: black → light gray
+    : 'none'                        // Light mode: keep black
+};
+```
+
+See `ThemeToggle.tsx` and `Dashboard.styles.ts` (`CrownIcon`, `EmptyStateIcon`) for examples.
+
 ## Deploying to Cloudflare Pages via GitHub Actions
 
 The project deploys automatically via GitHub Actions when you push to `master` (production) or open a pull request (preview).

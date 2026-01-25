@@ -134,11 +134,12 @@ export const AlertSourceIcon = styled.span`
   color: ${props => props.theme.colors.text};
 `;
 
-export const AlertTitle = styled.div`
+export const AlertTitle = styled.h3`
   font-size: 14px;
   font-weight: 600;
   color: ${props => props.theme.colors.text};
   line-height: 1.3;
+  margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -203,7 +204,9 @@ export const NoAlertsIcon = styled.img`
   width: 40px;
   height: 40px;
   opacity: 0.6;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  object-fit: contain;
+  /* Light-fill SVGs (#e3e3e3): brightness(0) in light mode, brightness(0) invert(1) in dark */
+  filter: ${props => (props.theme.name === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)')};
 `;
 
 /** For emoji/text fallback when no img src (img cannot have children). */

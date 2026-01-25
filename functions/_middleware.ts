@@ -17,12 +17,8 @@ export const onRequest: PagesFunction = async context => {
   // Read and modify the HTML
   let html = await response.text();
 
-  // Add nonce to script tags (but not to application/ld+json which is data, not code)
-  // Match <script that is NOT followed by type="application/ld+json"
-  html = html.replace(
-    /<script(?![^>]*type\s*=\s*["']application\/ld\+json["'])/gi,
-    `<script nonce="${nonce}"`
-  );
+  // Add nonce to all script tags so CSP allows them (incl. inline application/ld+json)
+  html = html.replace(/<script\b/gi, `<script nonce="${nonce}"`);
 
   // Build CSP with nonce
   const csp = [

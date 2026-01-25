@@ -22,19 +22,15 @@ export const WidgetContainer = styled.div<{ $accentColor?: string }>`
   `}
 `;
 
-export const WidgetHeader = styled.div`
+export const WidgetHeader = styled.div<{ $locked?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
   background: ${props => props.theme.colors.backgroundTertiary};
   border-bottom: 1px solid ${props => props.theme.colors.border};
-  cursor: grab;
+  cursor: ${props => (props.$locked ? 'default' : 'move')};
   transition: background-color 0.2s ease;
-
-  &:active {
-    cursor: grabbing;
-  }
 `;
 
 export const WidgetTitleSection = styled.div`

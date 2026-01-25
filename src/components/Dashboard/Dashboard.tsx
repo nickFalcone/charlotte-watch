@@ -6,6 +6,8 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 
 import closeIcon from '../../assets/icons/close.svg';
+import crownIcon from '../../assets/icons/crown.svg';
+import noResultsIcon from '../../assets/icons/no-results.svg';
 import resetIcon from '../../assets/icons/reset.svg';
 import { useDashboardLayout } from '../../hooks';
 import { WidgetWrapper } from '../Widget';
@@ -16,6 +18,7 @@ import { ThemeToggle } from '../../theme';
 import {
   CloseButton,
   CloseButtonIcon,
+  CrownIcon,
   DashboardContainer,
   ResetIcon,
   DashboardHeader,
@@ -59,7 +62,10 @@ export function Dashboard() {
     <DashboardContainer>
       <Dialog.Root open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
         <DashboardHeader as="header" role="banner">
-          <DashboardTitle as="h1">Charlotte Watch</DashboardTitle>
+          <DashboardTitle as="h1">
+            <CrownIcon src={crownIcon} alt="" aria-hidden />
+            Charlotte Watch
+          </DashboardTitle>
           <HeaderControls>
             <ThemeToggle />
             <Dialog.Trigger asChild>
@@ -116,7 +122,7 @@ export function Dashboard() {
             </ResponsiveGridLayout>
           ) : (
             <EmptyState>
-              <EmptyStateIcon>📭</EmptyStateIcon>
+              <EmptyStateIcon src={noResultsIcon} alt="" aria-hidden />
               <EmptyStateText>No widgets visible. Click "Widgets" to add some.</EmptyStateText>
             </EmptyState>
           )}

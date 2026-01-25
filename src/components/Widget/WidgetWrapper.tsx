@@ -44,7 +44,7 @@ function WidgetWrapperInner({
 
   return (
     <WidgetContainer $accentColor={color}>
-      <WidgetHeader>
+      <WidgetHeader $locked={config.locked}>
         <WidgetTitleSection className="widget-drag-handle">
           <DragHandle src={dragIcon} alt="" aria-hidden $locked={config.locked} />
           <WidgetIcon src={icon} alt="" />
@@ -57,6 +57,11 @@ function WidgetWrapperInner({
               <Tooltip.Root>
                 <Tooltip.Trigger asChild>
                   <ControlButton
+                    aria-label={
+                      config.locked
+                        ? 'Unlock widget location and dimensions'
+                        : 'Lock widget location and dimensions'
+                    }
                     onClick={e => {
                       e.stopPropagation();
                       onToggleLock();
@@ -94,7 +99,6 @@ function WidgetWrapperInner({
           )}
           {onToggleVisibility && (
             <ControlButton
-              $variant="danger"
               onClick={e => {
                 e.stopPropagation();
                 onToggleVisibility();

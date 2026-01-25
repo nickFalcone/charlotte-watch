@@ -14,6 +14,7 @@ export const DashboardHeader = styled.header`
   justify-content: space-between;
   margin-bottom: 20px;
   padding-bottom: 16px;
+  padding-left: 12px;
   border-bottom: 1px solid ${props => props.theme.colors.border};
 `;
 
@@ -25,6 +26,14 @@ export const DashboardTitle = styled.h1`
   display: flex;
   align-items: center;
   gap: 12px;
+`;
+
+export const CrownIcon = styled.img`
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  /* Crown has light fill (#e3e3e3): same as ThemeToggle / EmptyStateIcon */
+  filter: ${props => (props.theme.name === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)')};
 `;
 
 export const HeaderControls = styled.div`
@@ -101,6 +110,7 @@ export const GridContainer = styled.div`
     position: absolute;
     width: 20px;
     height: 20px;
+    background-image: none;
   }
 
   .react-grid-item > .react-resizable-handle::after {
@@ -297,10 +307,14 @@ export const EmptyState = styled.div`
   color: ${props => props.theme.colors.textMuted};
 `;
 
-export const EmptyStateIcon = styled.div`
-  font-size: 48px;
+export const EmptyStateIcon = styled.img`
+  width: 48px;
+  height: 48px;
   margin-bottom: 16px;
-  opacity: 0.5;
+  opacity: 0.6;
+  object-fit: contain;
+  /* Same as ThemeToggle: SVGs with light fill need brightness(0) then invert in dark */
+  filter: ${props => (props.theme.name === 'dark' ? 'brightness(0) invert(1)' : 'brightness(0)')};
 `;
 
 export const EmptyStateText = styled.p`

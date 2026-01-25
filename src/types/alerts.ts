@@ -147,12 +147,12 @@ export const getAlertSeverityConfig = (
       minor: { color: '#93c5fd', bgColor: 'rgba(59, 130, 246, 0.2)', label: 'Minor' }, // 7.73:1 on #2c2c2e
     };
   }
-  // Light mode - darker colors for better contrast
+  // Light mode - solid backgrounds (no alpha) so contrast tools get unambiguous pairs; >=4.5:1
   return {
-    critical: { color: '#b91c1c', bgColor: 'rgba(220, 38, 38, 0.1)', label: 'Critical' }, // 6.47:1 on #ffffff
-    high: { color: '#dc2626', bgColor: 'rgba(239, 68, 68, 0.1)', label: 'High' }, // 5.5:1 on #ffffff
-    moderate: { color: '#b35600', bgColor: 'rgba(234, 88, 12, 0.1)', label: 'Moderate' }, // 4.94:1 on #ffffff
-    minor: { color: '#1d4ed8', bgColor: 'rgba(59, 130, 246, 0.1)', label: 'Minor' }, // 6.70:1 on #ffffff
+    critical: { color: '#991b1b', bgColor: '#fef2f2', label: 'Critical' }, // red-800 on red-50
+    high: { color: '#b91c1c', bgColor: '#fee2e2', label: 'High' }, // red-700 on red-100
+    moderate: { color: '#c2410c', bgColor: '#fff7ed', label: 'Moderate' }, // orange-700 on orange-50
+    minor: { color: '#1d4ed8', bgColor: '#eff6ff', label: 'Minor' }, // blue-700 on blue-50
   };
 };
 

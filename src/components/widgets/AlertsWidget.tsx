@@ -14,6 +14,7 @@ import { queryKeys } from '../../utils/queryKeys';
 import alertsIcon from '../../assets/icons/alerts.svg';
 import closeIcon from '../../assets/icons/close.svg';
 import infoIcon from '../../assets/icons/info.svg';
+import noResultsIcon from '../../assets/icons/no-results.svg';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
@@ -33,7 +34,7 @@ import {
   AlertMeta,
   AlertMetaItem,
   NoAlertsContainer,
-  NoAlertsIconFallback,
+  NoAlertsIcon,
   NoAlertsText,
   NoAlertsSubtext,
   SelectAllLink,
@@ -336,7 +337,7 @@ export function AlertsWidget(_props: WidgetProps) {
           </NoAlertsContainer>
         ) : (
           <NoAlertsContainer>
-            <NoAlertsIconFallback>✓</NoAlertsIconFallback>
+            <NoAlertsIcon src={noResultsIcon} alt="" />
             <NoAlertsText>No Active Alerts</NoAlertsText>
             <NoAlertsSubtext>
               {(() => {
