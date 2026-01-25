@@ -36,7 +36,8 @@ We use **manual installation** of the Cloudflare Web Analytics beacon to avoid `
 1. Disable auto-injection in Cloudflare dashboard (Pages > Settings > Web Analytics)
 2. Add the script tag to `index.html` before `</body>` with your site token
 3. The external beacon is allowed via `https://static.cloudflareinsights.com` in `script-src`
-4. Data reporting is allowed via `https://cloudflareinsights.com` in `connect-src`
+4. `'strict-dynamic'` in `script-src` allows the beacon to create inline scripts at runtime
+5. Data reporting is allowed via `https://cloudflareinsights.com` in `connect-src`
 
 **`ERR_NAME_NOT_RESOLVED` for `static.cloudflareinsights.com`** means the visitor’s DNS or network cannot resolve that hostname (e.g. Pi-hole, corporate DNS, VPN, or strict ad-blockers). The app still works; analytics simply does not load for those users. We cannot fix this from the app.
 

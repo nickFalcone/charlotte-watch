@@ -3,4 +3,4 @@
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.basemaps.cartocdn.com; connect-src 'self' https://api.weather.gov https://api.open-meteo.com https://air-quality-api.open-meteo.com https://eapps.ncdot.gov https://cmpdinfo.charlottenc.gov https://cloudflareinsights.com https://a.nel.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'strict-dynamic' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.basemaps.cartocdn.com; connect-src 'self' https://api.weather.gov https://api.open-meteo.com https://air-quality-api.open-meteo.com https://eapps.ncdot.gov https://cmpdinfo.charlottenc.gov https://cloudflareinsights.com https://a.nel.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'
