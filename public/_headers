@@ -1,0 +1,6 @@
+# Security headers for the SPA. Does not apply to /api/* (Pages Functions).
+# When adding new API origins, script sources, or img hosts, update the CSP.
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://*.basemaps.cartocdn.com; connect-src 'self' https://api.weather.gov https://eapps.ncdot.gov https://cmpdinfo.charlottenc.gov https://cloudflareinsights.com https://a.nel.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; object-src 'none'

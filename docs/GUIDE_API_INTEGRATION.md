@@ -8,6 +8,7 @@ For APIs that don't require authentication:
 2. Add types to `src/types/your.ts`
 3. Add query keys to `src/utils/queryKeys.ts`
 4. Use directly in components via TanStack Query
+5. **CSP:** The client fetches directly, so the origin must be in `connect-src` in `public/_headers`. **Ask the user before editing** `public/_headers`. See [CSP and security headers](./CSP_AND_HEADERS.md).
 
 ## Authenticated APIs
 

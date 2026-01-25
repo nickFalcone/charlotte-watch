@@ -10,6 +10,7 @@ Widgets are self-contained dashboard components in `src/components/widgets/`.
 4. Create API client in `src/utils/yourApi.ts`
 5. Add query key to `src/utils/queryKeys.ts`
 6. Add to dashboard in `src/components/Dashboard/Dashboard.tsx`
+7. **CSP:** If the widget loads from a new external origin (API, image/tile host, or script), add it to `public/_headers`. **Ask the user before editing** `public/_headers`. See [CSP and security headers](./CSP_AND_HEADERS.md).
 
 ## Widget Template
 

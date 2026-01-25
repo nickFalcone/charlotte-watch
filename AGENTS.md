@@ -7,6 +7,7 @@ Real-time Charlotte, NC dashboard (weather, flights, traffic, alerts, stocks) bu
 1. **Query keys are centralized** — Always use `src/utils/queryKeys.ts`, never inline strings
 2. **API keys stay server-side** — Use Netlify functions for authenticated APIs, never expose keys in client code
 3. **Ask before adding dependencies** — Prefer existing packages; use caret versions (e.g., `^1.2.3`)
+4. **Ask before editing CSP** — When adding a new external origin (API, script, or image host), `public/_headers` may need to be updated. **Ask the user before editing** `public/_headers`. See [CSP and security headers](./docs/CSP_AND_HEADERS.md).
 
 ## Commands
 
@@ -29,6 +30,7 @@ npm test         # Run tests
 | Integrating a new external API | [API Integration Guide](./docs/GUIDE_API_INTEGRATION.md) |
 | Deploying or configuring env vars | [Deployment](./docs/DEPLOYMENT.md) |
 | Map/tile layer changes | [Map Tiles](./docs/MAP_TILES.md) |
+| Adding external origins (APIs, scripts, images) or changing CSP | [CSP and security headers](./docs/CSP_AND_HEADERS.md) |
 
 ## After Making Changes
 

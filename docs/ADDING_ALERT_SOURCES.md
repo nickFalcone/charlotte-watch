@@ -101,7 +101,7 @@ export function convertYourDataToGeneric(data: YourSourceData[]): GenericAlert[]
 }
 ```
 
-## That's It!
+**CSP:** If your source's API is called directly by the client (not via a Pages Function), the origin must be in `connect-src` in `public/_headers`. **Ask the user before editing** `public/_headers`. See [CSP and security headers](./CSP_AND_HEADERS.md).
 
 The UI will automatically:
 - Display your source's status indicator
