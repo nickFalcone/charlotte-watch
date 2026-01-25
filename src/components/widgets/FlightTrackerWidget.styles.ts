@@ -49,29 +49,6 @@ export const FlightCount = styled.span<{ $hasFlights: boolean }>`
   font-weight: 500;
 `;
 
-export const StatsRow = styled.div`
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-`;
-
-export const StatBadge = styled.div<{ $color: string }>`
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  padding: 3px 8px;
-  background: ${({ $color }) => `${$color}15`};
-  border: 1px solid ${({ $color }) => `${$color}30`};
-  border-radius: 4px;
-  font-size: 11px;
-  color: ${({ $color }) => $color};
-`;
-
-export const StatValue = styled.span`
-  font-weight: 600;
-`;
-
 export const MapContainer = styled.div`
   flex: 1;
   min-height: 0;
@@ -367,49 +344,4 @@ export const TooltipLabel = styled.span`
 export const TooltipValue = styled.span`
   color: ${props => props.theme.colors.text};
   font-family: 'Monaco', 'Menlo', monospace;
-`;
-
-export const CreditIndicator = styled.div<{ $percentUsed: number }>`
-  position: absolute;
-  bottom: 16px;
-  right: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  background: ${props => props.theme.colors.backgroundSecondary};
-  border: 1px solid ${props => props.theme.colors.border};
-  border-radius: 4px;
-  font-size: 9px;
-  opacity: 0.9;
-  color: ${({ $percentUsed, theme }) =>
-    $percentUsed > 90
-      ? theme.colors.error
-      : $percentUsed > 70
-        ? theme.colors.warning
-        : theme.colors.textMuted};
-`;
-
-export const CreditBar = styled.div<{ $percentUsed: number }>`
-  width: 15px;
-  height: 4px;
-  background: ${props => props.theme.colors.backgroundTertiary};
-  border-radius: 2px;
-  overflow: hidden;
-
-  &::after {
-    content: '';
-    display: block;
-    height: 100%;
-    width: ${({ $percentUsed }) => Math.min(100, $percentUsed)}%;
-    background: ${({ $percentUsed, theme }) =>
-      $percentUsed > 90
-        ? theme.colors.error
-        : $percentUsed > 70
-          ? theme.colors.warning
-          : theme.colors.success};
-    border-radius: 2px;
-    transition: width 0.3s ease;
-  }
 `;

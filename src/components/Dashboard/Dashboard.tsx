@@ -15,6 +15,7 @@ import { widgetRegistry } from '../widgets';
 import { WIDGET_COLORS, WIDGET_ICONS } from '../widgets/constants';
 import { BREAKPOINTS, COLS, ROW_HEIGHT, MARGIN } from '../../utils/layoutDefaults';
 import { ThemeToggle } from '../../theme';
+import { Footer } from '../Footer';
 import {
   CloseButton,
   CloseButtonIcon,
@@ -180,6 +181,8 @@ export function Dashboard() {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <Footer />
     </DashboardContainer>
   );
 }

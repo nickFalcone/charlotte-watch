@@ -11,7 +11,6 @@ import type {
 import type { GenericAlert } from '../types/alerts';
 import { mapFAADelaySeverity } from '../types/alerts';
 import { getAccessToken } from './openSkyAuth';
-import { calculateCreditsForBoundingBox, recordCreditUsage } from './openSkyCredits';
 
 // Use proxy paths in dev, Pages Functions in production
 const OPENSKY_STATES_URL = import.meta.env.DEV
@@ -97,10 +96,6 @@ export async function fetchAircraftInBoundingBox(
   }
 
   const data: OpenSkyResponse = await response.json();
-
-  // Track credit usage only after successful response AND successful parse
-  const credits = calculateCreditsForBoundingBox(airport);
-  recordCreditUsage(credits);
 
   if (!data.states) {
     return [];

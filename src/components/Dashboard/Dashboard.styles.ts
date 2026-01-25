@@ -2,6 +2,8 @@ import styled from 'styled-components';
 import { Root as ToggleGroupRoot } from '@radix-ui/react-toggle-group';
 
 export const DashboardContainer = styled.div`
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background: ${props => props.theme.colors.background};
   padding: 20px;
@@ -70,6 +72,9 @@ export const HeaderButton = styled.button<{ $variant?: 'primary' | 'secondary' }
 `;
 
 export const GridContainer = styled.div`
+  flex: 1;
+  min-height: 0;
+
   .react-grid-layout {
     position: relative;
   }

@@ -39,9 +39,6 @@ import {
   AirportInfo,
   AirportCode,
   FlightCount,
-  StatsRow,
-  StatBadge,
-  StatValue,
   MapContainer,
   MapOverlay,
   MapControls,
@@ -56,10 +53,7 @@ import {
   ErrorIcon,
   ErrorText,
   RetryButton,
-  CreditIndicator,
-  CreditBar,
 } from './FlightTrackerWidget.styles';
-import { getCreditStats } from '../../utils/openSkyCredits';
 
 const DEFAULT_ZOOM = 7;
 const DEFAULT_CENTER: [number, number] = [KCLT_AIRPORT.latitude, KCLT_AIRPORT.longitude];
@@ -312,12 +306,6 @@ export function FlightTrackerWidget(_props: WidgetProps) {
 
   const flights = aircraft || [];
 
-  // Calculate stats
-  const onGround = flights.filter(f => getFlightPhase(f) === 'ground');
-  const airborne = flights.filter(f => getFlightPhase(f) !== 'ground');
-  const departing = flights.filter(f => getFlightPhase(f) === 'departing');
-  const approaching = flights.filter(f => getFlightPhase(f) === 'approaching');
-
   return (
     <FlightContainer ref={widgetRef}>
       <FlightHeader>
@@ -326,25 +314,6 @@ export function FlightTrackerWidget(_props: WidgetProps) {
         </AirportInfo>
         <FlightCount $hasFlights={flights.length > 0}>{flights.length} aircraft</FlightCount>
       </FlightHeader>
-
-      <StatsRow>
-        <StatBadge $color={FLIGHT_PHASE_COLORS.departing}>
-          <span>↑</span>
-          <StatValue>{departing.length}</StatValue>
-        </StatBadge>
-        <StatBadge $color={FLIGHT_PHASE_COLORS.approaching}>
-          <span>↓</span>
-          <StatValue>{approaching.length}</StatValue>
-        </StatBadge>
-        <StatBadge $color={FLIGHT_PHASE_COLORS.cruise}>
-          <span>✈</span>
-          <StatValue>{airborne.length}</StatValue>
-        </StatBadge>
-        <StatBadge $color={FLIGHT_PHASE_COLORS.ground}>
-          <span>⬤</span>
-          <StatValue>{onGround.length}</StatValue>
-        </StatBadge>
-      </StatsRow>
 
       <MapContainer>
         <LeafletMapContainer
@@ -445,17 +414,6 @@ export function FlightTrackerWidget(_props: WidgetProps) {
             <ResetButtonIcon src={resetIcon} alt="" aria-hidden />
           </ResetButton>
         </MapControls>
-
-        <CreditIndicator
-          $percentUsed={getCreditStats().percentUsed}
-          title={`${getCreditStats().used}/${getCreditStats().limit} API credits used today`}
-        >
-          <CreditBar $percentUsed={getCreditStats().percentUsed} />
-          <span>
-            {getCreditStats().used.toLocaleString()}/{getCreditStats().limit.toLocaleString()}{' '}
-            credits
-          </span>
-        </CreditIndicator>
       </MapContainer>
     </FlightContainer>
   );
