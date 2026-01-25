@@ -1,0 +1,18 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# SPA fallback - redirect all routes to index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Environment variables needed (set these in Netlify dashboard):
+# - OPENSKY_CLIENT_ID        (OpenSky OAuth client ID)
+# - OPENSKY_CLIENT_SECRET    (OpenSky OAuth client secret)
+# - FINNHUB_API_KEY          (Finnhub stock data API key)
+# - DUKE_OUTAGE_URL          (Duke Energy outage API URL)
+# - DUKE_OUTAGE_AUTH         (Duke Energy Basic auth header)
+# - TRANSIT_LAND_API_KEY     (Transit.land API key for CATS)
