@@ -17,8 +17,8 @@ npm install
 # Start development server
 npm run dev
 
-# Start development server with Netlify functions (for AI summaries)
-netlify dev
+# Start with Cloudflare Pages Functions (for AI summaries, API proxies)
+npm run dev:pages
 
 # Build for production
 npm run build
@@ -45,11 +45,11 @@ npm run format:check # Check code formatting
 2. `npm run dev`
 3. Open http://localhost:5173
 
-**Full development (with AI summaries):**
+**Full development (with AI summaries and API functions):**
 1. `npm install`
-2. Copy `.env.example` to `.env.local` and add API keys (see below)
-3. `netlify dev` (or `npm run dev` for basic features)
-4. Open http://localhost:8888
+2. Copy `.env.example` to `.dev.vars` and add API keys (see below)
+3. `npm run dev:pages`
+4. Open http://localhost:8788
 
 **Before committing:**
 ```bash
@@ -58,11 +58,10 @@ npm run check:fix    # Auto-format, lint, and type-check
 
 ### Environment Variables
 
-For local development with AI alert summaries, create `.env.local`:
+For local development with API functions (AI summaries, stock quotes, etc.), create `.dev.vars`:
 
 ```bash
-# OpenAI API (for AI alert summaries)
-# Get your key from https://platform.openai.com/
+# .dev.vars (Wrangler local development)
 AI_PROVIDER=openai
 OPENAI_API_KEY=sk-your-key-here
 
@@ -73,7 +72,7 @@ OPENAI_API_KEY=sk-your-key-here
 # Other optional APIs (see .env.example for full list)
 ```
 
-**Note:** AI summarization only works with `netlify dev` or in production. Regular `npm run dev` will show alerts without AI summaries.
+**Note:** API functions (including AI summarization) only work with `npm run dev:pages` or in production. Regular `npm run dev` will show alerts without AI summaries.
 
 **Full development guide:** See [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)
 
@@ -98,4 +97,49 @@ src/
 ├── types/                # TypeScript type definitions
 ├── utils/                # Utility functions and API clients
 └── stores/               # State management
+functions/
+├── api/                  # Cloudflare Pages Functions (API routes)
+└── _lib/                 # Shared utilities for functions
 ```
+
+## Deploying to Cloudflare Pages via GitHub Actions
+
+The project deploys automatically via GitHub Actions when you push to `master` (production) or open a pull request (preview).
+
+### Required GitHub Secrets
+
+Set these in your repository under **Settings > Secrets and variables > Actions**:
+
+| Secret | Description |
+|--------|-------------|
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token with Pages edit permissions |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID |
+
+### Required GitHub Variables (or Secrets)
+
+| Variable | Description |
+|----------|-------------|
+| `CLOUDFLARE_PAGES_PROJECT` | Name of your Cloudflare Pages project |
+
+### Cloudflare Pages Setup
+
+1. Create a new Pages project in Cloudflare dashboard (Direct Upload method)
+2. Note the project name for the `CLOUDFLARE_PAGES_PROJECT` variable
+3. Set environment variables in **Pages > Your Project > Settings > Environment variables**:
+   - `OPENSKY_CLIENT_ID`
+   - `OPENSKY_CLIENT_SECRET`
+   - `FINNHUB_API_KEY`
+   - `AI_PROVIDER` (openai or anthropic)
+   - `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`
+   - Other API keys as needed (see `.env.example`)
+
+### Local Development with Pages Functions
+
+```bash
+# Build and serve with Wrangler (includes API functions)
+npm run dev:pages
+
+# Open http://localhost:8788
+```
+
+See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for detailed deployment instructions.

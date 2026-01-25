@@ -1,10 +1,10 @@
 import type { CATSAlertsResponse, CATSEntity, CATSInformedEntity } from '../types/cats';
 import { LYNX_LIGHT_RAIL_ROUTES } from '../types/cats';
 
-// Use Netlify function in production, dev proxy in development
+// Use Pages Function in production, dev proxy in development
 const CATS_ALERTS_URL = import.meta.env.DEV
   ? '/proxy/cats/api/v2/rest/feeds/f-dnq-charlotteareatransitsystem~rt/download_latest_rt/alerts.json'
-  : '/.netlify/functions/cats-alerts';
+  : '/api/cats-alerts';
 
 /**
  * Checks if a route ID corresponds to LYNX light rail services

@@ -13,13 +13,13 @@ import { mapFAADelaySeverity } from '../types/alerts';
 import { getAccessToken } from './openSkyAuth';
 import { calculateCreditsForBoundingBox, recordCreditUsage } from './openSkyCredits';
 
-// Use proxy paths in dev, Netlify functions in production
+// Use proxy paths in dev, Pages Functions in production
 const OPENSKY_STATES_URL = import.meta.env.DEV
   ? '/proxy/opensky/api/states/all'
-  : '/.netlify/functions/opensky-states';
+  : '/api/opensky-states';
 const FAA_STATUS_URL = import.meta.env.DEV
   ? '/proxy/faa/api/airport-status-information'
-  : '/.netlify/functions/faa-status';
+  : '/api/faa-status';
 
 // Parse OpenSky state vector array into Aircraft object
 function parseStateVector(state: (string | number | boolean | null | number[])[]): Aircraft | null {

@@ -49,15 +49,15 @@ function prepareAlertsForSummary(alerts: GenericAlert[]): AlertForSummary[] {
 
 /**
  * Fetch an AI-generated summary of the alerts.
- * Uses Netlify function - works in production and with `netlify dev`.
- * In dev without `netlify dev`, the summary feature is disabled.
+ * Uses Cloudflare Pages Function in production and dev:pages.
+ * In dev without Pages Functions, the summary feature is disabled.
  */
 export async function fetchAlertSummary(
   alerts: GenericAlert[],
   hash: string,
   signal?: AbortSignal
 ): Promise<SummarizeResponse> {
-  const API_URL = '/.netlify/functions/summarize-alerts';
+  const API_URL = '/api/summarize-alerts';
 
   const response = await fetch(API_URL, {
     method: 'POST',

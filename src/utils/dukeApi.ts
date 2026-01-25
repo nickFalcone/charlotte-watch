@@ -5,10 +5,10 @@ import {
   getDukeCustomersAffected,
 } from '../types/duke';
 
-// Use proxy in dev (auth injected by Vite proxy), Netlify function in production
+// Use proxy in dev (auth injected by Vite proxy), Pages Function in production
 const DUKE_OUTAGE_URL = import.meta.env.DEV
   ? '/proxy/duke/outage-maps/v1/outages?jurisdiction=DEC'
-  : '/.netlify/functions/duke-outages';
+  : '/api/duke-outages';
 
 /**
  * Checks if coordinates fall within Mecklenburg County bounds

@@ -128,12 +128,12 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
   };
 }
 
-// Dev-only plugin to handle AI summarization without Netlify CLI
+// Dev-only plugin to handle AI summarization without Wrangler/Pages Functions
 function aiSummarizationPlugin(env: Record<string, string>): Plugin {
   return {
     name: 'ai-summarization',
     configureServer(server) {
-      server.middlewares.use('/.netlify/functions/summarize-alerts', async (req, res) => {
+      server.middlewares.use('/api/summarize-alerts', async (req, res) => {
         if (req.method !== 'POST') {
           res.statusCode = 405;
           res.end(JSON.stringify({ error: 'Method not allowed' }));

@@ -1,54 +1,43 @@
-import type { Handler, HandlerEvent } from '@netlify/functions';
+import type { Env } from '../_lib/env';
 
 // Allowlisted parameters for OpenSky API
-// See: https://openskynetwork.github.io/opensky-api/rest.html
 const ALLOWED_PARAMS = ['lamin', 'lamax', 'lomin', 'lomax', 'extended', 'icao24', 'time'];
 
-// Validate latitude (-90 to 90)
 function isValidLatitude(value: string): boolean {
   const num = parseFloat(value);
   return !isNaN(num) && num >= -90 && num <= 90;
 }
 
-// Validate longitude (-180 to 180)
 function isValidLongitude(value: string): boolean {
   const num = parseFloat(value);
   return !isNaN(num) && num >= -180 && num <= 180;
 }
 
-// Validate extended parameter (0 or 1)
 function isValidExtended(value: string): boolean {
   return value === '0' || value === '1';
 }
 
-// Validate ICAO24 address (6 hex characters)
 function isValidIcao24(value: string): boolean {
   return /^[0-9a-f]{6}$/i.test(value);
 }
 
-// Validate Unix timestamp
 function isValidTime(value: string): boolean {
   const num = parseInt(value, 10);
-  return !isNaN(num) && num > 0 && num < 2147483647; // Valid Unix timestamp range
+  return !isNaN(num) && num > 0 && num < 2147483647;
 }
 
-// Parse and validate query parameters, returning safe URLSearchParams
-function parseAndValidateParams(event: HandlerEvent): URLSearchParams | null {
-  const params = event.queryStringParameters || {};
+function parseAndValidateParams(url: URL): URLSearchParams | null {
   const validated = new URLSearchParams();
 
-  for (const [key, value] of Object.entries(params)) {
-    // Skip if not in allowlist
+  for (const [key, value] of url.searchParams.entries()) {
     if (!ALLOWED_PARAMS.includes(key)) {
       continue;
     }
 
-    // Skip null/undefined values
     if (value === null || value === undefined) {
       continue;
     }
 
-    // Validate based on parameter type
     let isValid = false;
 
     switch (key) {
@@ -81,19 +70,18 @@ function parseAndValidateParams(event: HandlerEvent): URLSearchParams | null {
   return validated;
 }
 
-const handler: Handler = async event => {
-  // Parse and validate query parameters (allowlist + type validation)
-  const validatedParams = parseAndValidateParams(event);
+export const onRequestGet: PagesFunction<Env> = async context => {
+  const url = new URL(context.request.url);
+  const validatedParams = parseAndValidateParams(url);
 
   if (!validatedParams) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: 'Invalid query parameters' }),
-    };
+    return new Response(JSON.stringify({ error: 'Invalid query parameters' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const token = event.headers['authorization'];
-
+  const token = context.request.headers.get('authorization');
   const headers: HeadersInit = {};
   if (token) {
     headers['Authorization'] = token;
@@ -101,28 +89,24 @@ const handler: Handler = async event => {
 
   try {
     const queryString = validatedParams.toString();
-    const url = queryString
+    const apiUrl = queryString
       ? `https://opensky-network.org/api/states/all?${queryString}`
       : 'https://opensky-network.org/api/states/all';
 
-    const response = await fetch(url, { headers, cache: 'no-store' });
-
+    const response = await fetch(apiUrl, { headers, cf: { cacheTtl: 0, cacheEverything: false } });
     const data = await response.json();
 
-    return {
-      statusCode: response.status,
+    return new Response(JSON.stringify(data), {
+      status: response.status,
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
-      body: JSON.stringify(data),
-    };
+    });
   } catch {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to fetch aircraft data' }),
-    };
+    return new Response(JSON.stringify({ error: 'Failed to fetch aircraft data' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 };
-
-export { handler };

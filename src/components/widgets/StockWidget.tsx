@@ -23,14 +23,14 @@ import {
   TooltipChange,
 } from './StockWidget.styles';
 
-// Use Netlify functions in production, dev proxy in development
+// Use Pages Functions in production, dev proxy in development
 const FINNHUB_QUOTE_URL = import.meta.env.DEV
   ? '/proxy/finnhub/api/v1/quote'
-  : '/.netlify/functions/finnhub-quote';
+  : '/api/finnhub-quote';
 
 const FINNHUB_PROFILE_URL = import.meta.env.DEV
   ? '/proxy/finnhub/api/v1/stock/profile2'
-  : '/.netlify/functions/finnhub-profile';
+  : '/api/finnhub-profile';
 
 function isMarketOpen(): boolean {
   const now = new Date();

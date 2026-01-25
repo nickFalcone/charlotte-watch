@@ -32,8 +32,8 @@ export const CHARLOTTE_PRIORITY_ROUTES: HereRoute[] = [
  * Uses the Vite proxy in development to protect the API key.
  */
 async function fetchRouteFlow(route: HereRoute, signal?: AbortSignal): Promise<HereFlowResponse> {
-  // Use proxy in development, Netlify function in production
-  const baseUrl = import.meta.env.DEV ? '/proxy/here/v7/flow' : '/.netlify/functions/here-flow';
+  // Use proxy in development, Pages Function in production
+  const baseUrl = import.meta.env.DEV ? '/proxy/here/v7/flow' : '/api/here-flow';
 
   const params = new URLSearchParams({
     in: route.in,

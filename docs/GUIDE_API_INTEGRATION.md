@@ -17,24 +17,24 @@ For APIs that don't require authentication:
 
 ```
 Development:  Client → Vite Proxy (adds auth header) → External API
-Production:   Client → Netlify Function (adds auth header) → External API
+Production:   Client → Cloudflare Pages Function (adds auth header) → External API
 ```
 
 ### Step-by-Step
 
-1. **Create Netlify function** at `netlify/functions/your-api.ts`:
+1. **Create Pages Function** at `functions/api/your-api.ts`:
 
 ```typescript
-import type { Handler } from '@netlify/functions';
+import type { Env } from '../_lib/env';
 
-const handler: Handler = async (event) => {
-  const apiKey = process.env.YOUR_API_KEY; // Server-side only
+export const onRequestGet: PagesFunction<Env> = async (context) => {
+  const apiKey = context.env.YOUR_API_KEY; // Server-side only
 
   if (!apiKey) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'API key not configured' }),
-    };
+    return new Response(JSON.stringify({ error: 'API key not configured' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const response = await fetch('https://api.example.com/data', {
@@ -44,17 +44,23 @@ const handler: Handler = async (event) => {
     },
   });
 
-  return {
-    statusCode: response.status,
+  return new Response(await response.text(), {
+    status: response.status,
     headers: { 'Content-Type': 'application/json' },
-    body: await response.text(),
-  };
+  });
 };
-
-export { handler };
 ```
 
-2. **Add Vite proxy** in `vite.config.ts` for development:
+2. **Add env type** to `functions/_lib/env.ts`:
+
+```typescript
+export interface Env {
+  // ... existing vars
+  YOUR_API_KEY?: string;
+}
+```
+
+3. **Add Vite proxy** in `vite.config.ts` for development:
 
 ```typescript
 '/proxy/your-api': {
@@ -71,12 +77,12 @@ export { handler };
 },
 ```
 
-3. **Create API client** that switches based on environment:
+4. **Create API client** that switches based on environment:
 
 ```typescript
 const API_URL = import.meta.env.DEV
   ? '/proxy/your-api/endpoint'
-  : '/.netlify/functions/your-api';
+  : '/api/your-api';
 
 export async function fetchYourData(): Promise<YourData> {
   const response = await fetch(API_URL);
@@ -85,14 +91,15 @@ export async function fetchYourData(): Promise<YourData> {
 }
 ```
 
-4. **Add environment variables**:
-   - Development: Add to `.env.local`
-   - Production: Add in Netlify dashboard
+5. **Add environment variables**:
+   - Development: Add to `.env.local` (Vite proxy) or `.dev.vars` (Wrangler)
+   - Production: Add in Cloudflare Pages dashboard under Settings > Environment variables
    - Document in `.env.example`
 
 ## Existing Examples
 
-- `netlify/functions/duke-outages.ts` — Duke Energy (auth header)
-- `netlify/functions/finnhub-quote.ts` — Finnhub stocks (API key header)
-- `netlify/functions/cats-alerts.ts` — Transit.land (API key header)
-- `netlify/functions/opensky-auth.ts` — OpenSky (OAuth token)
+- `functions/api/duke-outages.ts` — Duke Energy (auth header)
+- `functions/api/finnhub-quote.ts` — Finnhub stocks (API key header)
+- `functions/api/cats-alerts.ts` — Transit.land (API key header)
+- `functions/api/opensky-auth.ts` — OpenSky (OAuth token)
+- `functions/api/summarize-alerts.ts` — AI summarization (OpenAI/Anthropic)

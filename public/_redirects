@@ -1,1 +1,3 @@
+# Cloudflare Pages Functions handle /api/* routes automatically
+# This SPA fallback ensures client-side routing works
 /* /index.html 200

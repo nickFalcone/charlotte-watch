@@ -19,6 +19,7 @@ export default tseslint.config(
       '*.config.js',
       '*.config.ts',
       'vite.config.ts',
+      'functions/**/*.ts', // Cloudflare Pages Functions - linted separately by Wrangler
     ],
   },
   {

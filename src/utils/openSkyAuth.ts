@@ -16,10 +16,10 @@ let cachedToken: TokenData | null = null;
 // Token refresh buffer - refresh 5 minutes before expiry
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
-// Auth endpoint - proxy in dev, Netlify function in prod
+// Auth endpoint - proxy in dev, Pages Function in prod
 const AUTH_ENDPOINT = import.meta.env.DEV
   ? '/proxy/opensky-auth/auth/realms/opensky-network/protocol/openid-connect/token'
-  : '/.netlify/functions/opensky-auth';
+  : '/api/opensky-auth';
 
 // Fetch a new token from OpenSky (Keycloak realm)
 // Credentials are injected server-side by proxy (dev) or Netlify function (prod)

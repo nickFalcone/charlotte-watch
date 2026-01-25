@@ -1,12 +1,10 @@
-import type { Handler } from '@netlify/functions';
+import type { Env } from '../_lib/env';
 
 // Charlotte, NC coordinates
 const CHARLOTTE_LAT = 35.2271;
 const CHARLOTTE_LNG = -80.8431;
 
 // ~30 mile radius in degrees
-// Latitude: 30mi / 69mi per degree ≈ 0.44°
-// Longitude: 30mi / (69 * cos(35°)) ≈ 0.53°
 const LAT_RADIUS = 0.44;
 const LNG_RADIUS = 0.53;
 
@@ -40,15 +38,15 @@ function isWithinRadius(lat: number, lng: number): boolean {
   return Math.abs(lat - CHARLOTTE_LAT) <= LAT_RADIUS && Math.abs(lng - CHARLOTTE_LNG) <= LNG_RADIUS;
 }
 
-const handler: Handler = async () => {
-  const dukeUrl = process.env.DUKE_OUTAGE_URL;
-  const dukeAuth = process.env.DUKE_OUTAGE_AUTH;
+export const onRequestGet: PagesFunction<Env> = async context => {
+  const dukeUrl = context.env.DUKE_OUTAGE_URL;
+  const dukeAuth = context.env.DUKE_OUTAGE_AUTH;
 
   if (!dukeUrl || !dukeAuth) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Duke Energy API configuration missing' }),
-    };
+    return new Response(JSON.stringify({ error: 'Duke Energy API configuration missing' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   const headers = {
@@ -61,14 +59,13 @@ const handler: Handler = async () => {
     const listResponse = await fetch(dukeUrl, { method: 'GET', headers });
 
     if (!listResponse.ok) {
-      return {
-        statusCode: listResponse.status,
-        body: JSON.stringify({ error: 'Failed to fetch outage list' }),
-      };
+      return new Response(JSON.stringify({ error: 'Failed to fetch outage list' }), {
+        status: listResponse.status,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const listJson = (await listResponse.json()) as { data?: OutageListItem[] } | OutageListItem[];
-    // API may return { data: [...] } or raw array
     const listData = Array.isArray(listJson) ? listJson : listJson.data || [];
 
     // Step 2: Filter to outages within ~30 miles of Charlotte
@@ -77,16 +74,13 @@ const handler: Handler = async () => {
     );
 
     if (nearbyOutages.length === 0) {
-      return {
-        statusCode: 200,
+      return new Response(JSON.stringify({ data: [], errorMessages: [] }), {
+        status: 200,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: [], errorMessages: [] }),
-      };
+      });
     }
 
     // Step 3: Build detail URL base from list URL
-    // List: .../outages?jurisdiction=DEC
-    // Detail: .../outages/outage?jurisdiction=DEC&sourceEventNumber=X
     const urlObj = new URL(dukeUrl);
     const jurisdiction = urlObj.searchParams.get('jurisdiction') || 'DEC';
     const detailBaseUrl = `${urlObj.origin}${urlObj.pathname}/outage`;
@@ -98,31 +92,26 @@ const handler: Handler = async () => {
         const detailResponse = await fetch(detailUrl, { method: 'GET', headers });
 
         if (!detailResponse.ok) {
-          // Fall back to list data if detail fetch fails
           return outage;
         }
 
         const detailJson = (await detailResponse.json()) as { data: OutageDetail };
         return detailJson.data;
       } catch {
-        // Fall back to list data on error
         return outage;
       }
     });
 
     const enrichedOutages = await Promise.all(detailPromises);
 
-    return {
-      statusCode: 200,
+    return new Response(JSON.stringify({ data: enrichedOutages, errorMessages: [] }), {
+      status: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: enrichedOutages, errorMessages: [] }),
-    };
+    });
   } catch {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to fetch Duke Energy outages' }),
-    };
+    return new Response(JSON.stringify({ error: 'Failed to fetch Duke Energy outages' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 };
-
-export { handler };
