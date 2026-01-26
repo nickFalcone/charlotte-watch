@@ -119,11 +119,8 @@ jobs:
             NEW_BODY=$(echo "$CURRENT_BODY" | sed "s|Preview Deployment:.*|Preview Deployment:** ${PREVIEW_URL}|")
           else
             # Append preview section with proper markdown formatting
-            NEW_BODY="${CURRENT_BODY}
-
----
-
-**Preview Deployment:** ${PREVIEW_URL}"
+            PREVIEW_SECTION=$(printf "\n\n---\n\n**Preview Deployment:** %s" "${PREVIEW_URL}")
+            NEW_BODY="${CURRENT_BODY}${PREVIEW_SECTION}"
           fi
 
           # Update PR description
