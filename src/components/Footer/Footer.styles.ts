@@ -54,11 +54,15 @@ export const FooterDialogOverlay = styled.div`
   background: rgba(0, 0, 0, 0.6);
   z-index: 2000;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 `;
 
 export const FooterDialogContent = styled.div`
   max-width: 600px;
   width: 100%;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  min-height: 0;
   background: ${props => props.theme.colors.widgetBackground};
   border-radius: 12px;
   border: 1px solid ${props => props.theme.colors.widgetBorder};
@@ -68,6 +72,7 @@ export const FooterDialogContent = styled.div`
 `;
 
 export const FooterDialogHeader = styled.div`
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -117,6 +122,10 @@ export const FooterDialogCloseIcon = styled.img`
 `;
 
 export const FooterDialogBody = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 20px;
   color: ${props => props.theme.colors.textSecondary};
   font-size: 13px;

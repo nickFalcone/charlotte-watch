@@ -24,24 +24,29 @@ export function useDashboardLayout() {
 
   const handleLayoutChange = useCallback(
     (_currentLayout: Layout[], allLayouts: Layouts) => {
-      // Preserve minW and minH from the original layouts
-      const preservedLayouts: Layouts = {};
+      // Merge RGL's layout (visible items only) into the full store layout so we
+      // never drop hidden items. RGL/allLayouts only contains visible widgets.
+      const merged: Layouts = {};
 
-      Object.entries(allLayouts).forEach(([breakpoint, layout]) => {
-        const originalLayout = layouts[breakpoint as keyof Layouts] || [];
-        const originalMap = new Map(originalLayout.map(item => [item.i, item]));
+      (Object.keys(layouts) as (keyof Layouts)[]).forEach(breakpoint => {
+        const existing = layouts[breakpoint] || [];
+        const rglLayout = allLayouts[breakpoint] || [];
+        const rglMap = new Map(rglLayout.map(item => [item.i, item]));
 
-        preservedLayouts[breakpoint as keyof Layouts] = layout.map(item => {
-          const original = originalMap.get(item.i);
-          return {
-            ...item,
-            minW: original?.minW ?? item.minW ?? 1,
-            minH: original?.minH ?? item.minH ?? 1,
-          };
+        merged[breakpoint] = existing.map(existingItem => {
+          const rglItem = rglMap.get(existingItem.i);
+          if (rglItem) {
+            return {
+              ...rglItem,
+              minW: existingItem.minW ?? rglItem.minW ?? 1,
+              minH: existingItem.minH ?? rglItem.minH ?? 1,
+            };
+          }
+          return existingItem;
         });
       });
 
-      setLayouts(preservedLayouts);
+      setLayouts(merged);
     },
     [layouts, setLayouts]
   );
@@ -68,24 +73,17 @@ export function useDashboardLayout() {
             if (widget) {
               const definition = widgetRegistry[widget.type];
               if (definition) {
-                // For newly visible widgets, prefer default size over potentially smaller saved sizes
-                const preferredW = Math.max(
-                  item.w,
-                  definition.minSize?.w || definition.defaultSize.w
-                );
-                const preferredH = Math.max(
-                  item.h,
-                  definition.minSize?.h || definition.defaultSize.h
-                );
+                // Enforce definition minimums only; preserve layout's breakpoint-specific w/h
+                const minW = definition.minSize?.w ?? 1;
+                const minH = definition.minSize?.h ?? 1;
 
                 return {
                   ...item,
                   static: widgetLockMap.get(item.i) || false,
-                  minW: definition.minSize?.w || definition.defaultSize.w,
-                  minH: definition.minSize?.h || definition.defaultSize.h,
-                  // Ensure current size meets minimums
-                  w: preferredW,
-                  h: preferredH,
+                  minW,
+                  minH,
+                  w: Math.max(item.w, minW),
+                  h: Math.max(item.h, minH),
                 };
               }
             }

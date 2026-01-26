@@ -11,9 +11,11 @@ export const DashboardContainer = styled.div`
 `;
 
 export const DashboardHeader = styled.header`
+  min-width: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 16px;
   padding-left: 12px;
@@ -22,6 +24,8 @@ export const DashboardHeader = styled.header`
 
 export const DashboardTitle = styled.h1`
   margin: 0;
+  flex: 1 1 0;
+  min-width: 140px;
   font-size: 24px;
   font-weight: 700;
   color: ${props => props.theme.colors.text};
@@ -39,6 +43,7 @@ export const CrownIcon = styled.img`
 `;
 
 export const HeaderControls = styled.div`
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 12px;
