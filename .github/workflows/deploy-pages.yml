@@ -101,14 +101,31 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT || secrets.CLOUDFLARE_PAGES_PROJECT }} --branch=pr-${{ github.event.number }} --commit-dirty=true
 
-      - name: Comment preview URL on PR
+      - name: Update PR description with preview URL
         if: github.event_name == 'pull_request'
-        uses: peter-evans/create-or-update-comment@v4
-        with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: |
-            ### Cloudflare Pages Preview Deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT || secrets.CLOUDFLARE_PAGES_PROJECT }}
+        run: |
+          PREVIEW_URL="https://pr-${PR_NUMBER}.${PROJECT_NAME}.pages.dev"
 
-            Preview URL: https://pr-${{ github.event.pull_request.number }}.${{ vars.CLOUDFLARE_PAGES_PROJECT || secrets.CLOUDFLARE_PAGES_PROJECT }}.pages.dev
+          # Get current PR body
+          CURRENT_BODY=$(gh pr view ${PR_NUMBER} --json body --jq '.body')
 
-            Built with commit ${{ github.event.pull_request.head.sha }}
+          # Create preview section
+          PREVIEW_SECTION="---
+
+          **Preview Deployment:** ${PREVIEW_URL}"
+
+          # Check if preview section already exists
+          if echo "$CURRENT_BODY" | grep -q "Preview Deployment:"; then
+            # Update existing preview URL
+            NEW_BODY=$(echo "$CURRENT_BODY" | sed "s|Preview Deployment:.*|Preview Deployment:** ${PREVIEW_URL}|")
+          else
+            # Append preview section
+            NEW_BODY="${CURRENT_BODY}${PREVIEW_SECTION}"
+          fi
+
+          # Update PR description
+          gh pr edit ${PR_NUMBER} --body "$NEW_BODY"
