@@ -231,7 +231,14 @@ export function AlertsWidget(_props: WidgetProps) {
   return (
     <AlertsContainer>
       <AlertsHeader>
-        <AlertCount $hasAlerts={sortedAlerts.length > 0}>{sortedAlerts.length} ALERTS</AlertCount>
+        <AlertCount
+          $hasAlerts={sortedAlerts.length > 0}
+          $allHidden={sortedAllAlerts.length > 0 && sortedAlerts.length === 0}
+        >
+          {sortedAllAlerts.length > 0 && sortedAlerts.length === 0
+            ? '0 ALERTS VISIBLE'
+            : `${sortedAlerts.length} ALERTS`}
+        </AlertCount>
         {sources && visibleSources.size > 0 && (
           <Tooltip.Provider delayDuration={300}>
             <ToggleGroup.Root
@@ -309,8 +316,8 @@ export function AlertsWidget(_props: WidgetProps) {
                 <Popover.Portal>
                   <Popover.Content side="top" sideOffset={6} asChild>
                     <AISummaryPopoverContent>
-                      This is an AI-generated summary of all available alert information. Always
-                      confirm details with source references.
+                      This is an AI-generated summary of all recent alerts. Always confirm details
+                      with the source references.
                     </AISummaryPopoverContent>
                   </Popover.Content>
                 </Popover.Portal>
@@ -336,26 +343,46 @@ export function AlertsWidget(_props: WidgetProps) {
             </NoAlertsSubtext>
           </NoAlertsContainer>
         ) : (
-          <NoAlertsContainer>
-            <NoAlertsIcon src={noResultsIcon} alt="" />
-            <NoAlertsText>No Active Alerts</NoAlertsText>
-            <NoAlertsSubtext>
-              {(() => {
-                if (!sources) return 'All systems normal';
-                const totalSources = Object.keys(sources).length;
-                const hiddenCount = totalSources - visibleSources.size;
-                if (hiddenCount > 0) {
-                  return (
+          (() => {
+            const allAlertsHidden = sortedAllAlerts.length > 0 && sortedAlerts.length === 0;
+            return (
+              <NoAlertsContainer>
+                <NoAlertsIcon src={noResultsIcon} alt="" />
+                <NoAlertsText $variant={allAlertsHidden ? 'warning' : undefined}>
+                  {allAlertsHidden ? 'No Visible Alerts' : 'No Active Alerts'}
+                </NoAlertsText>
+                <NoAlertsSubtext>
+                  {allAlertsHidden ? (
                     <>
-                      {hiddenCount} {hiddenCount === 1 ? 'source is' : 'sources are'} hidden.{' '}
-                      <SelectAllLink onClick={showAllAlertSources}>Select all</SelectAllLink>
+                      {sortedAllAlerts.length}{' '}
+                      {sortedAllAlerts.length === 1 ? 'alert is' : 'alerts are'} in hidden sources.{' '}
+                      <SelectAllLink onClick={showAllAlertSources}>View all sources</SelectAllLink>.
                     </>
-                  );
-                }
-                return 'All systems normal';
-              })()}
-            </NoAlertsSubtext>
-          </NoAlertsContainer>
+                  ) : !sources ? (
+                    'All systems normal'
+                  ) : (
+                    (() => {
+                      const totalSources = Object.keys(sources).length;
+                      const hiddenCount = totalSources - visibleSources.size;
+                      if (hiddenCount > 0) {
+                        return (
+                          <>
+                            {hiddenCount} {hiddenCount === 1 ? 'source is' : 'sources are'} hidden
+                            (summary considers all sources).{' '}
+                            <SelectAllLink onClick={showAllAlertSources}>
+                              View all sources
+                            </SelectAllLink>
+                            .
+                          </>
+                        );
+                      }
+                      return 'All systems normal';
+                    })()
+                  )}
+                </NoAlertsSubtext>
+              </NoAlertsContainer>
+            );
+          })()
         )
       ) : (
         <AlertsList tabIndex={0} role="region" aria-label="Alerts list">

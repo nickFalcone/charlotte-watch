@@ -16,26 +16,32 @@ export const AlertsContainer = styled.div`
 
 export const AlertsHeader = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   flex-shrink: 0;
 `;
 
-export const AlertCount = styled.span<{ $hasAlerts: boolean }>`
+export const AlertCount = styled.span<{ $hasAlerts: boolean; $allHidden?: boolean }>`
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 500;
-  ${({ $hasAlerts, theme }) => {
+  white-space: nowrap;
+  ${({ $hasAlerts, $allHidden, theme }) => {
+    const cfg = getAlertSeverityConfig(theme);
+    if ($allHidden) {
+      return css`
+        background: ${cfg.moderate.bgColor};
+        color: ${cfg.moderate.color};
+      `;
+    }
     if ($hasAlerts) {
-      const cfg = getAlertSeverityConfig(theme);
       return css`
         background: ${cfg.critical.bgColor};
         color: ${cfg.critical.color};
       `;
     }
-    // No alerts: use success green
     return css`
       background: ${theme.colors.success}20;
       color: ${theme.colors.success};
@@ -220,9 +226,10 @@ export const NoAlertsIconFallback = styled.span`
   opacity: 0.6;
 `;
 
-export const NoAlertsText = styled.div`
+export const NoAlertsText = styled.div<{ $variant?: 'success' | 'warning' }>`
   font-size: 14px;
-  color: ${props => props.theme.colors.success};
+  color: ${({ $variant, theme }) =>
+    $variant === 'warning' ? theme.colors.warning : theme.colors.success};
   font-weight: 500;
 `;
 
@@ -338,12 +345,12 @@ export const SourceStatusItem = styled.span<{ $success: boolean }>`
   }
 `;
 
-// Source filter toggle group styles
+// Source filter toggle group styles — full-width row so sources wrap in their own area
 export const SourceToggleGroup = styled.div`
   display: flex;
-  gap: 4px;
-  flex-shrink: 0;
+  gap: 8px;
   flex-wrap: wrap;
+  min-width: 0;
 `;
 
 export const SourceToggleItem = styled.button<{
@@ -352,11 +359,11 @@ export const SourceToggleItem = styled.button<{
 }>`
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   padding: 2px 6px;
   border: none;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 12px;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -380,7 +387,7 @@ export const SourceToggleItem = styled.button<{
 
   &::before {
     content: '${({ $success }) => ($success ? '●' : '○')}';
-    font-size: 8px;
+    font-size: 10px;
     color: var(--status-color);
   }
 

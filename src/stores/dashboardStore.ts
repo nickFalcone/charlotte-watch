@@ -36,35 +36,39 @@ export const useDashboardStore = create<DashboardStore>()(
             const definition = widgetRegistry[widget.type];
             if (definition) {
               newLayouts = { ...state.layouts };
-              Object.keys(state.layouts).forEach(breakpoint => {
-                const layout = state.layouts[breakpoint as keyof typeof state.layouts] || [];
-                const itemIndex = layout.findIndex(item => item.i === widgetId);
+              (Object.keys(state.layouts) as (keyof typeof state.layouts)[]).forEach(breakpoint => {
+                const prev = state.layouts[breakpoint] || [];
+                const itemIndex = prev.findIndex(item => item.i === widgetId);
+                const minW = definition.minSize?.w ?? 1;
+                const minH = definition.minSize?.h ?? 1;
 
-                if (itemIndex >= 0) {
-                  // Update existing layout item to use default dimensions
-                  layout[itemIndex] = {
-                    ...layout[itemIndex],
-                    w: definition.defaultSize.w,
-                    h: definition.defaultSize.h,
-                    minW: definition.minSize?.w || definition.defaultSize.w,
-                    minH: definition.minSize?.h || definition.defaultSize.h,
-                  };
-                } else {
-                  // Add layout item if it doesn't exist (shouldn't happen in normal flow)
-                  const maxY =
-                    layout.length > 0 ? Math.max(...layout.map(item => item.y + item.h)) : 0;
-                  layout.push({
-                    i: widgetId,
-                    x: 0,
-                    y: maxY,
-                    w: definition.defaultSize.w,
-                    h: definition.defaultSize.h,
-                    minW: definition.minSize?.w || definition.defaultSize.w,
-                    minH: definition.minSize?.h || definition.defaultSize.h,
-                  });
-                }
+                const next =
+                  itemIndex >= 0
+                    ? prev.map((it, i) =>
+                        i !== itemIndex
+                          ? it
+                          : {
+                              ...it,
+                              w: Math.max(it.w, minW),
+                              h: Math.max(it.h, minH),
+                              minW,
+                              minH,
+                            }
+                      )
+                    : [
+                        ...prev,
+                        {
+                          i: widgetId,
+                          x: 0,
+                          y: prev.length > 0 ? Math.max(...prev.map(item => item.y + item.h)) : 0,
+                          w: definition.defaultSize.w,
+                          h: definition.defaultSize.h,
+                          minW,
+                          minH,
+                        },
+                      ];
 
-                newLayouts[breakpoint as keyof typeof newLayouts] = layout;
+                newLayouts[breakpoint] = next;
               });
             }
           }
@@ -176,7 +180,18 @@ export const useDashboardStore = create<DashboardStore>()(
     }),
     {
       name: 'charlotte-dashboard-storage',
-      version: 2, // Bumped version for new field
+      version: 3,
+      migrate: (persisted: unknown, fromVersion: number) => {
+        if (fromVersion < 3 && persisted != null && typeof persisted === 'object') {
+          const p = persisted as Record<string, unknown>;
+          return {
+            ...p,
+            layouts: DEFAULT_LAYOUTS,
+            widgets: DEFAULT_WIDGET_CONFIGS,
+          };
+        }
+        return persisted as Record<string, unknown>;
+      },
     }
   )
 );
