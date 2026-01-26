@@ -1,0 +1,55 @@
+name: Cleanup Preview Deployment
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - master
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Delete preview deployment
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT || secrets.CLOUDFLARE_PAGES_PROJECT }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "Fetching deployments for branch pr-${PR_NUMBER}..."
+
+          # Get all deployments for this PR branch
+          DEPLOYMENTS=$(curl -s -X GET \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}/deployments" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            | jq -r --arg branch "pr-${PR_NUMBER}" '.result[] | select(.deployment_trigger.metadata.branch == $branch) | .id')
+
+          if [ -z "$DEPLOYMENTS" ]; then
+            echo "No deployments found for branch pr-${PR_NUMBER}"
+            exit 0
+          fi
+
+          echo "Found deployments to delete:"
+          echo "$DEPLOYMENTS"
+
+          # Delete each deployment with force=true to handle aliased deployments
+          for DEPLOYMENT_ID in $DEPLOYMENTS; do
+            echo "Deleting deployment ${DEPLOYMENT_ID}..."
+            RESPONSE=$(curl -s -X DELETE \
+              "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/${PROJECT_NAME}/deployments/${DEPLOYMENT_ID}?force=true" \
+              -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}")
+
+            SUCCESS=$(echo $RESPONSE | jq -r '.success')
+            if [ "$SUCCESS" = "true" ]; then
+              echo "Successfully deleted deployment ${DEPLOYMENT_ID}"
+            else
+              echo "Failed to delete deployment ${DEPLOYMENT_ID}"
+              echo "Response: $RESPONSE"
+            fi
+          done
+
+          echo "Cleanup complete for PR ${PR_NUMBER}"
