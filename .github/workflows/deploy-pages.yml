@@ -113,18 +113,17 @@ jobs:
           # Get current PR body
           CURRENT_BODY=$(gh pr view ${PR_NUMBER} --json body --jq '.body')
 
-          # Create preview section
-          PREVIEW_SECTION="---
-
-          **Preview Deployment:** ${PREVIEW_URL}"
-
           # Check if preview section already exists
           if echo "$CURRENT_BODY" | grep -q "Preview Deployment:"; then
             # Update existing preview URL
             NEW_BODY=$(echo "$CURRENT_BODY" | sed "s|Preview Deployment:.*|Preview Deployment:** ${PREVIEW_URL}|")
           else
-            # Append preview section
-            NEW_BODY="${CURRENT_BODY}${PREVIEW_SECTION}"
+            # Append preview section with proper markdown formatting
+            NEW_BODY="${CURRENT_BODY}
+
+---
+
+**Preview Deployment:** ${PREVIEW_URL}"
           fi
 
           # Update PR description
