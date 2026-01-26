@@ -115,8 +115,8 @@ jobs:
 
           # Check if preview section already exists
           if echo "$CURRENT_BODY" | grep -q "Preview Deployment:"; then
-            # Update existing preview URL
-            NEW_BODY=$(echo "$CURRENT_BODY" | sed "s|Preview Deployment:.*|Preview Deployment:** ${PREVIEW_URL}|")
+            # Update existing preview URL (match with or without asterisks)
+            NEW_BODY=$(echo "$CURRENT_BODY" | sed "s|\*\*Preview Deployment:\*\* .*|**Preview Deployment:** ${PREVIEW_URL}|; s|Preview Deployment: .*|**Preview Deployment:** ${PREVIEW_URL}|")
           else
             # Append preview section with proper markdown formatting
             PREVIEW_SECTION=$(printf "\n\n---\n\n**Preview Deployment:** %s" "${PREVIEW_URL}")
