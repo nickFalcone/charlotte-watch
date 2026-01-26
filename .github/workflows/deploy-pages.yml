@@ -45,9 +45,10 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT || secrets.CLOUDFLARE_PAGES_PROJECT }} --branch=master
+          command: pages deploy dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT || secrets.CLOUDFLARE_PAGES_PROJECT }} --branch=master --commit-dirty=true
 
       - name: Deploy to Cloudflare Pages (Preview)
+        id: deploy-preview
         if: github.event_name == 'pull_request'
         uses: cloudflare/wrangler-action@v3
         env:
@@ -56,4 +57,26 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT || secrets.CLOUDFLARE_PAGES_PROJECT }} --branch=pr-${{ github.event.number }}
+          command: pages deploy dist --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT || secrets.CLOUDFLARE_PAGES_PROJECT }} --branch=pr-${{ github.event.number }} --commit-dirty=true
+
+      - name: Comment preview URL on PR
+        if: github.event_name == 'pull_request'
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            ### Cloudflare Pages Preview Deployment
+
+            Preview URL: https://pr-${{ github.event.pull_request.number }}.${{ vars.CLOUDFLARE_PAGES_PROJECT || secrets.CLOUDFLARE_PAGES_PROJECT }}.pages.dev
+
+            Built with commit ${{ github.event.pull_request.head.sha }}
+
+      - name: Prune old preview deployments
+        if: github.event_name == 'pull_request'
+        uses: pulkitjalan/actions-cloudflare-prune-pages@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ vars.CLOUDFLARE_PAGES_PROJECT || secrets.CLOUDFLARE_PAGES_PROJECT }}
+          environment: preview
+          keep: 3
