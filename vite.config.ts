@@ -149,83 +149,6 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
   };
 }
 
-// Dev-only plugin to handle OpenWebNinja news API without Wrangler/Pages Functions
-function openWebNinjaNewsPlugin(env: Record<string, string>): Plugin {
-  return {
-    name: 'openwebninja-news',
-    configureServer(server) {
-      server.middlewares.use('/api/openwebninja-news', async (req, res) => {
-        if (req.method !== 'GET') {
-          res.statusCode = 405;
-          res.end(JSON.stringify({ error: 'Method not allowed' }));
-          return;
-        }
-
-        const apiKey = env.RAPIDAPI_KEY;
-
-        if (!apiKey) {
-          res.statusCode = 500;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'RapidAPI key not configured' }));
-          return;
-        }
-
-        try {
-          const url = new URL(req.url || '', 'http://localhost');
-          const query =
-            url.searchParams.get('query') ??
-            url.searchParams.get('q') ??
-            'charlotte north carolina';
-          const timePublished = url.searchParams.get('time_published') ?? '48h';
-
-          const params = new URLSearchParams({ query, time_published: timePublished });
-          const response = await fetch(
-            `https://real-time-news-data.p.rapidapi.com/search?${params}`,
-            {
-              method: 'GET',
-              headers: {
-                'x-rapidapi-key': apiKey,
-                'x-rapidapi-host': 'real-time-news-data.p.rapidapi.com',
-                Accept: 'application/json',
-              },
-            }
-          );
-
-          if (!response.ok) {
-            const text = await response.text();
-            res.statusCode = response.status;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(
-              JSON.stringify({
-                error: `OpenWebNinja API returned ${response.status}`,
-                detail: text.slice(0, 200),
-              })
-            );
-            return;
-          }
-
-          const data = await response.text();
-
-          res.statusCode = 200;
-          res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Cache-Control', 'public, max-age=300');
-          res.end(data);
-        } catch (error) {
-          console.error('[openwebninja-news] Error:', error);
-          res.statusCode = 500;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(
-            JSON.stringify({
-              error: 'Failed to fetch news',
-              message: error instanceof Error ? error.message : 'Unknown error',
-            })
-          );
-        }
-      });
-    },
-  };
-}
-
 const OPENWEBNINJA_HOST = 'real-time-news-data.p.rapidapi.com';
 const MAX_ARTICLES_TO_SEND = 80;
 
@@ -583,7 +506,6 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
-      openWebNinjaNewsPlugin(env),
       newsCharlotteParsedPlugin(env),
       aiSummarizationPlugin(env),
       dukeOutagePlugin(env),

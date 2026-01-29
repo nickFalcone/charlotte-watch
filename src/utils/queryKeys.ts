@@ -58,7 +58,6 @@ export const queryKeys = {
    * News queries
    */
   news: {
-    charlotte: () => ['news', 'charlotte'] as const,
     charlotteParsed: () => ['news', 'charlotteParsed'] as const,
   },
 
