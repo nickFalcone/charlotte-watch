@@ -7,7 +7,7 @@ The Alerts widget includes AI-generated BLUF (Bottom Line Up Front) summaries. C
 1. **Server-side KV cache** (Cloudflare KV) -- shares the same summary across all clients for 15 minutes, keyed by alert set hash.
 2. **Client-side React Query cache** (in-memory only) -- deduplicates requests within a single browser session.
 
-For full server-side caching details, see [CACHING_HANDOFF.md](./CACHING_HANDOFF.md).
+For full server-side caching details, see [CLOUDFLARE_KV_CACHING.md](./CLOUDFLARE_KV_CACHING.md).
 
 ## Hash-Based Invalidation
 

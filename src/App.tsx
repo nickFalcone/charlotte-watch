@@ -5,7 +5,7 @@ import { useThemeStore, GlobalStyles } from './theme';
 import type { ThemeStore } from './theme/themeStore';
 
 // Create QueryClient OUTSIDE component to preserve cache across renders.
-// Server-side KV caching (see docs/CACHING_HANDOFF.md) handles cross-client
+// Server-side KV caching (see docs/CLOUDFLARE_KV_CACHING.md) handles cross-client
 // response sharing; in-memory React Query cache handles within-session dedup.
 const queryClient = new QueryClient({
   defaultOptions: {
