@@ -55,6 +55,14 @@ export const queryKeys = {
   },
 
   /**
+   * News queries
+   */
+  news: {
+    charlotte: () => ['news', 'charlotte'] as const,
+    charlotteParsed: () => ['news', 'charlotteParsed'] as const,
+  },
+
+  /**
    * HERE Traffic flow queries
    */
   hereFlow: {
@@ -71,4 +79,5 @@ export type AlertsKeys = QueryKeys['alerts'];
 export type WeatherKeys = QueryKeys['weather'];
 export type FlightKeys = QueryKeys['flight'];
 export type StockKeys = QueryKeys['stock'];
+export type NewsKeys = QueryKeys['news'];
 export type HereFlowKeys = QueryKeys['hereFlow'];

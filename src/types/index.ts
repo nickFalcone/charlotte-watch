@@ -4,3 +4,4 @@ export * from './weather';
 export * from './alerts';
 export * from './flight';
 export * from './here';
+export * from './news';

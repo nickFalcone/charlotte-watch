@@ -103,6 +103,31 @@ git commit -m "feat: add new weather widget metric"
 git push
 ```
 
+## Server-Side Caching
+
+Pages Functions use **Cloudflare KV** (`CACHE` binding) to share responses across all clients, reducing upstream API calls and AI costs.
+
+### What is cached
+
+| Endpoint | Cache key | TTL | Notes |
+|---|---|---|---|
+| `/api/news-charlotte-parsed` | `news:parsed` | 12 hours | Parsed news events (AI pipeline) |
+| `/api/summarize-alerts` | `summary:<hash>` | 15 minutes | Alert BLUF summary, keyed by alert set hash |
+| `/api/cats-alerts` | `alerts:cats` | 15 minutes | CATS transit alerts |
+| `/api/duke-outages` | `alerts:duke` | 15 minutes | Duke Energy outage data |
+| `/api/here-flow` | `alerts:here` | 15 minutes | HERE traffic flow |
+| `/api/faa-status` | `alerts:faa` | 15 minutes | FAA airport status |
+| `/api/opensky-auth` | `alerts:opensky-auth` | 5 minutes | OpenSky auth token (short TTL) |
+| `/api/opensky-states` | `alerts:opensky-states:<hash>` | 15 minutes | Aircraft states, keyed by query params |
+
+### Production setup
+
+The KV namespace must be bound as `CACHE` in the Cloudflare Pages dashboard under **Settings > Bindings**. Without this binding, cache reads/writes will fail gracefully (requests still succeed, but every call hits upstream).
+
+### Local development
+
+The Vite dev plugins for `/api/news-charlotte-parsed` and `/api/summarize-alerts` use an in-memory `Map`-based cache with the same TTLs. Other alert endpoints are proxied directly in dev and are not cached locally.
+
 ## Common Issues
 
 ### "Module not found" after adding new files

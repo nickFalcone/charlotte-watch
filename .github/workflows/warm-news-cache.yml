@@ -1,0 +1,32 @@
+# Warm the news parsed cache so users get fast responses (cache hit).
+# Runs every 8 hours: morning, afternoon, and evening Eastern (Charlotte).
+name: Warm news cache
+
+on:
+  schedule:
+    # 04:00 UTC = 11:00 PM Eastern (prev day EST) / 12:00 AM Eastern (EDT)
+    - cron: '0 4 * * *'
+    # 12:00 UTC = 7:00 AM Eastern (EST) / 8:00 AM Eastern (EDT)
+    - cron: '0 12 * * *'
+    # 20:00 UTC = 3:00 PM Eastern (EST) / 4:00 PM Eastern (EDT)
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+
+jobs:
+  warm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Warm news cache
+        run: |
+          echo "Calling production news endpoint to populate KV cache..."
+          HTTP_CODE=$(curl -sS -o /tmp/response.json -w "%{http_code}" --max-time 180 \
+            "https://clt.watch/api/news-charlotte-parsed")
+          echo "Response HTTP $HTTP_CODE"
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "Cache warm succeeded."
+          else
+            echo "Unexpected response (may be cache hit or error). Body head:"
+            head -c 200 /tmp/response.json
+            exit 0
+          fi

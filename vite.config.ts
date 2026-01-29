@@ -1,6 +1,27 @@
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
-import { BLUF_SYSTEM_PROMPT } from './src/utils/aiPrompts';
+import { BLUF_SYSTEM_PROMPT, NEWS_PARSING_SYSTEM_PROMPT } from './src/utils/aiPrompts';
+
+// In-memory TTL cache for dev plugins (mirrors KV caching in production)
+interface DevCacheEntry {
+  data: string;
+  expiresAt: number;
+}
+const devCache = new Map<string, DevCacheEntry>();
+
+function devCacheGet(key: string): string | null {
+  const entry = devCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    devCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function devCachePut(key: string, data: string, ttlMs: number): void {
+  devCache.set(key, { data, expiresAt: Date.now() + ttlMs });
+}
 
 // Charlotte, NC coordinates and ~30 mile radius
 const CHARLOTTE_LAT = 35.2271;
@@ -128,6 +149,313 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
   };
 }
 
+// Dev-only plugin to handle OpenWebNinja news API without Wrangler/Pages Functions
+function openWebNinjaNewsPlugin(env: Record<string, string>): Plugin {
+  return {
+    name: 'openwebninja-news',
+    configureServer(server) {
+      server.middlewares.use('/api/openwebninja-news', async (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        const apiKey = env.RAPIDAPI_KEY;
+
+        if (!apiKey) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'RapidAPI key not configured' }));
+          return;
+        }
+
+        try {
+          const url = new URL(req.url || '', 'http://localhost');
+          const query =
+            url.searchParams.get('query') ??
+            url.searchParams.get('q') ??
+            'charlotte north carolina';
+          const timePublished = url.searchParams.get('time_published') ?? '48h';
+
+          const params = new URLSearchParams({ query, time_published: timePublished });
+          const response = await fetch(
+            `https://real-time-news-data.p.rapidapi.com/search?${params}`,
+            {
+              method: 'GET',
+              headers: {
+                'x-rapidapi-key': apiKey,
+                'x-rapidapi-host': 'real-time-news-data.p.rapidapi.com',
+                Accept: 'application/json',
+              },
+            }
+          );
+
+          if (!response.ok) {
+            const text = await response.text();
+            res.statusCode = response.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(
+              JSON.stringify({
+                error: `OpenWebNinja API returned ${response.status}`,
+                detail: text.slice(0, 200),
+              })
+            );
+            return;
+          }
+
+          const data = await response.text();
+
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'public, max-age=300');
+          res.end(data);
+        } catch (error) {
+          console.error('[openwebninja-news] Error:', error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              error: 'Failed to fetch news',
+              message: error instanceof Error ? error.message : 'Unknown error',
+            })
+          );
+        }
+      });
+    },
+  };
+}
+
+const OPENWEBNINJA_HOST = 'real-time-news-data.p.rapidapi.com';
+const MAX_ARTICLES_TO_SEND = 80;
+
+interface RawArticleForParse {
+  title: string;
+  snippet: string;
+  published_datetime_utc: string;
+  source_name: string;
+  link: string;
+  article_id?: string;
+}
+
+function buildNewsParseUserPrompt(articles: RawArticleForParse[]): string {
+  const slice = articles.slice(0, MAX_ARTICLES_TO_SEND);
+  return JSON.stringify(
+    slice.map(a => ({
+      title: a.title,
+      snippet: a.snippet,
+      published_datetime_utc: a.published_datetime_utc,
+      source_name: a.source_name,
+      link: a.link,
+      article_id: a.article_id ?? a.link,
+    }))
+  );
+}
+
+function parseJsonArrayFromNews(text: string): unknown[] {
+  const trimmed = text.trim();
+  const stripped = trimmed.replace(/^```\w*\n?|\n?```$/g, '').trim();
+  const parsed = JSON.parse(stripped) as unknown;
+  if (!Array.isArray(parsed)) throw new Error('AI did not return a JSON array');
+  return parsed;
+}
+
+// Dev-only plugin: news fetch + AI parse pipeline (at most ~2x/day from client)
+function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
+  return {
+    name: 'news-charlotte-parsed',
+    configureServer(server) {
+      server.middlewares.use('/api/news-charlotte-parsed', async (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        // In-memory cache (12h TTL, mirrors KV in production)
+        const cached = devCacheGet('news:parsed');
+        if (cached) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'private, max-age=43200');
+          res.end(cached);
+          return;
+        }
+
+        const rapidApiKey = env.RAPIDAPI_KEY;
+        const provider = env.AI_PROVIDER || 'openai';
+        const apiKey = provider === 'anthropic' ? env.ANTHROPIC_API_KEY : env.OPENAI_API_KEY;
+
+        if (!rapidApiKey) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'RapidAPI key not configured' }));
+          return;
+        }
+        if (!apiKey) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: `${provider.toUpperCase()} API key not configured` }));
+          return;
+        }
+
+        try {
+          const params = new URLSearchParams({
+            query: 'charlotte north carolina',
+            time_published: '1d',
+          });
+          const newsFetchOpts = {
+            method: 'GET' as const,
+            headers: {
+              'x-rapidapi-key': rapidApiKey,
+              'x-rapidapi-host': OPENWEBNINJA_HOST,
+              Accept: 'application/json',
+            },
+          };
+          let newsResponse = await fetch(
+            `https://${OPENWEBNINJA_HOST}/search?${params}`,
+            newsFetchOpts
+          );
+          if (newsResponse.status === 429) {
+            await new Promise(r => setTimeout(r, 2000));
+            newsResponse = await fetch(
+              `https://${OPENWEBNINJA_HOST}/search?${params}`,
+              newsFetchOpts
+            );
+          }
+          if (!newsResponse.ok) {
+            const detail = await newsResponse.text();
+            const isRateLimit = newsResponse.status === 429;
+            res.statusCode = isRateLimit ? 503 : newsResponse.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(
+              JSON.stringify({
+                error: isRateLimit ? 'News API rate limit exceeded' : 'Failed to fetch news',
+                detail: detail.slice(0, 200),
+                ...(isRateLimit && {
+                  retryAfter: 'Try again in a few minutes or check your RapidAPI quota.',
+                }),
+              })
+            );
+            return;
+          }
+
+          const newsJson = (await newsResponse.json()) as { data?: RawArticleForParse[] };
+          const articles = newsJson.data ?? [];
+
+          if (articles.length === 0) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Cache-Control', 'private, max-age=43200');
+            res.end(JSON.stringify({ data: [], generatedAt: new Date().toISOString() }));
+            return;
+          }
+
+          const userPrompt = buildNewsParseUserPrompt(articles);
+
+          let rawOutput: string;
+          if (provider === 'anthropic') {
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+              method: 'POST',
+              headers: {
+                'x-api-key': apiKey,
+                'Content-Type': 'application/json',
+                'anthropic-version': '2023-06-01',
+              },
+              body: JSON.stringify({
+                model: 'claude-3-5-haiku-latest',
+                max_tokens: 4096,
+                system: NEWS_PARSING_SYSTEM_PROMPT,
+                messages: [{ role: 'user', content: userPrompt }],
+              }),
+            });
+            if (!response.ok) {
+              const err = await response.text();
+              if (response.status === 429) {
+                res.statusCode = 503;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(
+                  JSON.stringify({
+                    error: 'AI API rate limit exceeded',
+                    detail: err.slice(0, 200),
+                    retryAfter: 'Try again in a few minutes.',
+                  })
+                );
+                return;
+              }
+              throw new Error(`Anthropic API error: ${response.status} - ${err}`);
+            }
+            const data = (await response.json()) as { content?: Array<{ text?: string }> };
+            rawOutput = data.content?.[0]?.text?.trim() ?? '[]';
+          } else {
+            const response = await fetch('https://api.openai.com/v1/responses', {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                instructions: NEWS_PARSING_SYSTEM_PROMPT,
+                input: userPrompt,
+                max_output_tokens: 4096,
+                temperature: 0.2,
+                store: false,
+              }),
+            });
+            if (!response.ok) {
+              const err = await response.text();
+              if (response.status === 429) {
+                res.statusCode = 503;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(
+                  JSON.stringify({
+                    error: 'AI API rate limit exceeded',
+                    detail: err.slice(0, 200),
+                    retryAfter: 'Try again in a few minutes.',
+                  })
+                );
+                return;
+              }
+              throw new Error(`OpenAI API error: ${response.status} - ${err}`);
+            }
+            const data = (await response.json()) as {
+              output?: Array<{ type: string; content?: Array<{ type: string; text?: string }> }>;
+            };
+            const messageOutput = data.output?.find(
+              (item: { type: string }) => item.type === 'message'
+            );
+            const textContent = messageOutput?.content?.find(
+              (c: { type: string }) => c.type === 'output_text'
+            );
+            rawOutput = textContent?.text?.trim() ?? '[]';
+          }
+
+          const data = parseJsonArrayFromNews(rawOutput);
+          const responseBody = JSON.stringify({ data, generatedAt: new Date().toISOString() });
+
+          devCachePut('news:parsed', responseBody, 12 * 60 * 60 * 1000);
+
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', 'private, max-age=43200');
+          res.end(responseBody);
+        } catch (error) {
+          console.error('[news-charlotte-parsed] Error:', error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(
+            JSON.stringify({
+              error: 'Failed to parse news',
+              message: error instanceof Error ? error.message : 'Unknown error',
+            })
+          );
+        }
+      });
+    },
+  };
+}
+
 // Dev-only plugin to handle AI summarization without Wrangler/Pages Functions
 function aiSummarizationPlugin(env: Record<string, string>): Plugin {
   return {
@@ -169,6 +497,18 @@ function aiSummarizationPlugin(env: Record<string, string>): Plugin {
           return;
         }
 
+        // In-memory cache (15min TTL, keyed by hash, mirrors KV in production)
+        if (requestData.hash) {
+          const cached = devCacheGet(`summary:${requestData.hash}`);
+          if (cached) {
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
+            res.setHeader('Cache-Control', 'private, max-age=900');
+            res.end(cached);
+            return;
+          }
+        }
+
         const alerts = requestData.alerts || [];
         const userPrompt =
           alerts.length === 0
@@ -207,15 +547,19 @@ function aiSummarizationPlugin(env: Record<string, string>): Plugin {
           const summary =
             openAIData.choices?.[0]?.message?.content?.trim() || 'Unable to generate summary.';
 
+          const responseBody = JSON.stringify({
+            summary,
+            hash: requestData.hash,
+            generatedAt: new Date().toISOString(),
+          });
+
+          if (requestData.hash) {
+            devCachePut(`summary:${requestData.hash}`, responseBody, 15 * 60 * 1000);
+          }
+
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
-          res.end(
-            JSON.stringify({
-              summary,
-              hash: requestData.hash,
-              generatedAt: new Date().toISOString(),
-            })
-          );
+          res.end(responseBody);
         } catch (error) {
           console.error('[ai-summarization] Error:', error);
           res.statusCode = 500;
@@ -237,7 +581,13 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
 
   return {
-    plugins: [react(), aiSummarizationPlugin(env), dukeOutagePlugin(env)],
+    plugins: [
+      react(),
+      openWebNinjaNewsPlugin(env),
+      newsCharlotteParsedPlugin(env),
+      aiSummarizationPlugin(env),
+      dukeOutagePlugin(env),
+    ],
     server: {
       proxy: {
         // Order matters - more specific paths first

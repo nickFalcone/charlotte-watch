@@ -22,10 +22,16 @@ export interface Env {
   // HERE Maps API for traffic flow
   HERE_API_KEY?: string;
 
+  // OpenWebNinja Real-Time News (RapidAPI)
+  RAPIDAPI_KEY?: string;
+
   // AI Provider settings
   AI_PROVIDER?: 'openai' | 'anthropic';
   OPENAI_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
+
+  // Cloudflare KV
+  CACHE: KVNamespace;
 }
 
 export type CFContext = EventContext<Env, string, unknown>;

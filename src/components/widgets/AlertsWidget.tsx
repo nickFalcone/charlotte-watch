@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { format, formatDistanceToNowStrict, isToday } from 'date-fns';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from 'styled-components';
 import type { WidgetProps } from '../../types';
@@ -19,6 +18,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { formatTimestamp } from '../common';
 import {
   AlertsContainer,
   AlertsHeader,
@@ -104,17 +104,6 @@ function getDisplaySeverity(alert: GenericAlert): string | undefined {
     return alert.metadata.displaySeverity;
   }
   return undefined;
-}
-
-/** Same-day: relative (e.g. "2 hours ago"). Otherwise: "Jan 24 6:20 PM" in local time. */
-function formatAlertTimestamp(date: Date | string | number): string {
-  const d = date instanceof Date ? date : new Date(date);
-  const t = d.getTime();
-  if (Number.isNaN(t)) return 'Invalid date';
-  if (isToday(d)) {
-    return formatDistanceToNowStrict(d, { addSuffix: true });
-  }
-  return format(d, 'MMM d h:mm a');
 }
 
 export function AlertsWidget(_props: WidgetProps) {
@@ -393,8 +382,8 @@ export function AlertsWidget(_props: WidgetProps) {
               <AlertCard
                 key={alert.id}
                 type="button"
-                $severityColor={severityConfig.color}
-                $severityBg={severityConfig.bgColor}
+                $accentColor={severityConfig.color}
+                $accentBg={severityConfig.bgColor}
                 onClick={() => setSelectedAlert(alert)}
               >
                 <AlertCardHeader>
@@ -511,11 +500,11 @@ export function AlertsWidget(_props: WidgetProps) {
                             <AlertModalLabel>Timing</AlertModalLabel>
                             <AlertModalText>
                               {selectedAlert.startTime && (
-                                <>Effective: {formatAlertTimestamp(selectedAlert.startTime)}</>
+                                <>Effective: {formatTimestamp(selectedAlert.startTime)}</>
                               )}
                               {selectedAlert.startTime && selectedAlert.endTime && '\n'}
                               {selectedAlert.endTime && (
-                                <>Expires: {formatAlertTimestamp(selectedAlert.endTime)}</>
+                                <>Expires: {formatTimestamp(selectedAlert.endTime)}</>
                               )}
                             </AlertModalText>
                           </AlertModalSection>
@@ -524,7 +513,7 @@ export function AlertsWidget(_props: WidgetProps) {
                         <AlertModalSection>
                           <AlertModalLabel>Last Updated</AlertModalLabel>
                           <AlertModalText>
-                            {formatAlertTimestamp(selectedAlert.updatedAt)}
+                            {formatTimestamp(selectedAlert.updatedAt)}
                           </AlertModalText>
                         </AlertModalSection>
                       </AlertModalBody>

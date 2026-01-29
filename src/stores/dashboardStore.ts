@@ -180,9 +180,18 @@ export const useDashboardStore = create<DashboardStore>()(
     }),
     {
       name: 'charlotte-dashboard-storage',
-      version: 3,
+      version: 4,
       migrate: (persisted: unknown, fromVersion: number) => {
         if (fromVersion < 3 && persisted != null && typeof persisted === 'object') {
+          const p = persisted as Record<string, unknown>;
+          return {
+            ...p,
+            layouts: DEFAULT_LAYOUTS,
+            widgets: DEFAULT_WIDGET_CONFIGS,
+          };
+        }
+        if (fromVersion < 4 && persisted != null && typeof persisted === 'object') {
+          // Version 3 -> 4: Added 'news' widget. Reset to defaults to include it.
           const p = persisted as Record<string, unknown>;
           return {
             ...p,

@@ -1,6 +1,6 @@
 import type { ComponentType } from 'react';
 
-export type WidgetType = 'weather' | 'flight-tracker' | 'alerts' | 'stocks';
+export type WidgetType = 'weather' | 'flight-tracker' | 'alerts' | 'stocks' | 'news';
 
 export interface WidgetConfig {
   id: string;

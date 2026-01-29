@@ -13,6 +13,23 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     });
   }
 
+  // Check KV cache (15min TTL shared across all clients)
+  const CACHE_KEY = 'alerts:cats';
+  try {
+    const cached = await context.env.CACHE.get(CACHE_KEY);
+    if (cached) {
+      return new Response(cached, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, max-age=900',
+        },
+      });
+    }
+  } catch (e) {
+    console.error('KV cache read error:', e);
+  }
+
   const url = `${CATS_BASE_URL}/feeds/${CATS_FEED_ID}/download_latest_rt/alerts.json`;
 
   try {
@@ -33,11 +50,18 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
     const data = await response.text();
 
+    // Store in KV cache (15min TTL); failures are non-fatal
+    try {
+      await context.env.CACHE.put(CACHE_KEY, data, { expirationTtl: 900 });
+    } catch (e) {
+      console.error('KV cache write error:', e);
+    }
+
     return new Response(data, {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60',
+        'Cache-Control': 'private, max-age=900',
       },
     });
   } catch (error) {
