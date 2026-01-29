@@ -7,7 +7,7 @@ export const ROW_HEIGHT = 100;
 export const MARGIN: [number, number] = [12, 12];
 
 export const DEFAULT_WIDGET_CONFIGS: WidgetConfig[] = [
-  { id: 'alerts-1', type: 'alerts', title: 'Alerts', visible: false }, // testing revert
+  { id: 'alerts-1', type: 'alerts', title: 'Alerts', visible: true },
   { id: 'news-1', type: 'news', title: 'News', visible: true },
   { id: 'flights-1', type: 'flight-tracker', title: 'Flight Tracker', visible: false },
   { id: 'stocks-1', type: 'stocks', title: 'Stocks', visible: false },
