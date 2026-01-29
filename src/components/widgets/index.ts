@@ -3,6 +3,7 @@ import { WeatherWidget } from './WeatherWidget';
 import { FlightTrackerWidget } from './FlightTrackerWidget';
 import { AlertsWidget } from './AlertsWidget';
 import { StockWidget } from './StockWidget';
+import { NewsWidget } from './NewsWidget';
 import { WIDGET_COLORS, WIDGET_ICONS } from './constants';
 
 export const widgetRegistry: Record<WidgetType, WidgetDefinition> = {
@@ -42,6 +43,15 @@ export const widgetRegistry: Record<WidgetType, WidgetDefinition> = {
     icon: WIDGET_ICONS.stocks,
     color: WIDGET_COLORS.stocks,
   },
+  news: {
+    type: 'news',
+    component: NewsWidget,
+    defaultTitle: 'News',
+    defaultSize: { w: 4, h: 4 },
+    minSize: { w: 3, h: 2 },
+    icon: WIDGET_ICONS.news,
+    color: WIDGET_COLORS.news,
+  },
 };
 
 export function getWidgetDefinition(type: WidgetType): WidgetDefinition {
@@ -52,3 +62,4 @@ export { WeatherWidget } from './WeatherWidget';
 export { FlightTrackerWidget } from './FlightTrackerWidget';
 export { AlertsWidget } from './AlertsWidget';
 export { StockWidget } from './StockWidget';
+export { NewsWidget } from './NewsWidget';

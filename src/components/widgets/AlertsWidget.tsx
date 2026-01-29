@@ -393,8 +393,8 @@ export function AlertsWidget(_props: WidgetProps) {
               <AlertCard
                 key={alert.id}
                 type="button"
-                $severityColor={severityConfig.color}
-                $severityBg={severityConfig.bgColor}
+                $accentColor={severityConfig.color}
+                $accentBg={severityConfig.bgColor}
                 onClick={() => setSelectedAlert(alert)}
               >
                 <AlertCardHeader>
