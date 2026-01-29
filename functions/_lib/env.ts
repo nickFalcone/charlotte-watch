@@ -29,6 +29,9 @@ export interface Env {
   AI_PROVIDER?: 'openai' | 'anthropic';
   OPENAI_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
+
+  // Cloudflare KV
+  CACHE: KVNamespace;
 }
 
 export type CFContext = EventContext<Env, string, unknown>;

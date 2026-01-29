@@ -108,6 +108,23 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     });
   }
 
+  // Check KV cache (15min TTL, keyed by alert set hash)
+  const cacheKey = `summary:${request.hash}`;
+  try {
+    const cached = await context.env.CACHE.get(cacheKey);
+    if (cached) {
+      return new Response(cached, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, max-age=900',
+        },
+      });
+    }
+  } catch (e) {
+    console.error('KV cache read error:', e);
+  }
+
   // Limit alerts to prevent abuse
   const alerts = request.alerts.slice(0, MAX_ALERTS);
 
@@ -134,7 +151,16 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       generatedAt: new Date().toISOString(),
     };
 
-    return new Response(JSON.stringify(response), {
+    const responseBody = JSON.stringify(response);
+
+    // Store in KV cache (15min TTL); failures are non-fatal
+    try {
+      await context.env.CACHE.put(cacheKey, responseBody, { expirationTtl: 900 });
+    } catch (e) {
+      console.error('KV cache write error:', e);
+    }
+
+    return new Response(responseBody, {
       status: 200,
       headers: {
         'Content-Type': 'application/json',

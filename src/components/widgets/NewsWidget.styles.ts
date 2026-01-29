@@ -42,3 +42,15 @@ export const ArticleLink = styled.a`
     text-decoration: underline;
   }
 `;
+
+export const SourcesList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+export const SourceItem = styled.div`
+  font-size: 14px;
+  color: ${props => props.theme.colors.text};
+  line-height: 1.5;
+`;

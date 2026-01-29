@@ -3,5 +3,6 @@ dist
 build
 .claude
 .env*
-# Local Netlify folder
+.dev.vars
+.wrangler
 .netlify

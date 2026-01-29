@@ -70,6 +70,15 @@ function parseAndValidateParams(url: URL): URLSearchParams | null {
   return validated;
 }
 
+/** Simple string hash for cache key differentiation. */
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return (hash >>> 0).toString(36);
+}
+
 export const onRequestGet: PagesFunction<Env> = async context => {
   const url = new URL(context.request.url);
   const validatedParams = parseAndValidateParams(url);
@@ -79,6 +88,28 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  // Build cache key from sorted validated params (15min TTL)
+  const sortedParams = [...validatedParams.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${k}=${v}`)
+    .join('&');
+  const cacheKey = `alerts:opensky-states:${simpleHash(sortedParams)}`;
+
+  try {
+    const cached = await context.env.CACHE.get(cacheKey);
+    if (cached) {
+      return new Response(cached, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, max-age=900',
+        },
+      });
+    }
+  } catch (e) {
+    console.error('KV cache read error:', e);
   }
 
   const token = context.request.headers.get('authorization');
@@ -95,12 +126,22 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
     const response = await fetch(apiUrl, { headers, cf: { cacheTtl: 0, cacheEverything: false } });
     const data = await response.json();
+    const responseBody = JSON.stringify(data);
 
-    return new Response(JSON.stringify(data), {
+    if (response.ok) {
+      // Store in KV cache (15min TTL); failures are non-fatal
+      try {
+        await context.env.CACHE.put(cacheKey, responseBody, { expirationTtl: 900 });
+      } catch (e) {
+        console.error('KV cache write error:', e);
+      }
+    }
+
+    return new Response(responseBody, {
       status: response.status,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'Cache-Control': 'private, max-age=900',
       },
     });
   } catch {

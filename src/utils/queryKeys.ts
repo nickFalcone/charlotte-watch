@@ -59,6 +59,7 @@ export const queryKeys = {
    */
   news: {
     charlotte: () => ['news', 'charlotte'] as const,
+    charlotteParsed: () => ['news', 'charlotteParsed'] as const,
   },
 
   /**

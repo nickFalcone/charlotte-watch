@@ -67,6 +67,23 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   }
   // maxJamFactor: do not read or forward; fixed server-side behavior only
 
+  // Check KV cache (15min TTL shared across all clients)
+  const CACHE_KEY = 'alerts:here';
+  try {
+    const cached = await context.env.CACHE.get(CACHE_KEY);
+    if (cached) {
+      return new Response(cached, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, max-age=900',
+        },
+      });
+    }
+  } catch (e) {
+    console.error('KV cache read error:', e);
+  }
+
   try {
     const url = new URL('https://data.traffic.hereapi.com/v7/flow');
     url.searchParams.set('in', inParam || ALLOWED_IN);
@@ -99,12 +116,20 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     }
 
     const data = await response.json();
+    const responseBody = JSON.stringify(data);
 
-    return new Response(JSON.stringify(data), {
+    // Store in KV cache (15min TTL); failures are non-fatal
+    try {
+      await context.env.CACHE.put(CACHE_KEY, responseBody, { expirationTtl: 900 });
+    } catch (e) {
+      console.error('KV cache write error:', e);
+    }
+
+    return new Response(responseBody, {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60',
+        'Cache-Control': 'private, max-age=900',
       },
     });
   } catch (error) {

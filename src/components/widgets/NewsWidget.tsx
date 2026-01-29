@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { formatDistanceToNowStrict, isToday, format } from 'date-fns';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { WidgetProps } from '../../types';
-import type { NewsArticle } from '../../types/news';
+import type { ParsedNewsEvent, ParsedNewsSource } from '../../types/news';
 import { useWidgetMetadata } from '../Widget/useWidgetMetadata';
 import { queryKeys } from '../../utils/queryKeys';
-import { fetchCharlotteNews } from '../../utils/newsApi';
+import { fetchCharlotteNewsParsed } from '../../utils/newsApi';
+import { formatTimestamp } from '../common';
 import infoIcon from '../../assets/icons/info.svg';
 import closeIcon from '../../assets/icons/close.svg';
 import noResultsIcon from '../../assets/icons/no-results.svg';
@@ -16,7 +16,6 @@ import {
   CardItemHeader,
   CardTitleRow,
   CardTitle,
-  CardSummary,
   CardMeta,
   CardMetaItem,
 } from '../common/CardList.styles';
@@ -43,41 +42,41 @@ import {
   ModalBody,
   ModalSection,
   ModalLabel,
-  ModalText,
 } from '../common/DetailModal.styles';
 import {
   NewsContainer,
   NewsHeader,
   ArticleCount,
-  ArticleSource,
   ArticleLink,
+  SourcesList,
+  SourceItem,
 } from './NewsWidget.styles';
 
 const ACCENT_COLOR = '#6366f1';
 
-/** Same-day: relative (e.g. "2 hours ago"). Otherwise: "Jan 24 6:20 PM". */
-function formatNewsTimestamp(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return 'Unknown date';
-  if (isToday(d)) {
-    return formatDistanceToNowStrict(d, { addSuffix: true });
-  }
-  return format(d, 'MMM d h:mm a');
+function mostRecentSourceDate(sources: ParsedNewsSource[]): string | null {
+  if (sources.length === 0) return null;
+  const dates = sources
+    .map(s => new Date(s.published_datetime_utc).getTime())
+    .filter(t => !Number.isNaN(t));
+  if (dates.length === 0) return null;
+  return new Date(Math.max(...dates)).toISOString();
 }
+
+const TWELVE_HOURS_MS = 1000 * 60 * 60 * 12;
 
 export function NewsWidget(_props: WidgetProps) {
   const { setLastUpdated } = useWidgetMetadata();
-  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<ParsedNewsEvent | null>(null);
 
   const { data, dataUpdatedAt, isLoading, isError, error, refetch } = useQuery({
-    queryKey: queryKeys.news.charlotte(),
-    queryFn: ({ signal }) => fetchCharlotteNews(signal),
-    // 12 hour refetch interval
-    refetchInterval: 1000 * 60 * 60 * 12,
-    staleTime: 1000 * 60 * 60 * 12,
+    queryKey: queryKeys.news.charlotteParsed(),
+    queryFn: ({ signal }) => fetchCharlotteNewsParsed(signal),
+    refetchInterval: TWELVE_HOURS_MS,
+    staleTime: TWELVE_HOURS_MS,
   });
 
-  const articles = data?.data ?? [];
+  const events = data?.data ?? [];
 
   // Sync React Query's dataUpdatedAt timestamp to widget metadata context.
   // MUST use useEffect to avoid infinite render loops.
@@ -108,35 +107,42 @@ export function NewsWidget(_props: WidgetProps) {
   return (
     <NewsContainer>
       <NewsHeader>
-        <ArticleCount>{articles.length} ARTICLES</ArticleCount>
+        <ArticleCount>{events.length} EVENTS</ArticleCount>
       </NewsHeader>
 
-      {articles.length === 0 ? (
+      {events.length === 0 ? (
         <EmptyContainer>
           <EmptyIcon src={noResultsIcon} alt="" />
           <EmptyText>No News Available</EmptyText>
-          <EmptySubtext>No recent news found</EmptySubtext>
+          <EmptySubtext>No recent Charlotte news meeting criteria</EmptySubtext>
         </EmptyContainer>
       ) : (
-        <CardList tabIndex={0} role="region" aria-label="News articles">
-          {articles.map((article, index) => (
+        <CardList tabIndex={0} role="region" aria-label="News events">
+          {events.map((event, index) => (
             <CardItem
-              key={`${article.link}-${index}`}
+              key={`${event.event_key}-${index}`}
               type="button"
               $accentColor={ACCENT_COLOR}
-              onClick={() => setSelectedArticle(article)}
+              onClick={() => setSelectedEvent(event)}
             >
               <CardItemHeader>
                 <CardTitleRow>
-                  <CardTitle>{article.title}</CardTitle>
+                  <CardTitle>{event.text}</CardTitle>
                 </CardTitleRow>
               </CardItemHeader>
-              {article.snippet && <CardSummary>{article.snippet}</CardSummary>}
               <CardMeta>
-                <CardMetaItem>
-                  <ArticleSource>{article.source_name}</ArticleSource>
-                </CardMetaItem>
-                <CardMetaItem>{formatNewsTimestamp(article.published_datetime_utc)}</CardMetaItem>
+                {event.sources.length > 0 && (
+                  <>
+                    {mostRecentSourceDate(event.sources) && (
+                      <CardMetaItem>
+                        {formatTimestamp(mostRecentSourceDate(event.sources)!)}
+                      </CardMetaItem>
+                    )}
+                    <CardMetaItem>
+                      {event.sources.length} source{event.sources.length !== 1 ? 's' : ''}
+                    </CardMetaItem>
+                  </>
+                )}
               </CardMeta>
             </CardItem>
           ))}
@@ -144,9 +150,9 @@ export function NewsWidget(_props: WidgetProps) {
       )}
 
       <Dialog.Root
-        open={selectedArticle !== null}
+        open={selectedEvent !== null}
         onOpenChange={open => {
-          if (!open) setSelectedArticle(null);
+          if (!open) setSelectedEvent(null);
         }}
       >
         <Dialog.Portal>
@@ -154,12 +160,12 @@ export function NewsWidget(_props: WidgetProps) {
             <ModalOverlay>
               <Dialog.Content asChild>
                 <ModalContent>
-                  {selectedArticle && (
+                  {selectedEvent && (
                     <>
                       <ModalHeader $color={ACCENT_COLOR}>
                         <ModalTitle>
                           <Dialog.Title asChild>
-                            <ModalTitleText>{selectedArticle.title}</ModalTitleText>
+                            <ModalTitleText>{selectedEvent.text}</ModalTitleText>
                           </Dialog.Title>
                         </ModalTitle>
                         <Dialog.Close asChild>
@@ -170,42 +176,21 @@ export function NewsWidget(_props: WidgetProps) {
                       </ModalHeader>
                       <ModalBody>
                         <ModalSection>
-                          <ModalLabel>Source</ModalLabel>
-                          <ModalText>{selectedArticle.source_name}</ModalText>
-                        </ModalSection>
-
-                        {selectedArticle.authors?.length > 0 && (
-                          <ModalSection>
-                            <ModalLabel>Authors</ModalLabel>
-                            <ModalText>{selectedArticle.authors.join(', ')}</ModalText>
-                          </ModalSection>
-                        )}
-
-                        <ModalSection>
-                          <ModalLabel>Published</ModalLabel>
-                          <ModalText>
-                            {formatNewsTimestamp(selectedArticle.published_datetime_utc)}
-                          </ModalText>
-                        </ModalSection>
-
-                        {selectedArticle.snippet && (
-                          <ModalSection>
-                            <ModalLabel>Summary</ModalLabel>
-                            <ModalText>{selectedArticle.snippet}</ModalText>
-                          </ModalSection>
-                        )}
-
-                        <ModalSection>
-                          <ModalLabel>Read Full Article</ModalLabel>
-                          <ModalText>
-                            <ArticleLink
-                              href={selectedArticle.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {selectedArticle.link}
-                            </ArticleLink>
-                          </ModalText>
+                          <ModalLabel>Sources</ModalLabel>
+                          <SourcesList>
+                            {selectedEvent.sources.map((src, i) => (
+                              <SourceItem key={src.link + i}>
+                                <ArticleLink
+                                  href={src.link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {src.source_name}: {src.title}
+                                </ArticleLink>{' '}
+                                ({formatTimestamp(src.published_datetime_utc)})
+                              </SourceItem>
+                            ))}
+                          </SourcesList>
                         </ModalSection>
                       </ModalBody>
                     </>
