@@ -118,7 +118,9 @@ Pages Functions use **Cloudflare KV** (`CACHE` binding) to share responses acros
 | `/api/here-flow` | `alerts:here` | 15 minutes | HERE traffic flow |
 | `/api/faa-status` | `alerts:faa` | 15 minutes | FAA airport status |
 | `/api/opensky-auth` | `alerts:opensky-auth` | 5 minutes | OpenSky auth token (short TTL) |
-| `/api/opensky-states` | `alerts:opensky-states:<hash>` | 15 minutes | Aircraft states, keyed by query params |
+| `/api/opensky-states` | -- | Not cached | Real-time aircraft positions (15s polling) |
+| `/api/finnhub-quote` | `stock:quote:<SYMBOL>` | 15 minutes | Stock quotes, per symbol |
+| `/api/finnhub-profile` | `stock:profile:<SYMBOL>` | 24 hours | Company profiles, per symbol |
 
 ### Production setup
 

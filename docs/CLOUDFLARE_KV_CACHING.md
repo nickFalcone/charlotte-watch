@@ -57,15 +57,18 @@ CACHE: KVNamespace;
 | `GET /api/here-flow` | `functions/api/here-flow.ts` | `alerts:here` | 15 minutes (900s) | Single key (params are fixed by allowlist) |
 | `GET /api/faa-status` | `functions/api/faa-status.ts` | `alerts:faa` | 15 minutes (900s) | Returns XML (`Content-Type: application/xml`) |
 | `GET /api/opensky-auth` | `functions/api/opensky-auth.ts` | `alerts:opensky-auth` | 5 minutes (300s) | Short TTL because tokens expire |
-| `GET /api/opensky-states` | `functions/api/opensky-states.ts` | `alerts:opensky-states:<hash>` | 15 minutes (900s) | Keyed by djb2 hash of sorted validated query params |
+### Stock data endpoints
+
+| Endpoint | File | Cache key | TTL | Notes |
+|---|---|---|---|---|
+| `GET /api/finnhub-quote` | `functions/api/finnhub-quote.ts` | `stock:quote:<SYMBOL>` | 15 minutes (900s) | Per-symbol key; 38 symbols polled every 15min during market hours |
+| `GET /api/finnhub-profile` | `functions/api/finnhub-profile.ts` | `stock:profile:<SYMBOL>` | 24 hours (86400s) | Per-symbol key; company info rarely changes |
 
 ### Not cached
 
 | Endpoint | File | Reason |
 |---|---|---|
-| `GET /api/openwebninja-news` | `functions/api/openwebninja-news.ts` | Raw news proxy; parsed news is cached separately |
-| `GET /api/finnhub-quote` | `functions/api/finnhub-quote.ts` | Stock data, not alert-related |
-| `GET /api/finnhub-profile` | `functions/api/finnhub-profile.ts` | Stock data, not alert-related |
+| `GET /api/opensky-states` | `functions/api/opensky-states.ts` | Real-time aircraft positions; polled every 15s by flight tracker |
 
 ---
 

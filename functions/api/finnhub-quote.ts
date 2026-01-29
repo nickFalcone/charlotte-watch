@@ -34,8 +34,27 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     });
   }
 
+  const upperSymbol = symbol.toUpperCase();
+
+  // Check KV cache (15min TTL per symbol, shared across all clients)
+  const cacheKey = `stock:quote:${upperSymbol}`;
   try {
-    const params = new URLSearchParams({ symbol: symbol.toUpperCase() });
+    const cached = await context.env.CACHE.get(cacheKey);
+    if (cached) {
+      return new Response(cached, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'private, max-age=900',
+        },
+      });
+    }
+  } catch (e) {
+    console.error('KV cache read error:', e);
+  }
+
+  try {
+    const params = new URLSearchParams({ symbol: upperSymbol });
     const response = await fetch(`https://finnhub.io/api/v1/quote?${params}`, {
       method: 'GET',
       headers: {
@@ -53,11 +72,18 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
     const data = await response.text();
 
+    // Store in KV cache (15min TTL); failures are non-fatal
+    try {
+      await context.env.CACHE.put(cacheKey, data, { expirationTtl: 900 });
+    } catch (e) {
+      console.error('KV cache write error:', e);
+    }
+
     return new Response(data, {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60',
+        'Cache-Control': 'private, max-age=900',
       },
     });
   } catch (error) {
