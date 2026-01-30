@@ -97,7 +97,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   try {
     const params = new URLSearchParams({
       query: 'charlotte north carolina',
-      time_published: '1d',
+      time_published: '7d', // Broadened from 1d to capture more articles for corroboration
     });
     const newsFetchOptions = {
       method: 'GET' as const,

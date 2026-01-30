@@ -21,6 +21,10 @@ jobs:
         run: |
           echo "Calling production news endpoint to populate KV cache..."
           HTTP_CODE=$(curl -sS -o /tmp/response.json -w "%{http_code}" --max-time 180 \
+            -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" \
+            -H "Accept: application/json, text/plain, */*" \
+            -H "Accept-Language: en-US,en;q=0.9" \
+            -H "Referer: https://clt.watch/" \
             "https://clt.watch/api/news-charlotte-parsed")
           echo "Response HTTP $HTTP_CODE"
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then

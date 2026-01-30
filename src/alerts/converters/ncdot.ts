@@ -4,6 +4,63 @@ import { mapNCDOTSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 import { getCharlotteRoadDisplay } from '../../utils/ncdotApi';
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
 
+// Nighttime hours (8 PM to 6 AM)
+const NIGHTTIME_START_HOUR = 20;
+const NIGHTTIME_END_HOUR = 6;
+const MIN_LANE_CLOSURE_PERCENT = 0.5;
+
+// Check if current time is nighttime
+function isNighttime(): boolean {
+  const hour = new Date().getHours();
+  return hour >= NIGHTTIME_START_HOUR || hour < NIGHTTIME_END_HOUR;
+}
+
+// Check if incident is maintenance or construction
+function isMaintenanceOrConstruction(incident: NCDOTIncident): boolean {
+  const type = incident.incidentType.toLowerCase();
+  const reason = incident.reason.toLowerCase();
+  const condition = incident.condition.toLowerCase();
+
+  return (
+    type.includes('construction') ||
+    type.includes('maintenance') ||
+    reason.includes('construction') ||
+    reason.includes('maintenance') ||
+    condition.includes('construction') ||
+    condition.includes('maintenance') ||
+    incident.inWorkZone
+  );
+}
+
+// Check if incident should be filtered out
+function shouldFilterIncident(incident: NCDOTIncident): boolean {
+  // Never filter crashes, fatalities, or bridge incidents
+  const type = incident.incidentType.toLowerCase();
+  const isCrash =
+    type.includes('accident') ||
+    type.includes('collision') ||
+    type.includes('crash') ||
+    incident.fatality;
+
+  if (isCrash || incident.bridgeInvolved) {
+    return false;
+  }
+
+  // Check if it's nighttime maintenance/construction with minor lane closures
+  if (!isNighttime() || !isMaintenanceOrConstruction(incident)) {
+    return false;
+  }
+
+  // Filter if less than 50% of lanes are closed
+  if (incident.lanesTotal > 0) {
+    const closurePercent = incident.lanesClosed / incident.lanesTotal;
+    return closurePercent < MIN_LANE_CLOSURE_PERCENT;
+  }
+
+  // If we can't determine lane closure percentage, keep it
+  return false;
+}
+
 // Format incident end time for display
 function formatIncidentEndTime(endTime: string | undefined): string | undefined {
   if (!endTime) return undefined;
@@ -25,7 +82,12 @@ function formatIncidentEndTime(endTime: string | undefined): string | undefined 
 }
 
 // Convert NC DOT incident to generic alert format
-export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericAlert {
+// Returns null for filtered nighttime maintenance/construction with <50% lane closures
+export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericAlert | null {
+  // Filter out low-impact nighttime maintenance/construction
+  if (shouldFilterIncident(incident)) {
+    return null;
+  }
   const severity = mapNCDOTSeverity({
     fatality: incident.fatality,
     bridgeInvolved: incident.bridgeInvolved,
@@ -140,6 +202,9 @@ export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericA
 }
 
 // Convert all NC DOT incidents to generic format
+// Filters out nighttime maintenance/construction with <50% lane closures
 export function convertNCDOTIncidentsToGeneric(incidents: NCDOTIncident[]): GenericAlert[] {
-  return incidents.map(convertNCDOTIncidentToGeneric);
+  return incidents
+    .map(convertNCDOTIncidentToGeneric)
+    .filter((alert): alert is GenericAlert => alert !== null);
 }

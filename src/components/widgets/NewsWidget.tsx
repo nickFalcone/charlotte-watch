@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import * as Dialog from '@radix-ui/react-dialog';
+import * as Popover from '@radix-ui/react-popover';
 import type { WidgetProps } from '../../types';
 import type { ParsedNewsEvent, ParsedNewsSource } from '../../types/news';
 import { useWidgetMetadata } from '../Widget/useWidgetMetadata';
@@ -18,8 +19,6 @@ import {
   CardTitle,
   CardMeta,
   CardMetaItem,
-} from '../common/CardList.styles';
-import {
   LoadingContainer,
   LoadingIcon,
   LoadingText,
@@ -30,8 +29,6 @@ import {
   EmptyIcon,
   EmptyText,
   EmptySubtext,
-} from '../common/WidgetStates.styles';
-import {
   ModalOverlay,
   ModalContent,
   ModalHeader,
@@ -42,7 +39,10 @@ import {
   ModalBody,
   ModalSection,
   ModalLabel,
-} from '../common/DetailModal.styles';
+  InfoIcon,
+  InfoTrigger,
+  PopoverContent,
+} from '../common';
 import {
   NewsContainer,
   NewsHeader,
@@ -76,7 +76,8 @@ export function NewsWidget(_props: WidgetProps) {
     staleTime: TWELVE_HOURS_MS,
   });
 
-  const events = data?.data ?? [];
+  // Filter to only show events with 2+ corroborating sources
+  const events = (data?.data ?? []).filter(event => event.sources.length >= 2);
 
   // Sync React Query's dataUpdatedAt timestamp to widget metadata context.
   // MUST use useEffect to avoid infinite render loops.
@@ -107,7 +108,23 @@ export function NewsWidget(_props: WidgetProps) {
   return (
     <NewsContainer>
       <NewsHeader>
-        <ArticleCount>{events.length} EVENTS</ArticleCount>
+        <ArticleCount>
+          {events.length} EVENT{events.length !== 1 ? 'S' : ''}
+        </ArticleCount>
+        <Popover.Root>
+          <Popover.Trigger asChild>
+            <InfoTrigger aria-label="About news sources">
+              <InfoIcon src={infoIcon} alt="" aria-hidden />
+            </InfoTrigger>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content side="top" sideOffset={6} asChild>
+              <PopoverContent>
+                News events shown require at least 2 corroborating sources for verification.
+              </PopoverContent>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
       </NewsHeader>
 
       {events.length === 0 ? (
@@ -176,7 +193,9 @@ export function NewsWidget(_props: WidgetProps) {
                       </ModalHeader>
                       <ModalBody>
                         <ModalSection>
-                          <ModalLabel>Sources</ModalLabel>
+                          <ModalLabel>
+                            Source{selectedEvent.sources.length > 1 ? 's' : ''}
+                          </ModalLabel>
                           <SourcesList>
                             {selectedEvent.sources.map((src, i) => (
                               <SourceItem key={src.link + i}>
@@ -185,7 +204,7 @@ export function NewsWidget(_props: WidgetProps) {
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
-                                  {src.source_name}: {src.title}
+                                  {src.source_name}
                                 </ArticleLink>{' '}
                                 ({formatTimestamp(src.published_datetime_utc)})
                               </SourceItem>

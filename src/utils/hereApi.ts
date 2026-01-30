@@ -38,7 +38,7 @@ async function fetchRouteFlow(route: HereRoute, signal?: AbortSignal): Promise<H
   const params = new URLSearchParams({
     in: route.in,
     locationReferencing: 'shape',
-    minJamFactor: '8', // Jam 8+ approximates heavier congestion; 50% slower enforced by MIN_CONGESTION_PERCENT
+    minJamFactor: '8', // Jam 8+ approximates heavier congestion; 80% slower enforced by MIN_CONGESTION_PERCENT
   });
 
   // In production, the Netlify function handles the API key
@@ -133,7 +133,7 @@ function getEffectiveFreeFlow(flow: HereFlowResult['currentFlow']): number {
 }
 
 const MIN_JAM_ALERT = 7; // maxJamFactor > 7
-const MIN_CONGESTION_PERCENT = 50; // only alert when at least 50% slower than free flow
+const MIN_CONGESTION_PERCENT = 80; // only alert when at least 80% slower than free flow
 
 /**
  * Group results by location.description, compute per-road stats.

@@ -4,6 +4,13 @@ import { mapCMPDSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 import { getCMPDIncidentCategory } from '../../types/cmpd';
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
 
+// Filter thresholds
+const MAX_EVENT_AGE_HOURS = 3;
+const EXCLUDED_TYPES = new Set([
+  'AC-R/PD', // Property-damage-only accidents
+  'HR-R/PD', // Hit & run - property damage
+]);
+
 // Format CMPD event time for display
 function formatCMPDEventTime(eventDateTime: string): string {
   try {
@@ -15,8 +22,36 @@ function formatCMPDEventTime(eventDateTime: string): string {
   }
 }
 
+// Check if event should be filtered out
+function shouldFilterEvent(event: CMPDTrafficEvent): boolean {
+  // Filter property-damage-only accidents
+  if (EXCLUDED_TYPES.has(event.typeCode)) {
+    return true;
+  }
+
+  // Filter events older than threshold
+  try {
+    const eventTime = new Date(event.eventDateTime).getTime();
+    const now = Date.now();
+    const ageHours = (now - eventTime) / (1000 * 60 * 60);
+    if (ageHours > MAX_EVENT_AGE_HOURS) {
+      return true;
+    }
+  } catch {
+    // If we can't parse the time, keep the event
+    return false;
+  }
+
+  return false;
+}
+
 // Convert CMPD traffic event to generic alert format
-export function convertCMPDEventToGeneric(event: CMPDTrafficEvent): GenericAlert {
+// Returns null for filtered events (property damage, old reports)
+export function convertCMPDEventToGeneric(event: CMPDTrafficEvent): GenericAlert | null {
+  // Filter out low-priority events
+  if (shouldFilterEvent(event)) {
+    return null;
+  }
   const severity = mapCMPDSeverity({
     typeCode: event.typeCode,
     typeDescription: event.typeDescription,
@@ -100,6 +135,9 @@ export function convertCMPDEventToGeneric(event: CMPDTrafficEvent): GenericAlert
 }
 
 // Convert all CMPD traffic events to generic format
+// Filters out property-damage accidents and events older than 3 hours
 export function convertCMPDEventsToGeneric(events: CMPDTrafficEvent[]): GenericAlert[] {
-  return events.map(convertCMPDEventToGeneric);
+  return events
+    .map(convertCMPDEventToGeneric)
+    .filter((alert): alert is GenericAlert => alert !== null);
 }
