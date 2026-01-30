@@ -28,7 +28,7 @@ interface ParsedNewsEvent {
   }>;
 }
 
-const MAX_ARTICLES_TO_SEND = 100;
+const MAX_ARTICLES_TO_SEND = 50;
 
 function buildUserPrompt(articles: RawArticle[]): string {
   const slice = articles.slice(0, MAX_ARTICLES_TO_SEND);
