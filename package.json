@@ -7,6 +7,7 @@
     "dev": "vite",
     "dev:pages": "npm run build && npx wrangler pages dev dist --kv=CACHE",
     "build": "tsc -b && vite build",
+    "deploy:cache-warmer": "npx wrangler deploy --config workers/wrangler.toml",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

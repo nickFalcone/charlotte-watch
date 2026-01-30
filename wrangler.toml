@@ -6,3 +6,6 @@ pages_build_output_dir = "dist"
 
 # Note: KV namespace bindings are configured via Cloudflare Pages dashboard,
 # not in this file. For local dev, use --local-protocol=https for auto preview KV.
+
+# Cache warmer Worker is configured separately in workers/wrangler.toml
+# Deploy it with: npm run deploy:cache-warmer
