@@ -183,7 +183,7 @@ export function mapFAADelaySeverity(delayMinutes: number): AlertSeverity {
 // Helper to map Duke Energy outage severity based on customers affected
 export function mapDukeOutageSeverity(customersAffected: number): AlertSeverity {
   if (customersAffected >= 100) return 'critical';
-  if (customersAffected >= 20) return 'moderate';
+  if (customersAffected >= 50) return 'moderate';
   return 'minor';
 }
 

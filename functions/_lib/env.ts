@@ -30,6 +30,9 @@ export interface Env {
   OPENAI_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
 
+  // Cache warming secret for GitHub Actions workflow
+  CACHE_WARMING_SECRET?: string;
+
   // Cloudflare KV
   CACHE: KVNamespace;
 }

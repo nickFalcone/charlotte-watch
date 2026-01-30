@@ -18,7 +18,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { formatTimestamp } from '../common';
+import { formatTimestamp, InfoIcon, InfoTrigger, PopoverContent } from '../common';
 import {
   AlertsContainer,
   AlertsHeader,
@@ -63,9 +63,6 @@ import {
   AISummaryContainer,
   AISummaryRow,
   AISummaryText,
-  AISummaryInfoIcon,
-  AISummaryInfoTrigger,
-  AISummaryPopoverContent,
   AISummarySkeleton,
   AISummarySkeletonLine,
   AISummaryError,
@@ -298,16 +295,16 @@ export function AlertsWidget(_props: WidgetProps) {
               <AISummaryText>{summaryData.summary}</AISummaryText>
               <Popover.Root>
                 <Popover.Trigger asChild>
-                  <AISummaryInfoTrigger aria-label="About AI summary">
-                    <AISummaryInfoIcon src={infoIcon} alt="" aria-hidden />
-                  </AISummaryInfoTrigger>
+                  <InfoTrigger aria-label="About AI summary">
+                    <InfoIcon src={infoIcon} alt="" aria-hidden />
+                  </InfoTrigger>
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Content side="top" sideOffset={6} asChild>
-                    <AISummaryPopoverContent>
+                    <PopoverContent>
                       This is an AI-generated summary of all recent alerts. Always confirm details
                       with the source references.
-                    </AISummaryPopoverContent>
+                    </PopoverContent>
                   </Popover.Content>
                 </Popover.Portal>
               </Popover.Root>

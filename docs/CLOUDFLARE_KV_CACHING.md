@@ -159,9 +159,25 @@ Since all clients receive the same raw alert data from KV-cached endpoints withi
 
 ---
 
+## Cache warming
+
+The news cache is automatically warmed every 8 hours by a scheduled Cloudflare Worker to ensure users get fast cache-hit responses.
+
+**Schedule:** 04:00, 12:00, and 20:00 UTC (every 8 hours)
+- 04:00 UTC = 11 PM Eastern (prev day EST) / 12 AM Eastern (EDT)
+- 12:00 UTC = 7 AM Eastern (EST) / 8 AM Eastern (EDT)
+- 20:00 UTC = 3 PM Eastern (EST) / 4 PM Eastern (EDT)
+
+**Implementation:** `workers/cache-warmer.ts` with config in `workers/wrangler.toml`
+
+**Deploy:** `npm run deploy:cache-warmer`
+
+**View logs:** Cloudflare Dashboard → Workers & Pages → charlotte-monitor-cache-warmer → Logs
+
+---
+
 ## Possible future improvements
 
 - **Background revalidation for news:** Trigger a re-fetch at ~11h to keep the cache warm and avoid cold-start latency after expiration.
-- **Cache warming on deploy:** A post-deploy script could hit key endpoints to pre-populate KV.
 - **Cache invalidation API:** An admin endpoint to manually purge specific keys (e.g. after a data correction).
 - **Metrics:** Log cache hit/miss counts per endpoint for observability.

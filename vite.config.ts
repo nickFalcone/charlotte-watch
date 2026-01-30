@@ -150,7 +150,7 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
 }
 
 const OPENWEBNINJA_HOST = 'real-time-news-data.p.rapidapi.com';
-const MAX_ARTICLES_TO_SEND = 80;
+const MAX_ARTICLES_TO_SEND = 100;
 
 interface RawArticleForParse {
   title: string;

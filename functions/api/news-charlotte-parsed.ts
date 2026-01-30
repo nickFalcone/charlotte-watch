@@ -55,6 +55,11 @@ function parseJsonArray(text: string): ParsedNewsEvent[] {
 }
 
 export const onRequestGet: PagesFunction<Env> = async context => {
+  // Check for cache warming secret (allows GitHub Actions to bypass Cloudflare bot detection)
+  const warmingSecret = context.request.headers.get('x-cache-warming-secret');
+  const expectedSecret = context.env.CACHE_WARMING_SECRET;
+  const isWarmingRequest = warmingSecret && expectedSecret && warmingSecret === expectedSecret;
+
   // Check KV cache first (12h TTL shared across all clients)
   const CACHE_KEY = 'news:parsed';
   try {
@@ -65,6 +70,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         headers: {
           'Content-Type': 'application/json',
           'Cache-Control': 'private, max-age=43200',
+          ...(isWarmingRequest && { 'X-Cache-Status': 'HIT' }),
         },
       });
     }
@@ -97,7 +103,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   try {
     const params = new URLSearchParams({
       query: 'charlotte north carolina',
-      time_published: '1d',
+      time_published: '7d', // Broadened from 1d to capture more articles for corroboration
     });
     const newsFetchOptions = {
       method: 'GET' as const,
@@ -232,6 +238,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'private, max-age=43200',
+        ...(isWarmingRequest && { 'X-Cache-Status': 'MISS' }),
       },
     });
   } catch (error) {

@@ -36,15 +36,19 @@ export function computeAlertsHash(alerts: GenericAlert[]): string {
 /**
  * Prepare alerts for the summarization API.
  * Extracts only the fields needed for summarization to minimize payload.
+ * Filters out traffic alerts (accidents, congestion, road work) as they are
+ * ephemeral and not actionable like weather/power/transit alerts.
  */
 function prepareAlertsForSummary(alerts: GenericAlert[]): AlertForSummary[] {
-  return alerts.map(alert => ({
-    title: alert.title,
-    summary: alert.summary,
-    severity: alert.severity,
-    source: alert.source,
-    category: alert.category,
-  }));
+  return alerts
+    .filter(alert => alert.category !== 'traffic')
+    .map(alert => ({
+      title: alert.title,
+      summary: alert.summary,
+      severity: alert.severity,
+      source: alert.source,
+      category: alert.category,
+    }));
 }
 
 /**

@@ -29,7 +29,7 @@ export const ModalContent = styled.div`
 
 export const ModalHeader = styled.div<{ $color: string }>`
   display: flex;
-  align-items: center;
+  align-items: top;
   justify-content: space-between;
   padding: 16px 20px;
   background: ${({ $color }) => `${$color}15`};
@@ -43,7 +43,7 @@ export const ModalTitle = styled.div`
 `;
 
 export const ModalTitleText = styled.h3`
-  margin: 0;
+  margin: 0 12px 0 0;
   font-size: 16px;
   font-weight: 600;
   color: ${props => props.theme.colors.text};
