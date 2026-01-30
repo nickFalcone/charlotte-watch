@@ -4,9 +4,5 @@ compatibility_date = "2024-01-01"
 # Pages Functions configuration
 pages_build_output_dir = "dist"
 
-# KV namespace binding for local development
-# In production, this is configured via Cloudflare dashboard
-[[kv_namespaces]]
-binding = "CACHE"
-id = "local-dev-cache"
-preview_id = "local-dev-cache"
+# Note: KV namespace bindings are configured via Cloudflare Pages dashboard,
+# not in this file. For local dev, use --local-protocol=https for auto preview KV.

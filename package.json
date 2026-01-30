@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:pages": "npm run build && npx wrangler pages dev dist",
+    "dev:pages": "npm run build && npx wrangler pages dev dist --kv=CACHE",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
