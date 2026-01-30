@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 3
     steps:
       - name: Warm news cache
+        env:
+          CACHE_WARMING_SECRET: ${{ secrets.CACHE_WARMING_SECRET }}
         run: |
           echo "Calling production news endpoint to populate KV cache..."
           HTTP_CODE=$(curl -sS -o /tmp/response.json -w "%{http_code}" --max-time 180 \
@@ -25,12 +27,21 @@ jobs:
             -H "Accept: application/json, text/plain, */*" \
             -H "Accept-Language: en-US,en;q=0.9" \
             -H "Referer: https://clt.watch/" \
+            -H "X-Cache-Warming-Secret: ${CACHE_WARMING_SECRET}" \
             "https://clt.watch/api/news-charlotte-parsed")
           echo "Response HTTP $HTTP_CODE"
+
+          # Extract cache status if available
+          CACHE_STATUS=$(grep -i "X-Cache-Status" /tmp/response_headers.txt 2>/dev/null | cut -d: -f2 | tr -d ' \r' || echo "")
+
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
-            echo "Cache warm succeeded."
+            if [ -n "$CACHE_STATUS" ]; then
+              echo "Cache warm succeeded. Status: $CACHE_STATUS"
+            else
+              echo "Cache warm succeeded."
+            fi
           else
-            echo "Unexpected response (may be cache hit or error). Body head:"
+            echo "Unexpected response. Body head:"
             head -c 200 /tmp/response.json
-            exit 0
+            exit 1
           fi
