@@ -17,7 +17,7 @@ import { ALERT_SEVERITY_CONFIG } from '../../types';
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
 
 const MIN_JAM_ALERT = 7;
-const MIN_CONGESTION_PERCENT = 80;
+const MIN_CONGESTION_PERCENT = 90;
 
 function num(v: number): number {
   return Number.isFinite(v) ? v : 0;
