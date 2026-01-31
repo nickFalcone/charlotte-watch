@@ -164,7 +164,6 @@ export const ALERT_SEVERITY_CONFIG = getAlertSeverityConfig({ name: 'dark' } as 
 const NWS_CRITICAL_EVENT_PATTERNS = [
   'extreme cold',
   'heat warning',
-  'heat advisory',
   'blizzard',
   'ice storm',
   'tornado',

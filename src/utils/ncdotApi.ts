@@ -73,7 +73,7 @@ function extractMileMarkers(location: string): { start: number; end: number } | 
  */
 function extractProjectNumber(reason: string): string | null {
   // Match patterns like "C204556", "project C204556", "C-204556", etc.
-  const match = reason.match(/\b([C]?-?\d{6})\b/i);
+  const match = reason.match(/\b(C?-?\d{6})\b/i);
   if (!match) return null;
 
   const num = match[1].replace(/-/g, '').toUpperCase();
@@ -154,7 +154,6 @@ function consolidateSimilarIncidents(incidents: NCDOTIncident[]): NCDOTIncident[
   // Group incidents by consolidation key
   for (const incident of incidents) {
     const key = getConsolidationKey(incident);
-    console.log(`[NCDOT] Incident ${incident.id} key: ${key}`);
     const group = groups.get(key) || [];
     group.push(incident);
     groups.set(key, group);
@@ -163,14 +162,7 @@ function consolidateSimilarIncidents(incidents: NCDOTIncident[]): NCDOTIncident[
   // Merge each group into a single incident
   const consolidated: NCDOTIncident[] = [];
 
-  console.log(`[NCDOT] Found ${groups.size} unique consolidation groups`);
-  for (const [key, group] of groups.entries()) {
-    if (group.length > 1) {
-      console.log(
-        `[NCDOT] Group "${key}" has ${group.length} incidents:`,
-        group.map(i => i.id)
-      );
-    }
+  for (const group of groups.values()) {
     if (group.length === 1) {
       consolidated.push(group[0]);
       continue;

@@ -74,13 +74,11 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
     if (!response.ok) {
       const errText = await response.text();
-      return new Response(
-        JSON.stringify({ error: `Twitter API returned ${response.status}`, detail: errText }),
-        {
-          status: response.status,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      console.error('CATS Twitter API error:', response.status, errText);
+      return new Response(JSON.stringify({ error: `Twitter API returned ${response.status}` }), {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     const body: TwitterApiResponse = await response.json();

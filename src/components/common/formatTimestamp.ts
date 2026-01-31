@@ -16,7 +16,7 @@ export function formatTimestamp(date: Date | string | number): string {
 }
 
 /**
- * Format for AI summary "generated at" timestamp: "Jan-31 @ 2:16 PM EST" (locale, 12h, timezone).
+ * Format for AI summary "generated at" timestamp: "Jan-31, 2:16 PM EST" (locale, 12h, timezone).
  */
 export function formatGeneratedAt(date: Date | string): string {
   const d = date instanceof Date ? date : new Date(date);

@@ -203,11 +203,6 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
     let totalFree = 0;
     let maxCongestion = 0;
 
-    // Log segment details for debugging
-    const origNames = Array.from(originalNames.get(routeName) ?? []);
-    console.log(`[HERE] Processing route: ${routeName} (${group.length} segments)`);
-    console.log(`[HERE]   Original names:`, origNames);
-
     for (const r of group) {
       const flow = r.currentFlow;
       const j =
@@ -242,18 +237,13 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
     // Only alert on major routes (interstates, US highways, major NC routes)
     // Skip minor roads, residential streets, etc. to reduce noise
     const isMajorRoute =
-      routeName.startsWith('I-') ||
-      routeName.startsWith('US-') ||
-      routeName.startsWith('NC-') ||
-      routeName.match(/^I-\d+/); // Catch any interstate patterns
+      routeName.startsWith('I-') || routeName.startsWith('US-') || routeName.startsWith('NC-');
     if (!isMajorRoute) {
-      console.log(`[HERE] Skipping minor road: ${routeName}`);
       continue;
     }
 
     // Require minimum segment count to filter isolated incidents
     if (n < MIN_SEGMENT_COUNT) {
-      console.log(`[HERE] Skipping route with too few segments: ${routeName} (${n} segments)`);
       continue;
     }
 

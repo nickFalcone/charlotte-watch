@@ -53,7 +53,4 @@ export const DUKE_SEVERITY_THRESHOLDS = {
   MIN_CARD: 10,
   /** Minimum customers for a single outage to be included in the AI summary bullet (100+ = moderate+) */
   MIN_SUMMARY: 100,
-  severe: 500,
-  warning: 100,
-  minor: 10,
 } as const;

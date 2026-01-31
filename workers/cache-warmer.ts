@@ -114,7 +114,6 @@ async function warmNewsCache(
 
   const newsJson = (await newsResponse.json()) as { data?: RawArticle[] };
   const articles = newsJson.data ?? [];
-  console.log(`Fetched ${articles.length} articles from RapidAPI`);
 
   if (articles.length === 0) {
     const body = JSON.stringify({ data: [], generatedAt: new Date().toISOString() });
@@ -160,7 +159,6 @@ async function warmNewsCache(
 
   // 3. Parse response
   const data = parseJsonArray(rawOutput);
-  console.log(`Parsed ${data.length} news events`);
 
   // 4. Write to KV (12h TTL)
   const responseBody = JSON.stringify({
@@ -168,17 +166,16 @@ async function warmNewsCache(
     generatedAt: new Date().toISOString(),
   });
   await env.CACHE.put(CACHE_KEY, responseBody, { expirationTtl: 43200 });
-  console.log('KV cache updated');
 
   return { success: true, eventCount: data.length, articlesFound: articles.length };
 }
 
 export default {
   async scheduled(event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
-    console.log('Cache warming cron triggered at', new Date(event.scheduledTime).toISOString());
+    console.info('Cache warming cron triggered at', new Date(event.scheduledTime).toISOString());
     try {
       const result = await warmNewsCache(env);
-      console.log(
+      console.info(
         `Cache warm complete: ${result.eventCount} events from ${result.articlesFound} articles`
       );
     } catch (error) {

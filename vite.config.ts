@@ -65,7 +65,6 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
         }
 
         const dukeAuth = env.DUKE_OUTAGE_AUTH;
-        console.log('[duke-outage-enrichment] Auth configured:', !!dukeAuth);
         if (!dukeAuth) {
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
@@ -82,9 +81,7 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
           // Step 1: Fetch list of all outages
           const listUrl =
             'https://prod.apigee.duke-energy.app/outage-maps/v1/outages?jurisdiction=DEC';
-          console.log('[duke-outage-enrichment] Fetching list from:', listUrl);
           const listResponse = await fetch(listUrl, { method: 'GET', headers });
-          console.log('[duke-outage-enrichment] List response status:', listResponse.status);
 
           if (!listResponse.ok) {
             res.statusCode = listResponse.status;
@@ -391,11 +388,11 @@ function isServiceAlertTweet(text: string): boolean {
   const serviceTerms =
     /suspend|suspended|blue line|gold line|bus service|operational|on schedule|delays?|detour|road closed|no service|micro service|micro |tracks|blocked|ctc|station|route|reopening|winter weather|road conditions|express bus|streetcar/i;
   const excludeTerms =
-    /live now|virtual meeting|fare study|fare modernization|hosting a |join us|be there to share|want to learn more about fare|book demo/i;
+    /live now|meeting|fare study|fare modernization|hosting a |join us|be there to share|want to learn more about fare|book demo/i;
   return serviceTerms.test(lower) && !excludeTerms.test(lower);
 }
 
-function isWithinLast24Hours(createdAt: string): boolean {
+function isWithinLast12Hours(createdAt: string): boolean {
   const ts = new Date(createdAt).getTime();
   return ts > Date.now() - TWELVE_HOURS_MS;
 }
@@ -457,7 +454,7 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
               t.author?.id === CATS_TWITTER_USER_ID &&
               (t.type === 'tweet' || t.type === 'quote') &&
               isServiceAlertTweet(t.text) &&
-              isWithinLast24Hours(t.createdAt)
+              isWithinLast12Hours(t.createdAt)
           );
           const responseBody = JSON.stringify({ data: catsTweets });
           devCachePut('cats-twitter', responseBody, CATS_TWITTER_CACHE_TTL_MS);
