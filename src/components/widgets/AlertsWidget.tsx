@@ -18,7 +18,13 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { formatTimestamp, InfoIcon, InfoTrigger, PopoverContent } from '../common';
+import {
+  formatGeneratedAt,
+  formatTimestamp,
+  InfoIcon,
+  InfoTrigger,
+  PopoverContent,
+} from '../common';
 import {
   AlertsContainer,
   AlertsHeader,
@@ -63,6 +69,11 @@ import {
   AISummaryContainer,
   AISummaryRow,
   AISummaryText,
+  AISummaryTitleRow,
+  AISummaryList,
+  AISummaryListItem,
+  AISummaryGeneratedAt,
+  AISummaryTitle,
   AISummarySkeleton,
   AISummarySkeletonLine,
   AISummaryError,
@@ -101,6 +112,24 @@ function getDisplaySeverity(alert: GenericAlert): string | undefined {
     return alert.metadata.displaySeverity;
   }
   return undefined;
+}
+
+function AISummaryContent({ summary }: { summary: string }) {
+  const raw = summary.trim();
+  const lines = raw
+    .split(/\n/)
+    .map(line => line.replace(/^\s*[-*•]\s*/, '').trim())
+    .filter(Boolean);
+  if (lines.length > 1) {
+    return (
+      <AISummaryList>
+        {lines.map((line, i) => (
+          <AISummaryListItem key={i}>{line}</AISummaryListItem>
+        ))}
+      </AISummaryList>
+    );
+  }
+  return <>{lines[0] ?? raw}</>;
 }
 
 export function AlertsWidget(_props: WidgetProps) {
@@ -292,22 +321,33 @@ export function AlertsWidget(_props: WidgetProps) {
             <AISummaryError>Summary unavailable</AISummaryError>
           ) : summaryData?.summary ? (
             <AISummaryRow>
-              <AISummaryText>{summaryData.summary}</AISummaryText>
-              <Popover.Root>
-                <Popover.Trigger asChild>
-                  <InfoTrigger aria-label="About AI summary">
-                    <InfoIcon src={infoIcon} alt="" aria-hidden />
-                  </InfoTrigger>
-                </Popover.Trigger>
-                <Popover.Portal>
-                  <Popover.Content side="top" sideOffset={6} asChild>
-                    <PopoverContent>
-                      This is an AI-generated summary of all recent alerts. Always confirm details
-                      with the source references.
-                    </PopoverContent>
-                  </Popover.Content>
-                </Popover.Portal>
-              </Popover.Root>
+              <AISummaryText>
+                <AISummaryTitleRow>
+                  <AISummaryTitle>Summary</AISummaryTitle>
+                  <Popover.Root>
+                    <Popover.Trigger asChild>
+                      <InfoTrigger aria-label="About AI summary">
+                        <InfoIcon src={infoIcon} alt="" aria-hidden />
+                      </InfoTrigger>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                      <Popover.Content side="top" sideOffset={6} asChild>
+                        <PopoverContent>
+                          This is an AI-generated summary of the most important alerts. Always
+                          confirm details with source references.
+                        </PopoverContent>
+                      </Popover.Content>
+                    </Popover.Portal>
+                  </Popover.Root>
+                </AISummaryTitleRow>
+                <AISummaryContent summary={summaryData.summary} />
+                {/* Server-provided generation time only; we never use client time */}
+                {summaryData.generatedAt && (
+                  <AISummaryGeneratedAt>
+                    Generated: {formatGeneratedAt(summaryData.generatedAt)}
+                  </AISummaryGeneratedAt>
+                )}
+              </AISummaryText>
             </AISummaryRow>
           ) : null}
         </AISummaryContainer>
@@ -464,10 +504,14 @@ export function AlertsWidget(_props: WidgetProps) {
 
                         {selectedAlert.url && (
                           <AlertModalSection>
-                            <AlertModalLabel>Map</AlertModalLabel>
+                            <AlertModalLabel>
+                              {/x\.com|twitter\.com/.test(selectedAlert.url) ? 'Tweet' : 'Map'}
+                            </AlertModalLabel>
                             <AlertModalText>
                               <a href={selectedAlert.url} target="_blank" rel="noopener noreferrer">
-                                View on map
+                                {/x\.com|twitter\.com/.test(selectedAlert.url)
+                                  ? 'View on X'
+                                  : 'View on map'}
                               </a>
                             </AlertModalText>
                           </AlertModalSection>

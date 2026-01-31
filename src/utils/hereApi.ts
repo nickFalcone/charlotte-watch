@@ -86,6 +86,43 @@ function getGroupCentroid(group: HereFlowResult[]): { lat: number; lng: number }
   return n > 0 ? { lat: sumLat / n, lng: sumLng / n } : null;
 }
 
+/** Normalize road name to group major routes together (e.g., "I-77 N" -> "I-77", "I-77/US-21" -> "I-77") */
+function normalizeRoadName(name: string): string {
+  const cleaned = name.trim();
+
+  // Only keep multi-interstate junctions separate (e.g., "I-85/I-77")
+  // But normalize concurrent routes like "I-77/US-21" to just "I-77"
+  const interstateCount = (cleaned.match(/I-?\d+/g) || []).length;
+  if (interstateCount > 1) {
+    // Multiple interstates - keep separate (it's a junction)
+    return cleaned;
+  }
+
+  // Extract and normalize to the first interstate found
+  const interstateMatch = cleaned.match(/I-?\s*(\d+)/i);
+  if (interstateMatch) {
+    return `I-${interstateMatch[1]}`;
+  }
+
+  // No interstate - try US routes
+  const usRouteMatch = cleaned.match(/(?:US|U\.S\.)\s*(?:Highway|Route|Hwy)?\s*-?\s*(\d+)/i);
+  if (usRouteMatch) {
+    return `US-${usRouteMatch[1]}`;
+  }
+
+  // No US route - try NC routes
+  const ncRouteMatch = cleaned.match(/(?:NC|Highway|Hwy|State Route|SR)\s*-?\s*(\d+)/i);
+  if (ncRouteMatch) {
+    return `NC-${ncRouteMatch[1]}`;
+  }
+
+  // Not a numbered highway - strip directional suffixes from regular roads
+  return cleaned.replace(
+    /\s+(NORTHBOUND|SOUTHBOUND|EASTBOUND|WESTBOUND|[NSEW](?:ORTH|OUTH|AST|EST)?)$/i,
+    ''
+  );
+}
+
 /** Slug for routeId: lowercase, alphanumeric and hyphens only */
 function slug(name: string): string {
   const s = name
@@ -134,20 +171,28 @@ function getEffectiveFreeFlow(flow: HereFlowResult['currentFlow']): number {
 
 const MIN_JAM_ALERT = 7; // maxJamFactor > 7
 const MIN_CONGESTION_PERCENT = 80; // only alert when at least 80% slower than free flow
+const MIN_SEGMENT_COUNT = 10; // only alert when 10+ segments affected (filters isolated incidents)
 
 /**
  * Group results by location.description, compute per-road stats.
  * Returns one HereRouteFlow per road with maxJamFactor > 7 and congestionPercent >= 50.
  * Uses subSegments when top-level speed is omitted (e.g. closed).
+ * Road names are normalized to consolidate major routes (e.g., "I-77 N" and "I-77 S" -> "I-77").
  */
 function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string): HereRouteFlow[] {
   const byRoad = new Map<string, HereFlowResult[]>();
+  const originalNames = new Map<string, Set<string>>(); // Track original names per normalized name
   for (const r of results) {
     const name = r.location?.description?.trim() || 'Unnamed';
     if (name === 'Unnamed') continue; // skip segments without a road name — not actionable
-    const arr = byRoad.get(name) ?? [];
+    const normalizedName = normalizeRoadName(name);
+    const arr = byRoad.get(normalizedName) ?? [];
     arr.push(r);
-    byRoad.set(name, arr);
+    byRoad.set(normalizedName, arr);
+    // Track original names
+    const names = originalNames.get(normalizedName) ?? new Set<string>();
+    names.add(name);
+    originalNames.set(normalizedName, names);
   }
 
   const out: HereRouteFlow[] = [];
@@ -156,14 +201,23 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
     let maxJam = 0;
     let totalSpeed = 0;
     let totalFree = 0;
+    let maxCongestion = 0;
+
     for (const r of group) {
       const flow = r.currentFlow;
       const j =
         typeof flow.jamFactor === 'number' && Number.isFinite(flow.jamFactor) ? flow.jamFactor : 0;
       totalJam += j;
       maxJam = Math.max(maxJam, j);
-      totalSpeed += getEffectiveSpeed(flow);
-      totalFree += getEffectiveFreeFlow(flow);
+      const speed = getEffectiveSpeed(flow);
+      const free = getEffectiveFreeFlow(flow);
+      totalSpeed += speed;
+      totalFree += free;
+      // Calculate congestion percent for this segment
+      if (free > 0 && Number.isFinite(speed)) {
+        const segmentCongestion = ((free - speed) / free) * 100;
+        maxCongestion = Math.max(maxCongestion, segmentCongestion);
+      }
     }
     if (maxJam <= MIN_JAM_ALERT) continue;
 
@@ -177,7 +231,21 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
       const p = ((avgFree - avgSpeed) / avgFree) * 100;
       congestionPercent = Math.round(Math.max(0, Math.min(100, p)));
     }
-    if (congestionPercent < MIN_CONGESTION_PERCENT) continue;
+    const maxCongestionPercent = Math.round(Math.max(0, Math.min(100, maxCongestion)));
+    if (maxCongestionPercent < MIN_CONGESTION_PERCENT) continue;
+
+    // Only alert on major routes (interstates, US highways, major NC routes)
+    // Skip minor roads, residential streets, etc. to reduce noise
+    const isMajorRoute =
+      routeName.startsWith('I-') || routeName.startsWith('US-') || routeName.startsWith('NC-');
+    if (!isMajorRoute) {
+      continue;
+    }
+
+    // Require minimum segment count to filter isolated incidents
+    if (n < MIN_SEGMENT_COUNT) {
+      continue;
+    }
 
     const avgSpeedMph = Number.isFinite(avgSpeed) ? Math.round(metersPerSecToMph(avgSpeed)) : 0;
     const freeFlowMph = Number.isFinite(avgFree) ? Math.round(metersPerSecToMph(avgFree)) : 0;
@@ -192,6 +260,7 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
       avgSpeedMph,
       freeFlowSpeedMph: freeFlowMph,
       congestionPercent,
+      maxCongestionPercent,
       segmentCount: n,
       timestamp,
       ...(centroid ? { centerLat: centroid.lat, centerLng: centroid.lng } : {}),

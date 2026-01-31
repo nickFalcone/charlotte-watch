@@ -46,11 +46,12 @@ function dedupeOutages(outages: DukeOutage[]): DukeOutage[] {
 }
 
 /**
- * Filters outages to only include those meeting minimum customer threshold
+ * Filters outages to only include those meeting minimum customer threshold for alert cards.
+ * Under MIN_CARD (10): no card, not in summary. 10+: show card (severity from mapDukeOutageSeverity).
  */
 function filterByMinimumCustomers(outages: DukeOutage[]): DukeOutage[] {
   return outages.filter(
-    outage => getDukeCustomersAffected(outage) >= DUKE_SEVERITY_THRESHOLDS.minor
+    outage => getDukeCustomersAffected(outage) >= DUKE_SEVERITY_THRESHOLDS.MIN_CARD
   );
 }
 

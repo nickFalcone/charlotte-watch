@@ -100,6 +100,7 @@ export type AlertMetadata =
       currentSpeedMph: number;
       freeFlowSpeedMph: number;
       congestionPercent: number;
+      maxCongestionPercent: number;
       segmentCount: number;
       displaySeverity?: string;
     }
@@ -159,8 +160,28 @@ export const getAlertSeverityConfig = (
 // Legacy export for backwards compatibility - uses dark theme colors
 export const ALERT_SEVERITY_CONFIG = getAlertSeverityConfig({ name: 'dark' } as Theme);
 
+// Life-safety NWS event types that should display as critical regardless of NWS severity field
+const NWS_CRITICAL_EVENT_PATTERNS = [
+  'extreme cold',
+  'heat warning',
+  'blizzard',
+  'ice storm',
+  'tornado',
+  'hurricane',
+  'storm surge',
+  'tsunami',
+  'flash flood',
+  'dust storm',
+  'avalanche',
+];
+
 // Helper to map NWS severity to generic severity
-export function mapNWSSeverity(nwsSeverity: string): AlertSeverity {
+// event: optional NWS event name (e.g. "Extreme Cold Warning") to elevate life-safety alerts to critical
+export function mapNWSSeverity(nwsSeverity: string, event?: string): AlertSeverity {
+  const eventLower = (event || '').toLowerCase();
+  const isCriticalEvent = NWS_CRITICAL_EVENT_PATTERNS.some(p => eventLower.includes(p));
+  if (isCriticalEvent) return 'critical';
+
   switch (nwsSeverity) {
     case 'Extreme':
       return 'critical';
@@ -182,8 +203,9 @@ export function mapFAADelaySeverity(delayMinutes: number): AlertSeverity {
 
 // Helper to map Duke Energy outage severity based on customers affected
 export function mapDukeOutageSeverity(customersAffected: number): AlertSeverity {
-  if (customersAffected >= 100) return 'critical';
-  if (customersAffected >= 50) return 'moderate';
+  if (customersAffected >= 1000) return 'critical';
+  if (customersAffected >= 500) return 'high';
+  if (customersAffected >= 100) return 'moderate';
   return 'minor';
 }
 
@@ -199,10 +221,17 @@ export function mapNCDOTSeverity(incident: {
   const condition = incident.condition.toLowerCase();
   const incidentType = incident.incidentType.toLowerCase();
 
-  // Critical: fatalities, bridge issues, road closures, accidents
+  // Critical: fatalities, bridge issues, road closures (not planned maintenance), accidents
   if (incident.fatality) return 'critical';
   if (incident.bridgeInvolved) return 'critical';
-  if (condition.includes('road closed') || condition.includes('moving closure')) return 'critical';
+  if (condition.includes('road closed')) return 'critical';
+  // Moving closure: critical only if not maintenance/construction (planned work)
+  const isMaintenance =
+    incidentType.includes('maintenance') ||
+    incidentType.includes('construction') ||
+    condition.includes('maintenance') ||
+    condition.includes('construction');
+  if (condition.includes('moving closure') && !isMaintenance) return 'critical';
   if (incidentType.includes('accident') || incidentType.includes('collision')) return 'critical';
   if (condition.includes('local traffic only')) return 'critical'; // Effectively road closed
 

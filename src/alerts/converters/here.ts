@@ -16,8 +16,7 @@ import type { HereRouteFlow } from '../../types/here';
 import { ALERT_SEVERITY_CONFIG } from '../../types';
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
 
-const MIN_JAM_ALERT = 7;
-const MIN_CONGESTION_PERCENT = 90;
+const MIN_CONGESTION_PERCENT = 95;
 
 function num(v: number): number {
   return Number.isFinite(v) ? v : 0;
@@ -29,7 +28,9 @@ function num(v: number): number {
 function getCongestionDescription(flow: HereRouteFlow): string {
   const mph = num(flow.avgSpeedMph);
   const free = num(flow.freeFlowSpeedMph);
-  return `Heavy congestion - traffic nearly stopped. Currently ${mph} mph (normally ${free} mph).`;
+  const maxJam = num(flow.maxJamFactor);
+  const jamText = maxJam >= 9 ? ' Worst segments nearly stopped.' : '';
+  return `Heavy congestion - traffic slowed significantly. Currently ${mph} mph (normally ${free} mph).${jamText}`;
 }
 
 /**
@@ -37,17 +38,19 @@ function getCongestionDescription(flow: HereRouteFlow): string {
  */
 function getCongestionSummary(flow: HereRouteFlow): string {
   const p = num(flow.congestionPercent);
+  const segments = flow.segmentCount;
+  const segmentText = segments > 1 ? ` across ${segments} segments` : '';
 
-  return `Heavy traffic • ${p}% slower than normal`;
+  return `Heavy traffic${segmentText} • ${p}% slower than normal`;
 }
 
 /**
  * Convert a single route flow to a generic alert.
- * Returns null when maxJamFactor <= 7 or congestionPercent < 80.
+ * Returns null when the most congested segment is below the threshold.
+ * Uses maxCongestionPercent so consolidated routes alert when ANY segment is severely congested.
  */
 export function convertHereFlowToGeneric(flow: HereRouteFlow): GenericAlert | null {
-  if (flow.maxJamFactor <= MIN_JAM_ALERT) return null;
-  if (num(flow.congestionPercent) < MIN_CONGESTION_PERCENT) return null;
+  if (num(flow.maxCongestionPercent) < MIN_CONGESTION_PERCENT) return null;
 
   return {
     id: `here-flow-${flow.routeId}`,
@@ -69,6 +72,7 @@ export function convertHereFlowToGeneric(flow: HereRouteFlow): GenericAlert | nu
       currentSpeedMph: flow.avgSpeedMph,
       freeFlowSpeedMph: flow.freeFlowSpeedMph,
       congestionPercent: flow.congestionPercent,
+      maxCongestionPercent: flow.maxCongestionPercent,
       segmentCount: flow.segmentCount,
       displaySeverity: ALERT_SEVERITY_CONFIG['high'].label,
     },
@@ -78,9 +82,17 @@ export function convertHereFlowToGeneric(flow: HereRouteFlow): GenericAlert | nu
 /**
  * Convert all route flows to generic alerts.
  * Filters out routes without significant congestion.
+ * Sorts by segment count descending (routes with most segments first).
  */
 export function convertHereFlowsToGeneric(flows: HereRouteFlow[]): GenericAlert[] {
-  return flows
+  const alerts = flows
     .map(convertHereFlowToGeneric)
     .filter((alert): alert is GenericAlert => alert !== null);
+
+  // Sort by segment count (highest impact first)
+  return alerts.sort((a, b) => {
+    const aSegments = a.metadata?.source === 'here-flow' ? (a.metadata.segmentCount ?? 0) : 0;
+    const bSegments = b.metadata?.source === 'here-flow' ? (b.metadata.segmentCount ?? 0) : 0;
+    return bSegments - aSegments;
+  });
 }

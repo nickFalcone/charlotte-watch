@@ -68,13 +68,75 @@ function extractMileMarkers(location: string): { start: number; end: number } | 
 }
 
 /**
+ * Extract project number from reason string (e.g., "C204556")
+ * Always returns with C prefix for consistency
+ */
+function extractProjectNumber(reason: string): string | null {
+  // Match patterns like "C204556", "project C204556", "C-204556", etc.
+  const match = reason.match(/\b(C?-?\d{6})\b/i);
+  if (!match) return null;
+
+  const num = match[1].replace(/-/g, '').toUpperCase();
+  // Always prefix with C if not already present
+  return num.startsWith('C') ? num : `C${num}`;
+}
+
+/**
+ * Normalize road name to base route (e.g., "I-485 A" -> "I-485")
+ */
+function normalizeRoadForConsolidation(road: string): string {
+  const display = getCharlotteRoadDisplay(road);
+  // Remove suffixes like " A", " I", " INNER", " OUTER"
+  return display.replace(/\s+[A-Z]$/i, '').trim();
+}
+
+/**
+ * Check if incident is maintenance or construction
+ */
+function isMaintenanceOrConstruction(incident: NCDOTIncident): boolean {
+  const type = incident.incidentType.toLowerCase();
+  const reason = incident.reason.toLowerCase();
+  const condition = incident.condition.toLowerCase();
+
+  return (
+    type.includes('construction') ||
+    type.includes('maintenance') ||
+    reason.includes('construction') ||
+    reason.includes('maintenance') ||
+    condition.includes('construction') ||
+    condition.includes('maintenance') ||
+    incident.inWorkZone
+  );
+}
+
+/**
  * Creates a grouping key for similar incidents
  * Incidents with the same key can potentially be consolidated
  */
 function getConsolidationKey(incident: NCDOTIncident): string {
-  const roadDisplay = getCharlotteRoadDisplay(incident.road);
+  const normalizedRoad = normalizeRoadForConsolidation(incident.road);
+  const projectNumber = extractProjectNumber(incident.reason);
+
+  // For construction projects with a project number, group by project
+  // This consolidates different segments/directions of the same project
+  if (projectNumber) {
+    return [normalizedRoad, projectNumber].join('|');
+  }
+
+  // For recurring maintenance (no project number), group by location and type
+  // This consolidates maintenance windows on different days at the same location
+  if (isMaintenanceOrConstruction(incident)) {
+    return [
+      normalizedRoad,
+      incident.direction,
+      incident.location, // Include mile marker range
+      incident.condition.toLowerCase().trim(),
+    ].join('|');
+  }
+
+  // For crashes and other incidents, include date for strict grouping
   return [
-    roadDisplay,
+    normalizedRoad,
     incident.direction,
     incident.reason.toLowerCase().trim(),
     incident.condition.toLowerCase().trim(),

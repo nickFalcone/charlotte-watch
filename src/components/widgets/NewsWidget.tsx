@@ -120,7 +120,8 @@ export function NewsWidget(_props: WidgetProps) {
           <Popover.Portal>
             <Popover.Content side="top" sideOffset={6} asChild>
               <PopoverContent>
-                News events shown require at least 2 corroborating sources for verification.
+                Headlines are read by AI and verified against at least 2 corroborating sources.
+                Always confirm details with source references.
               </PopoverContent>
             </Popover.Content>
           </Popover.Portal>

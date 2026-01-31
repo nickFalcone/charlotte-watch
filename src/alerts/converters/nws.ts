@@ -4,7 +4,7 @@ import { mapNWSSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 
 // Convert NWS alert to generic alert format
 export function convertNWSAlertToGeneric(alert: NWSAlert): GenericAlert {
-  const severity = mapNWSSeverity(alert.properties.severity);
+  const severity = mapNWSSeverity(alert.properties.severity, alert.properties.event);
 
   return {
     id: alert.id,

@@ -65,7 +65,6 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
         }
 
         const dukeAuth = env.DUKE_OUTAGE_AUTH;
-        console.log('[duke-outage-enrichment] Auth configured:', !!dukeAuth);
         if (!dukeAuth) {
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
@@ -82,9 +81,7 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
           // Step 1: Fetch list of all outages
           const listUrl =
             'https://prod.apigee.duke-energy.app/outage-maps/v1/outages?jurisdiction=DEC';
-          console.log('[duke-outage-enrichment] Fetching list from:', listUrl);
           const listResponse = await fetch(listUrl, { method: 'GET', headers });
-          console.log('[duke-outage-enrichment] List response status:', listResponse.status);
 
           if (!listResponse.ok) {
             res.statusCode = listResponse.status;
@@ -150,7 +147,7 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
 }
 
 const OPENWEBNINJA_HOST = 'real-time-news-data.p.rapidapi.com';
-const MAX_ARTICLES_TO_SEND = 50;
+const MAX_ARTICLES_TO_SEND = 100;
 
 interface RawArticleForParse {
   title: string;
@@ -226,7 +223,7 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
           const params = new URLSearchParams({
             query: 'charlotte north carolina',
             time_published: '1d',
-            limit: '50',
+            limit: '100',
           });
           const newsFetchOpts = {
             method: 'GET' as const,
@@ -380,6 +377,102 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
   };
 }
 
+// Dev-only plugin: GET /api/cats-twitter (RapidAPI) so Vite dev returns JSON instead of index.html
+const TWITTER_API_HOST = 'twitter-api47.p.rapidapi.com';
+const CATS_TWITTER_USER_ID = '868028628';
+const CATS_TWITTER_CACHE_TTL_MS = 43200 * 1000; // 12h, match production
+const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+
+function isServiceAlertTweet(text: string): boolean {
+  const lower = text.toLowerCase();
+  const serviceTerms =
+    /suspend|suspended|blue line|gold line|bus service|operational|on schedule|delays?|detour|road closed|no service|micro service|micro |tracks|blocked|ctc|station|route|reopening|winter weather|road conditions|express bus|streetcar/i;
+  const excludeTerms =
+    /live now|meeting|fare study|fare modernization|hosting a |join us|be there to share|want to learn more about fare|book demo/i;
+  return serviceTerms.test(lower) && !excludeTerms.test(lower);
+}
+
+function isWithinLast12Hours(createdAt: string): boolean {
+  const ts = new Date(createdAt).getTime();
+  return ts > Date.now() - TWELVE_HOURS_MS;
+}
+
+function catsTwitterPlugin(env: Record<string, string>): Plugin {
+  return {
+    name: 'cats-twitter',
+    configureServer(server) {
+      server.middlewares.use('/api/cats-twitter', async (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        const cached = devCacheGet('cats-twitter');
+        if (cached) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.end(cached);
+          return;
+        }
+
+        const apiKey = env.RAPIDAPI_KEY;
+        if (!apiKey) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ data: [] }));
+          return;
+        }
+
+        try {
+          const url = `https://${TWITTER_API_HOST}/v3/user/tweets?userId=${CATS_TWITTER_USER_ID}`;
+          const response = await fetch(url, {
+            headers: {
+              'x-rapidapi-host': TWITTER_API_HOST,
+              'x-rapidapi-key': apiKey,
+            },
+          });
+          if (!response.ok) {
+            res.statusCode = response.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: `Twitter API ${response.status}`, data: [] }));
+            return;
+          }
+          const body = (await response.json()) as {
+            data?: Array<{
+              author?: { id: string };
+              type?: string;
+              text: string;
+              createdAt: string;
+            }>;
+          };
+          const allTweets = body.data ?? [];
+          const catsTweets = allTweets.filter(
+            t =>
+              t.author?.id === CATS_TWITTER_USER_ID &&
+              (t.type === 'tweet' || t.type === 'quote') &&
+              isServiceAlertTweet(t.text) &&
+              isWithinLast12Hours(t.createdAt)
+          );
+          const responseBody = JSON.stringify({ data: catsTweets });
+          devCachePut('cats-twitter', responseBody, CATS_TWITTER_CACHE_TTL_MS);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.end(responseBody);
+        } catch (error) {
+          console.error('[cats-twitter] Error:', error);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ data: [] }));
+        }
+      });
+    },
+  };
+}
+
 // Dev-only plugin to handle AI summarization without Wrangler/Pages Functions
 function aiSummarizationPlugin(env: Record<string, string>): Plugin {
   return {
@@ -508,6 +601,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       newsCharlotteParsedPlugin(env),
+      catsTwitterPlugin(env),
       aiSummarizationPlugin(env),
       dukeOutagePlugin(env),
     ],

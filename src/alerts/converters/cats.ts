@@ -1,7 +1,35 @@
-import type { CATSEntity } from '../../types/cats';
+import type { CATSEntity, CATSTweet } from '../../types/cats';
 import type { GenericAlert } from '../../types/alerts';
 import { mapCATSSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
+import type { AlertSeverity } from '../../types/alerts';
 import { isLynxLightRailRoute } from '../../utils/catsApi';
+
+const TITLE_MAX_LEN = 80;
+
+function severityFromTweetText(text: string): AlertSeverity {
+  const lower = text.toLowerCase();
+  if (
+    lower.includes('suspend') ||
+    lower.includes('no service') ||
+    lower.includes('suspended') ||
+    lower.includes('will suspend')
+  )
+    return 'critical';
+  if (
+    lower.includes('detour') ||
+    lower.includes('delay') ||
+    lower.includes('delays') ||
+    lower.includes('road closed')
+  )
+    return 'moderate';
+  return 'minor';
+}
+
+function firstLine(s: string, maxLen: number): string {
+  const line = s.split(/\r?\n/)[0]?.trim() ?? s;
+  if (line.length <= maxLen) return line;
+  return line.slice(0, maxLen - 3) + '...';
+}
 
 // Convert CATS alert to generic alert format
 export function convertCATSAlertToGeneric(alert: CATSEntity): GenericAlert {
@@ -65,4 +93,38 @@ export function convertCATSAlertToGeneric(alert: CATSEntity): GenericAlert {
 // Convert all CATS alerts to generic format
 export function convertCATSAlertsToGeneric(alerts: CATSEntity[]): GenericAlert[] {
   return alerts.map(convertCATSAlertToGeneric);
+}
+
+const CATS_TWITTER_PROFILE = 'CATSRideTransit';
+
+// Convert CATS Twitter tweet to generic alert format (source still 'cats', category 'transit')
+export function convertCATSTweetToGeneric(tweet: CATSTweet): GenericAlert {
+  const severity = severityFromTweetText(tweet.text);
+  const title = firstLine(tweet.text, TITLE_MAX_LEN);
+  const updatedAt = tweet.createdAt ? new Date(tweet.createdAt) : new Date();
+  const tweetUrl = `https://x.com/${CATS_TWITTER_PROFILE}/status/${tweet.id}`;
+
+  return {
+    id: `cats-twitter-${tweet.id}`,
+    source: 'cats',
+    category: 'transit',
+    severity,
+    title,
+    summary: tweet.text,
+    description: tweet.text,
+    affectedArea: 'Charlotte Area Transit System',
+    updatedAt,
+    url: tweetUrl,
+    metadata: {
+      source: 'cats',
+      routes: [],
+      effect: 'ANNOUNCEMENT',
+      cause: 'TWITTER',
+      displaySeverity: ALERT_SEVERITY_CONFIG[severity].label,
+    },
+  };
+}
+
+export function convertCATSTweetsToGeneric(tweets: CATSTweet[]): GenericAlert[] {
+  return tweets.map(convertCATSTweetToGeneric);
 }
