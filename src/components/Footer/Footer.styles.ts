@@ -27,7 +27,7 @@ export const FooterReportLink = styled.a`
   }
 
   &:visited {
-    color: ${props => props.theme.colors.linkVisited};
+    color: ${props => props.theme.colors.link};
   }
 
   &:focus-visible {
