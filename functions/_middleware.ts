@@ -38,12 +38,13 @@ async function fetchBLUFSummary(request: Request): Promise<string[]> {
 }
 
 export const onRequest: PagesFunction<Env> = async context => {
-  const { request, env } = context;
+  const { request, next } = context;
   const url = new URL(request.url);
 
   // Only inject dynamic meta tags for the root path
+  // Let everything else (API routes, static assets) pass through
   if (url.pathname !== '/') {
-    return env.ASSETS.fetch(request);
+    return next();
   }
 
   // Only inject for requests that look like social media crawlers or browsers
@@ -64,8 +65,8 @@ export const onRequest: PagesFunction<Env> = async context => {
     userAgent.includes('Googlebot') || // Google's web crawler
     !userAgent.includes('Mozilla'); // Likely a crawler if no Mozilla
 
-  // Fetch the static HTML
-  const response = await env.ASSETS.fetch(request);
+  // Fetch the static HTML from the next handler in the chain
+  const response = await next();
 
   // Only modify HTML responses
   if (!response.headers.get('Content-Type')?.includes('text/html')) {
