@@ -150,7 +150,7 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
 }
 
 const OPENWEBNINJA_HOST = 'real-time-news-data.p.rapidapi.com';
-const MAX_ARTICLES_TO_SEND = 100;
+const MAX_ARTICLES_TO_SEND = 50;
 
 interface RawArticleForParse {
   title: string;
@@ -226,6 +226,7 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
           const params = new URLSearchParams({
             query: 'charlotte north carolina',
             time_published: '1d',
+            limit: '50',
           });
           const newsFetchOpts = {
             method: 'GET' as const,

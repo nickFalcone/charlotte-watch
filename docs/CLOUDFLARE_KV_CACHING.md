@@ -19,7 +19,7 @@ Client  -->  Pages Function  -->  KV CACHE hit?  --yes-->  return cached respons
 ```
 
 - **Cache reads/writes are wrapped in try/catch.** A KV failure never blocks the response; it logs the error and falls through to the upstream path.
-- **No stale-while-revalidate.** Simple "hit or miss" strategy. Background revalidation could be added later for the news endpoint if desired.
+- **No stale-while-revalidate.** Simple "hit or miss" strategy for most endpoints. The news endpoint uses a separate write path (see Cache warming below).
 - **Client-side React Query is unchanged.** Clients still refetch on their normal intervals; they just receive cached server responses faster.
 
 ---
@@ -45,7 +45,7 @@ CACHE: KVNamespace;
 
 | Endpoint | File | Cache key | TTL | Notes |
 |---|---|---|---|---|
-| `GET /api/news-charlotte-parsed` | `functions/api/news-charlotte-parsed.ts` | `news:parsed` | 12 hours (43200s) | Single global key; fetches RapidAPI + AI parse pipeline on miss |
+| `GET /api/news-charlotte-parsed` | `functions/api/news-charlotte-parsed.ts` | `news:parsed` | 12 hours (43200s) | Read-only; populated by `workers/cache-warmer.ts` on cron schedule |
 | `POST /api/summarize-alerts` | `functions/api/summarize-alerts.ts` | `summary:<hash>` | 15 minutes (900s) | Keyed by client-provided `hash` from request body |
 
 ### Raw alert proxy endpoints
@@ -159,9 +159,16 @@ Since all clients receive the same raw alert data from KV-cached endpoints withi
 
 ---
 
-## Cache warming
+## Cache warming (news endpoint)
 
-The news cache is automatically warmed every 8 hours by a scheduled Cloudflare Worker to ensure users get fast cache-hit responses.
+The news endpoint uses a separated write/read architecture to avoid timeout issues:
+
+```
+WRITE: Cron -> Worker -> fetch articles -> LLM parse -> write KV   (async, no user waiting)
+READ:  User -> Pages Function -> read KV -> return                 (instant, always fast)
+```
+
+The cache-warmer Worker (`workers/cache-warmer.ts`) handles the heavy processing (fetching 100 articles from RapidAPI, sending 50 to OpenAI for parsing) and writes the result to KV. The Pages Function (`functions/api/news-charlotte-parsed.ts`) is read-only and returns cached data or an empty array on cache miss.
 
 **Schedule:** 04:00, 12:00, and 20:00 UTC (every 8 hours)
 - 04:00 UTC = 11 PM Eastern (prev day EST) / 12 AM Eastern (EDT)
@@ -172,12 +179,19 @@ The news cache is automatically warmed every 8 hours by a scheduled Cloudflare W
 
 **Deploy:** `npm run deploy:cache-warmer`
 
-**View logs:** Cloudflare Dashboard → Workers & Pages → charlotte-monitor-cache-warmer → Logs
+**Manual trigger:** `curl "https://charlotte-monitor-cache-warmer.<your-subdomain>.workers.dev/warm?secret=<CACHE_WARMING_SECRET>"`
+
+**Worker secrets** (set via `npx wrangler secret put <NAME> --config workers/wrangler.toml`):
+- `RAPIDAPI_KEY` -- OpenWebNinja Real-Time News
+- `OPENAI_API_KEY` -- OpenAI (default provider)
+- `CACHE_WARMING_SECRET` -- protects the `/warm` manual trigger
+- `ANTHROPIC_API_KEY` -- optional, if `AI_PROVIDER=anthropic`
+
+**View logs:** Cloudflare Dashboard > Workers & Pages > charlotte-monitor-cache-warmer > Logs
 
 ---
 
 ## Possible future improvements
 
-- **Background revalidation for news:** Trigger a re-fetch at ~11h to keep the cache warm and avoid cold-start latency after expiration.
 - **Cache invalidation API:** An admin endpoint to manually purge specific keys (e.g. after a data correction).
 - **Metrics:** Log cache hit/miss counts per endpoint for observability.

@@ -1,5 +1,12 @@
 # Cloudflare Worker for cache warming (runs on a schedule)
 # Deploy with: npx wrangler deploy --config workers/wrangler.toml
+#
+# Required secrets (set via `npx wrangler secret put <NAME> --config workers/wrangler.toml`):
+#   RAPIDAPI_KEY          - OpenWebNinja Real-Time News (RapidAPI)
+#   OPENAI_API_KEY        - OpenAI API key (default provider)
+#   CACHE_WARMING_SECRET  - Secret for authenticated /warm requests
+# Optional secrets:
+#   ANTHROPIC_API_KEY     - Anthropic API key (if AI_PROVIDER=anthropic)
 
 name = "charlotte-monitor-cache-warmer"
 main = "cache-warmer.ts"
@@ -16,4 +23,7 @@ crons = ["0 4,12,20 * * *"]
 [vars]
 SITE_URL = "https://clt.watch"
 
-# Optional: Add CACHE_WARMING_SECRET via dashboard or wrangler secret put
+# KV namespace for caching parsed news
+[[kv_namespaces]]
+binding = "CACHE"
+id = "80fba4fc58ab41d180087a22b5e1917c"
