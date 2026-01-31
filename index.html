@@ -19,9 +19,7 @@
     <meta name="theme-color" content="#1a1a1a" />
 
     <!-- Hide static content once JS loads, but keep it for crawlers -->
-    <script>
-      document.documentElement.classList.add('js-enabled');
-    </script>
+    <script src="/hide-fallback.js"></script>
     <style>
       .js-enabled #root > main {
         display: none;
