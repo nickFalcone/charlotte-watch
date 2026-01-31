@@ -4,37 +4,115 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/crown.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Charlotte Watch</title>
+
+    <!-- Primary Meta Tags -->
+    <title>Charlotte Watch - Real-time Charlotte NC Alerts, Weather, Traffic & More</title>
     <meta
       name="description"
-      content="Real-time Charlotte, NC dashboard: weather, flights, traffic, power outages, transit alerts, and stocks. See what's going on in Charlotte."
+      content="Live Charlotte-Mecklenburg dashboard with real-time alerts, weather, flights, traffic incidents, power outages, CATS transit delays, and local stocks. Your comprehensive Charlotte NC monitoring tool."
     />
+    <meta
+      name="keywords"
+      content="Charlotte NC, Mecklenburg County, Charlotte alerts, Charlotte weather, CLT airport, Charlotte traffic, CATS transit, Duke Energy outages, Charlotte real-time dashboard, Charlotte monitor, NC weather alerts"
+    />
+    <meta name="author" content="Charlotte Watch" />
+    <meta name="theme-color" content="#1a1a1a" />
 
-    <!-- Open Graph / social -->
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://clt.watch/" />
+
+    <!-- Geo Tags for Local SEO -->
+    <meta name="geo.region" content="US-NC" />
+    <meta name="geo.placename" content="Charlotte" />
+    <meta name="geo.position" content="35.2271;-80.8431" />
+    <meta name="ICBM" content="35.2271, -80.8431" />
+
+    <!-- Performance: Preconnect to external domains -->
+    <link rel="preconnect" href="https://api.weather.gov" />
+    <link rel="preconnect" href="https://api.open-meteo.com" />
+    <link rel="preconnect" href="https://static.cloudflareinsights.com" />
+
+    <!-- Open Graph / Social Media -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Charlotte Watch - Real-time Charlotte, NC Dashboard" />
+    <meta property="og:url" content="https://clt.watch/" />
+    <meta property="og:site_name" content="Charlotte Watch" />
+    <meta
+      property="og:title"
+      content="Charlotte Watch - Real-time Charlotte NC Alerts & Dashboard"
+    />
     <meta
       property="og:description"
-      content="Real-time Charlotte, NC dashboard: weather, flights, traffic, power outages, transit alerts, and stocks. See what's going on in Charlotte."
+      content="Live Charlotte-Mecklenburg dashboard with real-time alerts, weather, flights, traffic incidents, power outages, CATS transit delays, and local stocks."
     />
+    <meta property="og:image" content="https://clt.watch/crown.svg" />
+    <meta property="og:locale" content="en_US" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Charlotte Watch - Real-time Charlotte, NC Dashboard" />
+    <meta
+      name="twitter:title"
+      content="Charlotte Watch - Real-time Charlotte NC Alerts & Dashboard"
+    />
     <meta
       name="twitter:description"
-      content="Real-time Charlotte, NC dashboard: weather, flights, traffic, power outages, transit alerts, and stocks. See what's going on in Charlotte."
+      content="Live Charlotte-Mecklenburg dashboard with real-time alerts, weather, flights, traffic incidents, power outages, CATS transit delays, and local stocks."
     />
+    <meta name="twitter:image" content="https://clt.watch/crown.svg" />
 
-    <!-- JSON-LD for rich results (inline; src= is not fetched for application/ld+json) -->
+    <!-- JSON-LD Structured Data for rich results -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "WebApplication",
-        "name": "Charlotte Watch",
-        "description": "Real-time Charlotte, NC dashboard: weather, flights, traffic, power outages, transit alerts, and stocks.",
-        "applicationCategory": "UtilitiesApplication",
-        "operatingSystem": "Web"
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "name": "Charlotte Watch",
+            "url": "https://clt.watch/",
+            "description": "Real-time Charlotte-Mecklenburg dashboard with live alerts, weather, flights, traffic incidents, power outages, CATS transit delays, and local stocks.",
+            "applicationCategory": "UtilitiesApplication",
+            "operatingSystem": "Web",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "featureList": [
+              "Real-time weather alerts",
+              "Flight tracking (CLT)",
+              "Traffic incidents",
+              "Power outage monitoring",
+              "CATS transit alerts",
+              "Local stock quotes"
+            ]
+          },
+          {
+            "@type": "Service",
+            "serviceType": "Local Information Service",
+            "provider": {
+              "@type": "Organization",
+              "name": "Charlotte Watch"
+            },
+            "areaServed": {
+              "@type": "City",
+              "name": "Charlotte",
+              "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Charlotte",
+                "addressRegion": "NC",
+                "addressCountry": "US"
+              },
+              "geo": {
+                "@type": "GeoCoordinates",
+                "latitude": "35.2271",
+                "longitude": "-80.8431"
+              }
+            },
+            "availableChannel": {
+              "@type": "ServiceChannel",
+              "serviceUrl": "https://clt.watch/"
+            }
+          }
+        ]
       }
     </script>
   </head>

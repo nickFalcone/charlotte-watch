@@ -38,6 +38,10 @@ export interface Theme {
     widgetBackground: string;
     widgetBorder: string;
     widgetShadow: string;
+
+    // Badge/pill (e.g. event count) - same style as Alerts count pill, blue; 7:1 on badgeBackground
+    badgeBackground: string;
+    badgeText: string;
   };
 }
 
@@ -79,6 +83,10 @@ export const lightTheme: Theme = {
     widgetBackground: '#ffffff',
     widgetBorder: '#e5e5ea',
     widgetShadow: 'rgba(0, 0, 0, 0.05)',
+
+    // Badge/pill - blue (like Alerts pill style: tint + text), 7:1
+    badgeBackground: '#eff6ff',
+    badgeText: '#1e3a8a',
   },
 };
 
@@ -120,5 +128,9 @@ export const darkTheme: Theme = {
     widgetBackground: '#2c2c2e',
     widgetBorder: '#38383a',
     widgetShadow: 'rgba(0, 0, 0, 0.4)',
+
+    // Badge/pill - blue (like Alerts pill style), 7:1
+    badgeBackground: '#0d2137',
+    badgeText: '#7dc8ff',
   },
 };

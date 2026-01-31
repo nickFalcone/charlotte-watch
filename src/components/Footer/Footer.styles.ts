@@ -10,13 +10,29 @@ export const FooterBar = styled.footer`
   margin-top: 20px;
   border-top: 1px solid ${props => props.theme.colors.border};
   font-size: 12px;
-  color: ${props => props.theme.colors.textMuted};
+  color: ${props => props.theme.colors.textSecondary};
   flex-shrink: 0;
 `;
 
+const footerLinkColor = (theme: { name: string; colors: { link: string } }) =>
+  theme.name === 'dark' ? theme.colors.link : '#003366';
+
 export const FooterReportLink = styled.a`
+  color: ${props => footerLinkColor(props.theme)};
+  text-decoration: underline;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: ${props => (props.theme.name === 'dark' ? props.theme.colors.primaryHover : '#002244')};
+  }
+
   &:visited {
-    color: ${props => props.theme.colors.link};
+    color: ${props => props.theme.colors.linkVisited};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.colors.primary};
+    outline-offset: 2px;
   }
 `;
 
@@ -26,13 +42,13 @@ export const FooterLinkButton = styled.button`
   padding: 0;
   font: inherit;
   font-size: 12px;
-  color: ${props => props.theme.colors.link};
+  color: ${props => footerLinkColor(props.theme)};
   text-decoration: underline;
   cursor: pointer;
   transition: color 0.15s ease;
 
   &:hover {
-    color: ${props => props.theme.colors.primaryHover};
+    color: ${props => (props.theme.name === 'dark' ? props.theme.colors.primaryHover : '#002244')};
   }
 
   &:focus-visible {

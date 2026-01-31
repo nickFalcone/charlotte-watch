@@ -1,3 +1,6 @@
+# Redirect www to non-www (SEO: consolidate to single canonical domain)
+https://www.clt.watch/* https://clt.watch/:splat 301
+
 # Cloudflare Pages Functions handle /api/* routes automatically
 # This SPA fallback ensures client-side routing works
 /* /index.html 200

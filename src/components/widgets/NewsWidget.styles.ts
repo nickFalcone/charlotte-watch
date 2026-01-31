@@ -21,8 +21,10 @@ export const ArticleCount = styled.span`
   border-radius: 12px;
   font-weight: 500;
   white-space: nowrap;
-  background: ${props => props.theme.colors.primary}20;
-  color: ${props => props.theme.colors.primary};
+  background: ${props =>
+    props.theme.colors.badgeBackground ?? (props.theme.name === 'dark' ? '#0d2137' : '#eff6ff')};
+  color: ${props =>
+    props.theme.colors.badgeText ?? (props.theme.name === 'dark' ? '#7dc8ff' : '#1e3a8a')};
 `;
 
 export const ArticleSource = styled.span`

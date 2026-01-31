@@ -24,7 +24,7 @@ export const useThemeStore = create<ThemeStore>()(
     }),
     {
       name: 'charlotte-theme-storage',
-      version: 1,
+      version: 2,
     }
   )
 );

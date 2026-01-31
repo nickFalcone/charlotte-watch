@@ -147,11 +147,11 @@ export const getAlertSeverityConfig = (
       minor: { color: '#93c5fd', bgColor: 'rgba(59, 130, 246, 0.2)', label: 'Minor' }, // 7.73:1 on #2c2c2e
     };
   }
-  // Light mode - solid backgrounds (no alpha) so contrast tools get unambiguous pairs; >=4.5:1
+  // Light mode - solid backgrounds (no alpha); 7:1 on bgColor for AAA
   return {
     critical: { color: '#991b1b', bgColor: '#fef2f2', label: 'Critical' }, // red-800 on red-50
     high: { color: '#b91c1c', bgColor: '#fee2e2', label: 'High' }, // red-700 on red-100
-    moderate: { color: '#c2410c', bgColor: '#fff7ed', label: 'Moderate' }, // orange-700 on orange-50
+    moderate: { color: '#7c2d12', bgColor: '#fff7ed', label: 'Moderate' }, // orange-900 on orange-50, 7:1
     minor: { color: '#1d4ed8', bgColor: '#eff6ff', label: 'Minor' }, // blue-700 on blue-50
   };
 };
