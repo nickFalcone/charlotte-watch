@@ -205,6 +205,12 @@ export function AlertsWidget(_props: WidgetProps) {
     enabled: sortedAllAlerts.length > 0 && !isLoading,
   });
 
+  // Stable random skeleton line widths (30–100%) so loading state looks varied but consistent
+  const aiSummarySkeletonWidths = useMemo(
+    () => Array.from({ length: 9 }, () => Math.round(30 + Math.random() * 70)),
+    []
+  );
+
   // Sync last-fetch time to widget metadata. Prefer TanStack's dataUpdatedAt
   // (set on every successful fetch); fall back to fetchedAt for rehydrated caches.
   useEffect(() => {
@@ -314,8 +320,12 @@ export function AlertsWidget(_props: WidgetProps) {
         <AISummaryContainer>
           {isSummaryLoading ? (
             <AISummarySkeleton>
-              <AISummarySkeletonLine />
-              <AISummarySkeletonLine $width="85%" />
+              <AISummaryTitleRow>
+                <AISummaryTitle>Generating alert summary...</AISummaryTitle>
+              </AISummaryTitleRow>
+              {aiSummarySkeletonWidths.map((width, i) => (
+                <AISummarySkeletonLine key={i} $width={`${width}%`} />
+              ))}
             </AISummarySkeleton>
           ) : isSummaryError ? (
             <AISummaryError>Summary unavailable</AISummaryError>
