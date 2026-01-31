@@ -119,8 +119,10 @@ export interface HereRouteFlow {
   avgSpeedMph: number;
   /** Free flow speed in mph */
   freeFlowSpeedMph: number;
-  /** Percentage slower than free flow */
+  /** Average percentage slower than free flow */
   congestionPercent: number;
+  /** Maximum congestion percent from any single segment */
+  maxCongestionPercent: number;
   /** Number of road segments analyzed */
   segmentCount: number;
   /** Timestamp of data */

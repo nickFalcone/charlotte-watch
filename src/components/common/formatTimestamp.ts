@@ -14,3 +14,16 @@ export function formatTimestamp(date: Date | string | number): string {
   }
   return format(d, 'MMM d h:mm a');
 }
+
+/**
+ * Format for AI summary "generated at" timestamp: "Jan-31 @ 2:16 PM EST" (locale, 12h, timezone).
+ */
+export function formatGeneratedAt(date: Date | string): string {
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return 'Invalid date';
+  const tzPart = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' })
+    .formatToParts(d)
+    .find(p => p.type === 'timeZoneName');
+  const tz = tzPart?.value ?? '';
+  return `${format(d, 'MMM-d, h:mm a')} ${tz}`.trim();
+}

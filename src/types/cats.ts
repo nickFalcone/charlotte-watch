@@ -59,3 +59,16 @@ export const LYNX_LIGHT_RAIL_ROUTES = [
 ] as const;
 
 export type LynxRouteId = (typeof LYNX_LIGHT_RAIL_ROUTES)[number];
+
+// CATS Twitter (X) feed from RapidAPI twitter-api47 - used to augment GTFS alerts
+export interface CATSTweet {
+  id: string;
+  text: string;
+  createdAt: string;
+  author?: { id: string };
+  type?: string;
+}
+
+export interface CATSTwitterResponse {
+  data: CATSTweet[];
+}

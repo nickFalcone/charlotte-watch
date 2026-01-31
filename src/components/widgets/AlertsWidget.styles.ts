@@ -285,11 +285,49 @@ export const AISummaryRow = styled.div`
 `;
 
 export const AISummaryText = styled.div`
+  font-size: 14px;
+  color: ${props => props.theme.colors.text};
+  line-height: 1.45;
+  flex: 1;
+  min-width: 0;
+`;
+
+export const AISummaryTitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+`;
+
+export const AISummaryTitle = styled.h3`
   font-size: 16px;
   color: ${props => props.theme.colors.text};
   line-height: 1.2;
-  flex: 1;
-  min-width: 0;
+  margin: 0;
+`;
+
+export const AISummaryList = styled.ul`
+  margin: 0;
+  padding-left: 1.25em;
+  list-style-type: disc;
+`;
+
+export const AISummaryListItem = styled.li`
+  margin-bottom: 0.5em;
+  line-height: 1.45;
+  &::marker {
+    color: ${props => props.theme.colors.text};
+  }
+  &:last-child {
+    margin-bottom: 0;
+  }
+`;
+
+export const AISummaryGeneratedAt = styled.div`
+  font-size: 10px;
+  color: ${props => props.theme.colors.textMuted};
+  margin-top: 8px;
+  text-align: right;
 `;
 
 // Info popover components moved to src/components/common/InfoPopover.styles.ts

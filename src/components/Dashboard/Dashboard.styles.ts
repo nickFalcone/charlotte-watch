@@ -16,7 +16,6 @@ export const DashboardHeader = styled.header`
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
   padding-bottom: 16px;
   padding-left: 12px;
   border-bottom: 1px solid ${props => props.theme.colors.border};

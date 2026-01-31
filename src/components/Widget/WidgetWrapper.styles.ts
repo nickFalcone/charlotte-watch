@@ -26,7 +26,7 @@ export const WidgetHeader = styled.div<{ $locked?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: 6px 8px;
   background: ${props => props.theme.colors.backgroundTertiary};
   border-bottom: 1px solid ${props => props.theme.colors.border};
   cursor: ${props => (props.$locked ? 'default' : 'move')};

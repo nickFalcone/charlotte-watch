@@ -144,7 +144,7 @@ function parseFAAStatusXML(xml: string): FAAStatusResponse {
   }
 
   // Parse Ground Stops
-  const groundStops = doc.querySelectorAll('Ground_Stop_List Ground_Stop');
+  const groundStops = doc.querySelectorAll('Ground_Stop_List Program');
   if (groundStops.length > 0) {
     const groundStopList: FAAGroundStop[] = [];
     groundStops.forEach(gs => {
