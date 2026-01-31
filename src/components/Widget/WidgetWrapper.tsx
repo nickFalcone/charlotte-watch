@@ -20,6 +20,7 @@ import {
   DragHandle,
 } from './WidgetWrapper.styles';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { AnimatedTooltipContent } from '../common';
 
 interface WidgetWrapperProps {
   config: WidgetConfig;
@@ -75,13 +76,13 @@ function WidgetWrapperInner({
                   </ControlButton>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
-                  <Tooltip.Content side="top" sideOffset={5} asChild>
+                  <AnimatedTooltipContent side="top" sideOffset={5} asChild>
                     <ControlTooltipContent>
                       {config.locked
                         ? 'Unlock widget location and dimensions'
                         : 'Lock widget location and dimensions'}
                     </ControlTooltipContent>
-                  </Tooltip.Content>
+                  </AnimatedTooltipContent>
                 </Tooltip.Portal>
               </Tooltip.Root>
             </Tooltip.Provider>

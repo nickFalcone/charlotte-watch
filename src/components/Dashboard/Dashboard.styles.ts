@@ -1,4 +1,5 @@
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
+import * as Dialog from '@radix-ui/react-dialog';
 import { Root as ToggleGroupRoot } from '@radix-ui/react-toggle-group';
 
 export const DashboardContainer = styled.div`
@@ -158,35 +159,82 @@ export const GridContainer = styled.div`
   }
 `;
 
-export const WidgetDrawer = styled.div<{ $isOpen: boolean }>`
+// Drawer animations
+const slideInFromRight = keyframes`
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+`;
+
+const slideOutToRight = keyframes`
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+`;
+
+const overlayShow = keyframes`
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+`;
+
+const overlayHide = keyframes`
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+`;
+
+export const DrawerOverlay = styled(Dialog.Overlay)`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+
+  &[data-state='open'] {
+    animation: ${overlayShow} 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &[data-state='closed'] {
+    animation: ${overlayHide} 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+`;
+
+export const WidgetDrawer = styled(Dialog.Content)`
   position: fixed;
   top: 0;
-  right: ${({ $isOpen }) => ($isOpen ? '0' : '-320px')};
+  right: 0;
   width: 320px;
   height: 100vh;
   background: ${props => props.theme.colors.backgroundSecondary};
   border-left: 1px solid ${props => props.theme.colors.border};
   padding: 20px;
-  transition:
-    right 0.3s ease,
-    background-color 0.3s ease;
   z-index: 1000;
   overflow-y: auto;
-`;
 
-export const DrawerOverlay = styled.div<{ $isOpen: boolean }>`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  opacity: ${({ $isOpen }) => ($isOpen ? 1 : 0)};
-  visibility: ${({ $isOpen }) => ($isOpen ? 'visible' : 'hidden')};
-  transition:
-    opacity 0.3s ease,
-    visibility 0.3s ease;
-  z-index: 999;
+  &[data-state='open'] {
+    animation: ${slideInFromRight} 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &[data-state='closed'] {
+    animation: ${slideOutToRight} 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.colors.primary};
+    outline-offset: -2px;
+  }
 `;
 
 export const DrawerHeader = styled.div`

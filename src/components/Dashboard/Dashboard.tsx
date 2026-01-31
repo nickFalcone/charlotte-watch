@@ -130,55 +130,51 @@ export function Dashboard() {
         </GridContainer>
 
         <Dialog.Portal>
-          <Dialog.Overlay asChild>
-            <DrawerOverlay $isOpen={isDrawerOpen} />
-          </Dialog.Overlay>
-          <Dialog.Content asChild>
-            <WidgetDrawer $isOpen={isDrawerOpen} as="aside" aria-label="Widget manager">
-              <DrawerHeader>
-                <Dialog.Title asChild>
-                  <DrawerTitle as="h2">Manage Widgets</DrawerTitle>
-                </Dialog.Title>
-                <Dialog.Close asChild>
-                  <CloseButton aria-label="Close widget manager">
-                    <CloseButtonIcon src={closeIcon} alt="" aria-hidden />
-                  </CloseButton>
-                </Dialog.Close>
-              </DrawerHeader>
-              <WidgetToggleGroup
-                type="multiple"
-                value={widgets.filter(w => w.visible).map(w => w.id)}
-                onValueChange={newValue => {
-                  const visibleIds = widgets.filter(w => w.visible).map(w => w.id);
-                  const added = newValue.filter(id => !visibleIds.includes(id));
-                  const removed = visibleIds.filter(id => !newValue.includes(id));
-                  if (added.length) toggleWidgetVisibility(added[0]);
-                  else if (removed.length) toggleWidgetVisibility(removed[0]);
-                }}
-                aria-label="Widget visibility"
-                orientation="vertical"
-              >
-                {widgets.map(widget => (
-                  <ToggleGroup.Item
-                    key={widget.id}
-                    value={widget.id}
-                    asChild
-                    aria-label={`${widget.title} - ${widget.visible ? 'Visible' : 'Hidden'}. Click to ${widget.visible ? 'hide' : 'show'}`}
-                  >
-                    <WidgetListItem $isVisible={widget.visible} $color={WIDGET_COLORS[widget.type]}>
-                      <WidgetListIcon src={WIDGET_ICONS[widget.type]} alt="" aria-hidden="true" />
-                      <WidgetListInfo>
-                        <WidgetListName>{widget.title}</WidgetListName>
-                        <WidgetListStatus $isVisible={widget.visible}>
-                          {widget.visible ? 'Visible' : 'Hidden'}
-                        </WidgetListStatus>
-                      </WidgetListInfo>
-                    </WidgetListItem>
-                  </ToggleGroup.Item>
-                ))}
-              </WidgetToggleGroup>
-            </WidgetDrawer>
-          </Dialog.Content>
+          <DrawerOverlay />
+          <WidgetDrawer as="aside" aria-label="Widget manager">
+            <DrawerHeader>
+              <Dialog.Title asChild>
+                <DrawerTitle as="h2">Manage Widgets</DrawerTitle>
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <CloseButton aria-label="Close widget manager">
+                  <CloseButtonIcon src={closeIcon} alt="" aria-hidden />
+                </CloseButton>
+              </Dialog.Close>
+            </DrawerHeader>
+            <WidgetToggleGroup
+              type="multiple"
+              value={widgets.filter(w => w.visible).map(w => w.id)}
+              onValueChange={newValue => {
+                const visibleIds = widgets.filter(w => w.visible).map(w => w.id);
+                const added = newValue.filter(id => !visibleIds.includes(id));
+                const removed = visibleIds.filter(id => !newValue.includes(id));
+                if (added.length) toggleWidgetVisibility(added[0]);
+                else if (removed.length) toggleWidgetVisibility(removed[0]);
+              }}
+              aria-label="Widget visibility"
+              orientation="vertical"
+            >
+              {widgets.map(widget => (
+                <ToggleGroup.Item
+                  key={widget.id}
+                  value={widget.id}
+                  asChild
+                  aria-label={`${widget.title} - ${widget.visible ? 'Visible' : 'Hidden'}. Click to ${widget.visible ? 'hide' : 'show'}`}
+                >
+                  <WidgetListItem $isVisible={widget.visible} $color={WIDGET_COLORS[widget.type]}>
+                    <WidgetListIcon src={WIDGET_ICONS[widget.type]} alt="" aria-hidden="true" />
+                    <WidgetListInfo>
+                      <WidgetListName>{widget.title}</WidgetListName>
+                      <WidgetListStatus $isVisible={widget.visible}>
+                        {widget.visible ? 'Visible' : 'Hidden'}
+                      </WidgetListStatus>
+                    </WidgetListInfo>
+                  </WidgetListItem>
+                </ToggleGroup.Item>
+              ))}
+            </WidgetToggleGroup>
+          </WidgetDrawer>
         </Dialog.Portal>
       </Dialog.Root>
 
