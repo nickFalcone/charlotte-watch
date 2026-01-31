@@ -2,6 +2,7 @@ import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 
 import closeIcon from '../../assets/icons/close.svg';
+import { AnimatedDialogOverlay, AnimatedDialogContent } from '../common';
 import {
   FooterBar,
   FooterLinkButton,
@@ -32,9 +33,9 @@ export function Footer() {
           Legal
         </FooterLinkButton>
         <Dialog.Portal>
-          <Dialog.Overlay asChild>
+          <AnimatedDialogOverlay asChild>
             <FooterDialogOverlay>
-              <Dialog.Content asChild>
+              <AnimatedDialogContent asChild>
                 <FooterDialogContent>
                   <FooterDialogHeader>
                     <Dialog.Title asChild>
@@ -86,9 +87,9 @@ export function Footer() {
                     </p>
                   </FooterDialogBody>
                 </FooterDialogContent>
-              </Dialog.Content>
+              </AnimatedDialogContent>
             </FooterDialogOverlay>
-          </Dialog.Overlay>
+          </AnimatedDialogOverlay>
         </Dialog.Portal>
       </Dialog.Root>
       <span>|</span>
@@ -97,9 +98,9 @@ export function Footer() {
           Privacy
         </FooterLinkButton>
         <Dialog.Portal>
-          <Dialog.Overlay asChild>
+          <AnimatedDialogOverlay asChild>
             <FooterDialogOverlay>
-              <Dialog.Content asChild>
+              <AnimatedDialogContent asChild>
                 <FooterDialogContent>
                   <FooterDialogHeader>
                     <Dialog.Title asChild>
@@ -124,9 +125,9 @@ export function Footer() {
                     </p>
                   </FooterDialogBody>
                 </FooterDialogContent>
-              </Dialog.Content>
+              </AnimatedDialogContent>
             </FooterDialogOverlay>
-          </Dialog.Overlay>
+          </AnimatedDialogOverlay>
         </Dialog.Portal>
       </Dialog.Root>
       <span>|</span>

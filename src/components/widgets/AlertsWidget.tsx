@@ -19,11 +19,14 @@ import * as Popover from '@radix-ui/react-popover';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import {
+  AnimatedDialogContent,
+  AnimatedDialogOverlay,
+  AnimatedPopoverContent,
+  AnimatedTooltipContent,
   formatGeneratedAt,
   formatTimestamp,
   InfoIcon,
   InfoTrigger,
-  PopoverContent,
 } from '../common';
 import {
   AlertsContainer,
@@ -55,8 +58,6 @@ import {
   TooltipContent,
   TooltipRow,
   TooltipArrow,
-  AlertModalOverlay,
-  AlertModalContent,
   AlertModalHeader,
   AlertModalTitle,
   AlertModalTitleText,
@@ -283,7 +284,7 @@ export function AlertsWidget(_props: WidgetProps) {
                         </ToggleGroup.Item>
                       </Tooltip.Trigger>
                       <Tooltip.Portal>
-                        <Tooltip.Content side="top" sideOffset={5} asChild>
+                        <AnimatedTooltipContent side="top" sideOffset={5} asChild>
                           <TooltipContent>
                             <TooltipRow>{SOURCE_FULL_NAMES[sourceKey]}</TooltipRow>
                             <TooltipRow
@@ -304,7 +305,7 @@ export function AlertsWidget(_props: WidgetProps) {
                               <TooltipArrow />
                             </Tooltip.Arrow>
                           </TooltipContent>
-                        </Tooltip.Content>
+                        </AnimatedTooltipContent>
                       </Tooltip.Portal>
                     </Tooltip.Root>
                   );
@@ -341,12 +342,10 @@ export function AlertsWidget(_props: WidgetProps) {
                       </InfoTrigger>
                     </Popover.Trigger>
                     <Popover.Portal>
-                      <Popover.Content side="top" sideOffset={6} asChild>
-                        <PopoverContent>
-                          This is an AI-generated summary of the most important alerts. Always
-                          confirm details with source references.
-                        </PopoverContent>
-                      </Popover.Content>
+                      <AnimatedPopoverContent side="top" sideOffset={6}>
+                        This is an AI-generated summary of the most important alerts. Always confirm
+                        details with source references.
+                      </AnimatedPopoverContent>
                     </Popover.Portal>
                   </Popover.Root>
                 </AISummaryTitleRow>
@@ -467,113 +466,105 @@ export function AlertsWidget(_props: WidgetProps) {
         }}
       >
         <Dialog.Portal>
-          <Dialog.Overlay asChild>
-            <AlertModalOverlay>
-              <Dialog.Content asChild>
-                <AlertModalContent>
-                  {selectedAlert && (
-                    <>
-                      <AlertModalHeader
+          <AnimatedDialogOverlay>
+            <AnimatedDialogContent>
+              {selectedAlert && (
+                <>
+                  <AlertModalHeader $color={ALERT_SEVERITY_CONFIG[selectedAlert.severity].color}>
+                    <AlertModalTitle>
+                      <AlertSourceIcon>
+                        <AlertIcon source={selectedAlert.source} size={20} />
+                      </AlertSourceIcon>
+                      <Dialog.Title asChild>
+                        <AlertModalTitleText>{selectedAlert.title}</AlertModalTitleText>
+                      </Dialog.Title>
+                      <AlertSeverityBadge
                         $color={ALERT_SEVERITY_CONFIG[selectedAlert.severity].color}
+                        $bg={ALERT_SEVERITY_CONFIG[selectedAlert.severity].bgColor}
                       >
-                        <AlertModalTitle>
-                          <AlertSourceIcon>
-                            <AlertIcon source={selectedAlert.source} size={20} />
-                          </AlertSourceIcon>
-                          <Dialog.Title asChild>
-                            <AlertModalTitleText>{selectedAlert.title}</AlertModalTitleText>
-                          </Dialog.Title>
-                          <AlertSeverityBadge
-                            $color={ALERT_SEVERITY_CONFIG[selectedAlert.severity].color}
-                            $bg={ALERT_SEVERITY_CONFIG[selectedAlert.severity].bgColor}
-                          >
-                            {getDisplaySeverity(selectedAlert) ||
-                              ALERT_SEVERITY_CONFIG[selectedAlert.severity].label}
-                          </AlertSeverityBadge>
-                        </AlertModalTitle>
-                        <Dialog.Close asChild>
-                          <AlertModalClose aria-label="Close">
-                            <AlertModalCloseIcon src={closeIcon} alt="" aria-hidden />
-                          </AlertModalClose>
-                        </Dialog.Close>
-                      </AlertModalHeader>
-                      <AlertModalBody>
-                        <AlertModalSection>
-                          <AlertModalLabel>Source</AlertModalLabel>
-                          <AlertModalText>
-                            {selectedAlert.source.toUpperCase()} - {selectedAlert.category}
-                          </AlertModalText>
-                        </AlertModalSection>
+                        {getDisplaySeverity(selectedAlert) ||
+                          ALERT_SEVERITY_CONFIG[selectedAlert.severity].label}
+                      </AlertSeverityBadge>
+                    </AlertModalTitle>
+                    <Dialog.Close asChild>
+                      <AlertModalClose aria-label="Close">
+                        <AlertModalCloseIcon src={closeIcon} alt="" aria-hidden />
+                      </AlertModalClose>
+                    </Dialog.Close>
+                  </AlertModalHeader>
+                  <AlertModalBody>
+                    <AlertModalSection>
+                      <AlertModalLabel>Source</AlertModalLabel>
+                      <AlertModalText>
+                        {selectedAlert.source.toUpperCase()} - {selectedAlert.category}
+                      </AlertModalText>
+                    </AlertModalSection>
 
-                        {selectedAlert.affectedArea && (
-                          <AlertModalSection>
-                            <AlertModalLabel>Affected Area</AlertModalLabel>
-                            <AlertModalText>{selectedAlert.affectedArea}</AlertModalText>
-                          </AlertModalSection>
-                        )}
+                    {selectedAlert.affectedArea && (
+                      <AlertModalSection>
+                        <AlertModalLabel>Affected Area</AlertModalLabel>
+                        <AlertModalText>{selectedAlert.affectedArea}</AlertModalText>
+                      </AlertModalSection>
+                    )}
 
-                        {selectedAlert.url && (
-                          <AlertModalSection>
-                            <AlertModalLabel>
-                              {/x\.com|twitter\.com/.test(selectedAlert.url) ? 'Tweet' : 'Map'}
-                            </AlertModalLabel>
-                            <AlertModalText>
-                              <a href={selectedAlert.url} target="_blank" rel="noopener noreferrer">
-                                {/x\.com|twitter\.com/.test(selectedAlert.url)
-                                  ? 'View on X'
-                                  : 'View on map'}
-                              </a>
-                            </AlertModalText>
-                          </AlertModalSection>
-                        )}
+                    {selectedAlert.url && (
+                      <AlertModalSection>
+                        <AlertModalLabel>
+                          {/x\.com|twitter\.com/.test(selectedAlert.url) ? 'Tweet' : 'Map'}
+                        </AlertModalLabel>
+                        <AlertModalText>
+                          <a href={selectedAlert.url} target="_blank" rel="noopener noreferrer">
+                            {/x\.com|twitter\.com/.test(selectedAlert.url)
+                              ? 'View on X'
+                              : 'View on map'}
+                          </a>
+                        </AlertModalText>
+                      </AlertModalSection>
+                    )}
 
-                        <AlertModalSection>
-                          <AlertModalLabel>Summary</AlertModalLabel>
-                          <AlertModalText>{selectedAlert.summary}</AlertModalText>
-                        </AlertModalSection>
+                    <AlertModalSection>
+                      <AlertModalLabel>Summary</AlertModalLabel>
+                      <AlertModalText>{selectedAlert.summary}</AlertModalText>
+                    </AlertModalSection>
 
-                        {selectedAlert.description && (
-                          <AlertModalSection>
-                            <AlertModalLabel>Description</AlertModalLabel>
-                            <AlertModalText>{selectedAlert.description}</AlertModalText>
-                          </AlertModalSection>
-                        )}
+                    {selectedAlert.description && (
+                      <AlertModalSection>
+                        <AlertModalLabel>Description</AlertModalLabel>
+                        <AlertModalText>{selectedAlert.description}</AlertModalText>
+                      </AlertModalSection>
+                    )}
 
-                        {selectedAlert.instruction && (
-                          <AlertModalSection>
-                            <AlertModalLabel>Instructions</AlertModalLabel>
-                            <AlertModalText>{selectedAlert.instruction}</AlertModalText>
-                          </AlertModalSection>
-                        )}
+                    {selectedAlert.instruction && (
+                      <AlertModalSection>
+                        <AlertModalLabel>Instructions</AlertModalLabel>
+                        <AlertModalText>{selectedAlert.instruction}</AlertModalText>
+                      </AlertModalSection>
+                    )}
 
-                        {(selectedAlert.startTime || selectedAlert.endTime) && (
-                          <AlertModalSection>
-                            <AlertModalLabel>Timing</AlertModalLabel>
-                            <AlertModalText>
-                              {selectedAlert.startTime && (
-                                <>Effective: {formatTimestamp(selectedAlert.startTime)}</>
-                              )}
-                              {selectedAlert.startTime && selectedAlert.endTime && '\n'}
-                              {selectedAlert.endTime && (
-                                <>Expires: {formatTimestamp(selectedAlert.endTime)}</>
-                              )}
-                            </AlertModalText>
-                          </AlertModalSection>
-                        )}
+                    {(selectedAlert.startTime || selectedAlert.endTime) && (
+                      <AlertModalSection>
+                        <AlertModalLabel>Timing</AlertModalLabel>
+                        <AlertModalText>
+                          {selectedAlert.startTime && (
+                            <>Effective: {formatTimestamp(selectedAlert.startTime)}</>
+                          )}
+                          {selectedAlert.startTime && selectedAlert.endTime && '\n'}
+                          {selectedAlert.endTime && (
+                            <>Expires: {formatTimestamp(selectedAlert.endTime)}</>
+                          )}
+                        </AlertModalText>
+                      </AlertModalSection>
+                    )}
 
-                        <AlertModalSection>
-                          <AlertModalLabel>Last Updated</AlertModalLabel>
-                          <AlertModalText>
-                            {formatTimestamp(selectedAlert.updatedAt)}
-                          </AlertModalText>
-                        </AlertModalSection>
-                      </AlertModalBody>
-                    </>
-                  )}
-                </AlertModalContent>
-              </Dialog.Content>
-            </AlertModalOverlay>
-          </Dialog.Overlay>
+                    <AlertModalSection>
+                      <AlertModalLabel>Last Updated</AlertModalLabel>
+                      <AlertModalText>{formatTimestamp(selectedAlert.updatedAt)}</AlertModalText>
+                    </AlertModalSection>
+                  </AlertModalBody>
+                </>
+              )}
+            </AnimatedDialogContent>
+          </AnimatedDialogOverlay>
         </Dialog.Portal>
       </Dialog.Root>
     </AlertsContainer>

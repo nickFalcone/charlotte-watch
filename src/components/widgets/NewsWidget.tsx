@@ -12,6 +12,9 @@ import infoIcon from '../../assets/icons/info.svg';
 import closeIcon from '../../assets/icons/close.svg';
 import noResultsIcon from '../../assets/icons/no-results.svg';
 import {
+  AnimatedDialogContent,
+  AnimatedDialogOverlay,
+  AnimatedPopoverContent,
   CardList,
   CardItem,
   CardItemHeader,
@@ -29,8 +32,6 @@ import {
   EmptyIcon,
   EmptyText,
   EmptySubtext,
-  ModalOverlay,
-  ModalContent,
   ModalHeader,
   ModalTitle,
   ModalTitleText,
@@ -41,7 +42,6 @@ import {
   ModalLabel,
   InfoIcon,
   InfoTrigger,
-  PopoverContent,
 } from '../common';
 import {
   NewsContainer,
@@ -118,12 +118,10 @@ export function NewsWidget(_props: WidgetProps) {
             </InfoTrigger>
           </Popover.Trigger>
           <Popover.Portal>
-            <Popover.Content side="top" sideOffset={6} asChild>
-              <PopoverContent>
-                Headlines are read by AI and verified against at least 2 corroborating sources.
-                Always confirm details with source references.
-              </PopoverContent>
-            </Popover.Content>
+            <AnimatedPopoverContent side="top" sideOffset={6}>
+              Headlines are read by AI and verified against at least 2 corroborating sources. Always
+              confirm details with source references.
+            </AnimatedPopoverContent>
           </Popover.Portal>
         </Popover.Root>
       </NewsHeader>
@@ -174,51 +172,41 @@ export function NewsWidget(_props: WidgetProps) {
         }}
       >
         <Dialog.Portal>
-          <Dialog.Overlay asChild>
-            <ModalOverlay>
-              <Dialog.Content asChild>
-                <ModalContent>
-                  {selectedEvent && (
-                    <>
-                      <ModalHeader $color={ACCENT_COLOR}>
-                        <ModalTitle>
-                          <Dialog.Title asChild>
-                            <ModalTitleText>{selectedEvent.text}</ModalTitleText>
-                          </Dialog.Title>
-                        </ModalTitle>
-                        <Dialog.Close asChild>
-                          <ModalClose aria-label="Close">
-                            <ModalCloseIcon src={closeIcon} alt="" aria-hidden />
-                          </ModalClose>
-                        </Dialog.Close>
-                      </ModalHeader>
-                      <ModalBody>
-                        <ModalSection>
-                          <ModalLabel>
-                            Source{selectedEvent.sources.length > 1 ? 's' : ''}
-                          </ModalLabel>
-                          <SourcesList>
-                            {selectedEvent.sources.map((src, i) => (
-                              <SourceItem key={src.link + i}>
-                                <ArticleLink
-                                  href={src.link}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  {src.source_name}
-                                </ArticleLink>{' '}
-                                ({formatTimestamp(src.published_datetime_utc)})
-                              </SourceItem>
-                            ))}
-                          </SourcesList>
-                        </ModalSection>
-                      </ModalBody>
-                    </>
-                  )}
-                </ModalContent>
-              </Dialog.Content>
-            </ModalOverlay>
-          </Dialog.Overlay>
+          <AnimatedDialogOverlay>
+            <AnimatedDialogContent>
+              {selectedEvent && (
+                <>
+                  <ModalHeader $color={ACCENT_COLOR}>
+                    <ModalTitle>
+                      <Dialog.Title asChild>
+                        <ModalTitleText>{selectedEvent.text}</ModalTitleText>
+                      </Dialog.Title>
+                    </ModalTitle>
+                    <Dialog.Close asChild>
+                      <ModalClose aria-label="Close">
+                        <ModalCloseIcon src={closeIcon} alt="" aria-hidden />
+                      </ModalClose>
+                    </Dialog.Close>
+                  </ModalHeader>
+                  <ModalBody>
+                    <ModalSection>
+                      <ModalLabel>Source{selectedEvent.sources.length > 1 ? 's' : ''}</ModalLabel>
+                      <SourcesList>
+                        {selectedEvent.sources.map((src, i) => (
+                          <SourceItem key={src.link + i}>
+                            <ArticleLink href={src.link} target="_blank" rel="noopener noreferrer">
+                              {src.source_name}
+                            </ArticleLink>{' '}
+                            ({formatTimestamp(src.published_datetime_utc)})
+                          </SourceItem>
+                        ))}
+                      </SourcesList>
+                    </ModalSection>
+                  </ModalBody>
+                </>
+              )}
+            </AnimatedDialogContent>
+          </AnimatedDialogOverlay>
         </Dialog.Portal>
       </Dialog.Root>
     </NewsContainer>
