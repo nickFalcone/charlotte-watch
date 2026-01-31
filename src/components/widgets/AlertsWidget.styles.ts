@@ -260,6 +260,7 @@ export const TooltipArrow = styled.div`
 `;
 
 // AI Summary styles
+// Shimmer: bright band moves left to right
 const shimmer = keyframes`
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -338,6 +339,7 @@ export const AISummarySkeleton = styled.div`
   display: flex;
   flex-direction: column;
   gap: 6px;
+  height: 200px;
 `;
 
 export const AISummarySkeletonLine = styled.div<{ $width?: string }>`
