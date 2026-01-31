@@ -27,7 +27,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
   }
 
   // Cache miss - Worker hasn't populated yet or KV expired
-  return new Response(JSON.stringify({ data: [], generatedAt: null }), {
+  return new Response(JSON.stringify({ data: [], generatedAt: new Date().toISOString() }), {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
