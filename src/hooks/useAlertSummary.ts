@@ -30,8 +30,5 @@ export function useAlertSummary(alerts: GenericAlert[], options: UseAlertSummary
     staleTime: Infinity,
     // Keep cached data when hash changes while fetching new summary
     placeholderData: previousData => previousData,
-    // Retry with backoff for transient errors
-    retry: 2,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 }
