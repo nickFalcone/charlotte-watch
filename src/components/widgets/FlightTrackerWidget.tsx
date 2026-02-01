@@ -30,7 +30,7 @@ import {
 } from '../../utils/flightApi';
 import { queryKeys } from '../../utils/queryKeys';
 import { useWidgetMetadata } from '../Widget';
-import resetIcon from '../../assets/icons/reset.svg';
+import { MapRecenterButton } from '../common';
 import planeIcon from '../../assets/icons/plane.svg';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -42,8 +42,6 @@ import {
   MapContainer,
   MapOverlay,
   MapControls,
-  ResetButton,
-  ResetButtonIcon,
   LegendItem,
   LegendPlane,
   LoadingContainer,
@@ -410,9 +408,7 @@ export function FlightTrackerWidget(_props: WidgetProps) {
         </MapOverlay>
 
         <MapControls>
-          <ResetButton onClick={handleResetView} title="Reset view">
-            <ResetButtonIcon src={resetIcon} alt="" aria-hidden />
-          </ResetButton>
+          <MapRecenterButton onClick={handleResetView} title="Reset view" aria-label="Reset view" />
         </MapControls>
       </MapContainer>
     </FlightContainer>

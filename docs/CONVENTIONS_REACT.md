@@ -101,6 +101,26 @@ useEffect(() => {
 }, [dataUpdatedAt, setLastUpdated]);
 ```
 
+## Components Over Render Functions
+
+**Do not use render functions** (e.g. `const renderX = () => <JSX />` or `{renderX()}`). Prefer functional components instead: extract the UI into a component and render it as `<Component />`. Render functions are harder to name, test, and compose; components are the standard React abstraction.
+
+```tsx
+// Wrong: render function
+const renderSummary = () => {
+  if (loading) return <Spinner />;
+  return <Content data={data} />;
+};
+return <div>{renderSummary()}</div>;
+
+// Correct: functional component
+function SummaryContent({ loading, data }: Props) {
+  if (loading) return <Spinner />;
+  return <Content data={data} />;
+}
+return <div><SummaryContent loading={loading} data={data} /></div>;
+```
+
 ## Conditional Rendering
 
 Use early returns instead of nested ternaries:

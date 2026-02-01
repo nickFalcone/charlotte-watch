@@ -47,7 +47,8 @@ export async function fetchCurrentWeather(
       'wind_speed_10m',
       'wind_direction_10m',
     ].join(','),
-    forecast_days: '1',
+    past_days: '1',
+    forecast_days: '2',
     temperature_unit: 'fahrenheit',
     wind_speed_unit: 'mph',
     timezone: 'auto',
@@ -81,6 +82,9 @@ export async function fetchAirQuality(
       'uv_index',
       'uv_index_clear_sky',
     ].join(','),
+    hourly: ['european_aqi', 'uv_index'].join(','),
+    past_days: '1',
+    forecast_days: '2',
     timezone: 'auto',
   });
 
@@ -180,83 +184,7 @@ export async function fetchAlertsForLocation(
   }
 }
 
-// Get wind direction as cardinal direction
-export function getWindDirection(degrees: number): string {
-  const directions = [
-    'N',
-    'NNE',
-    'NE',
-    'ENE',
-    'E',
-    'ESE',
-    'SE',
-    'SSE',
-    'S',
-    'SSW',
-    'SW',
-    'WSW',
-    'W',
-    'WNW',
-    'NW',
-    'NNW',
-  ];
-  const index = Math.round(degrees / 22.5) % 16;
-  return directions[index];
-}
-
 // Format temperature
 export function formatTemp(temp: number): string {
   return `${Math.round(temp)}°F`;
-}
-
-// Air quality interpretation
-export function getAirQualityInfo(aqi: number): {
-  level: string;
-  color: string;
-  description: string;
-} {
-  if (aqi <= 20)
-    return { level: 'Good', color: '#22c55e', description: 'Air quality is satisfactory' };
-  if (aqi <= 40)
-    return { level: 'Fair', color: '#eab308', description: 'Air quality is acceptable' };
-  if (aqi <= 60)
-    return {
-      level: 'Moderate',
-      color: '#f97316',
-      description: 'Members of sensitive groups may experience health effects',
-    };
-  if (aqi <= 80)
-    return {
-      level: 'Poor',
-      color: '#dc2626',
-      description: 'Everyone may begin to experience health effects',
-    };
-  if (aqi <= 100)
-    return {
-      level: 'Very Poor',
-      color: '#7c2d12',
-      description: 'Health warnings of emergency conditions',
-    };
-  return {
-    level: 'Extremely Poor',
-    color: '#1f2937',
-    description: 'Health alert: everyone may experience more serious health effects',
-  };
-}
-
-// UV Index interpretation
-export function getUVIndexInfo(uvIndex: number): {
-  level: string;
-  color: string;
-  description: string;
-} {
-  if (uvIndex <= 2)
-    return { level: 'Low', color: '#22c55e', description: 'Minimal sun protection required' };
-  if (uvIndex <= 5)
-    return { level: 'Moderate', color: '#eab308', description: 'Sun protection recommended' };
-  if (uvIndex <= 7)
-    return { level: 'High', color: '#f97316', description: 'Sun protection essential' };
-  if (uvIndex <= 10)
-    return { level: 'Very High', color: '#dc2626', description: 'Extra sun protection required' };
-  return { level: 'Extreme', color: '#7c2d12', description: 'Avoid sun exposure' };
 }

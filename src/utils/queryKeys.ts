@@ -34,6 +34,7 @@ export const queryKeys = {
   weather: {
     current: (lat: number, lng: number) => ['weather', 'current', lat, lng] as const,
     airQuality: (lat: number, lng: number) => ['weather', 'airQuality', lat, lng] as const,
+    summary: (hash: string) => ['weather', 'summary', hash] as const,
   },
 
   /**

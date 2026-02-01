@@ -66,7 +66,7 @@ export const MapContainer = styled.div`
   .leaflet-tile-pane {
     filter: ${props =>
       props.theme.name === 'dark'
-        ? 'brightness(0.6) contrast(1.1) saturate(0.8)'
+        ? 'brightness(0.78) contrast(1.2) saturate(0.85)'
         : 'brightness(1) contrast(1) saturate(1)'};
   }
 
@@ -121,44 +121,6 @@ export const MapControls = styled.div`
   flex-direction: column;
   gap: 4px;
 `;
-
-const MapControlButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: ${props => props.theme.colors.backgroundSecondary};
-  border: 1px solid ${props => props.theme.colors.border};
-  border-radius: 4px;
-  color: ${props => props.theme.colors.text};
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  &:hover:not(:disabled) {
-    background: ${props => props.theme.colors.backgroundTertiary};
-  }
-
-  &:active:not(:disabled) {
-    transform: scale(0.95);
-  }
-
-  &:disabled {
-    cursor: wait;
-    opacity: 0.7;
-  }
-`;
-
-export const ResetButtonIcon = styled.img`
-  width: 16px;
-  height: 16px;
-  object-fit: contain;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
-`;
-
-export const ResetButton = MapControlButton;
 
 export const LegendItem = styled.div<{ $color: string }>`
   display: flex;
