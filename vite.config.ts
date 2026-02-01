@@ -759,12 +759,6 @@ function aiWeatherSummaryPlugin(env: Record<string, string>): Plugin {
           userPrompt += `\n\nAir quality (European AQI): Next 12h: ${summarizeAqi(aqNext)}. Prior 12h: ${summarizeAqi(aqPast)}. Mention air quality ONLY when AQI exceeds 100 (see system prompt).`;
         }
 
-        console.log('[ai-weather-summary] temperature phrase:', temperaturePhrase);
-        console.log(
-          '[ai-weather-summary] user prompt (first 600 chars):',
-          userPrompt.slice(0, 600)
-        );
-
         try {
           const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',

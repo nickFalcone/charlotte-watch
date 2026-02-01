@@ -167,13 +167,6 @@ export async function fetchWeatherSummary(
   const { next_12h: airQualityNext12h, past_12h: airQualityPast12h } =
     prepareAirQualityNextAndPast12h(airQuality, weather.current.time);
 
-  if (airQualityNext12h.length > 0 || airQualityPast12h.length > 0) {
-    console.log('[weatherSummary] Forecast air quality next 12h (European AQI):', {
-      next_12h: airQualityNext12h.map(h => ({ time: h.time, european_aqi: h.european_aqi })),
-      past_12h: airQualityPast12h.map(h => ({ time: h.time, european_aqi: h.european_aqi })),
-    });
-  }
-
   const body: Record<string, unknown> = {
     current: prepareCurrent(weather),
     hourly: prepareNext12h(weather),

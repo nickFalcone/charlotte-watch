@@ -35,12 +35,6 @@ interface SummarizeWeatherRequest {
   air_quality_past_12h?: AirQualityHourInput[];
 }
 
-/** Hour from ISO time "2026-02-01T14:00" -> 14 */
-function getHour(time: string): number {
-  const t = time.split('T')[1];
-  return t ? parseInt(t.slice(0, 2), 10) : 0;
-}
-
 function summarizeBlock(slots: WeatherHourInput[]): string {
   if (slots.length === 0) return 'no data';
   const temps = slots.map(s => s.temperature_2m);
@@ -223,25 +217,6 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     ? request.air_quality_past_12h.slice(0, 12)
     : undefined;
   const temperaturePhrase = getTemperaturePhrase(request.current, hourly);
-
-  // Debug: log what we send to the LLM
-  console.log('[summarize-weather] current.temperature_2m (now):', request.current.temperature_2m);
-  console.log('[summarize-weather] temperature phrase:', temperaturePhrase);
-  if (airQualityNext12h?.length || airQualityPast12h?.length) {
-    console.log('[summarize-weather] air quality next 12h:', airQualityNext12h?.length ?? 0);
-    console.log('[summarize-weather] air quality past 12h:', airQualityPast12h?.length ?? 0);
-  }
-  console.log(
-    '[summarize-weather] user prompt (first 600 chars):',
-    buildUserPrompt(
-      request.current,
-      hourly,
-      past12h,
-      temperaturePhrase,
-      airQualityNext12h,
-      airQualityPast12h
-    ).slice(0, 600)
-  );
 
   try {
     let summary: string;
