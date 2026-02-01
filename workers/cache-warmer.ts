@@ -15,7 +15,7 @@ import newsParsingPrompt from '../src/prompts/newsParsing.json';
 const NEWS_PARSING_SYSTEM_PROMPT: string = newsParsingPrompt.systemPrompt;
 const OPENWEBNINJA_HOST = 'real-time-news-data.p.rapidapi.com';
 const CACHE_KEY = 'news:parsed';
-const MAX_ARTICLES_TO_SEND = 50;
+const MAX_ARTICLES_TO_SEND = 200;
 
 export interface Env {
   CACHE: KVNamespace;
@@ -87,11 +87,11 @@ async function warmNewsCache(
   if (!rapidApiKey) throw new Error('RAPIDAPI_KEY not configured');
   if (!apiKey) throw new Error(`${provider.toUpperCase()} API key not configured`);
 
-  // 1. Fetch articles from RapidAPI
+  // 1. Fetch articles from RapidAPI (single query, higher limit = 1 API call per warm)
   const params = new URLSearchParams({
     query: 'charlotte north carolina',
     time_published: '1d',
-    limit: '100',
+    limit: '200',
   });
   const fetchOptions = {
     method: 'GET' as const,
