@@ -48,6 +48,12 @@ export interface OpenMeteoAirQualityCurrent {
   uv_index_clear_sky: number;
 }
 
+export interface OpenMeteoAirQualityHourly {
+  time: string[];
+  european_aqi: number[];
+  uv_index?: number[];
+}
+
 export interface OpenMeteoAirQualityResponse {
   latitude: number;
   longitude: number;
@@ -58,6 +64,8 @@ export interface OpenMeteoAirQualityResponse {
   elevation: number;
   current_units: Record<string, string>;
   current: OpenMeteoAirQualityCurrent;
+  hourly?: OpenMeteoAirQualityHourly;
+  hourly_units?: Record<string, string>;
 }
 
 // NWS API Types

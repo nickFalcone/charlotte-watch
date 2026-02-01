@@ -36,5 +36,3 @@ export interface Env {
   // Cloudflare KV
   CACHE: KVNamespace;
 }
-
-export type CFContext = EventContext<Env, string, unknown>;

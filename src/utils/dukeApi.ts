@@ -61,7 +61,7 @@ function filterByMinimumCustomers(outages: DukeOutage[]): DukeOutage[] {
  */
 export async function fetchDukeOutages(signal?: AbortSignal): Promise<DukeOutage[]> {
   try {
-    // Auth is handled by Vite proxy (dev) or Netlify function (prod)
+    // Auth is handled by Vite proxy (dev) or Cloudflare Function (prod)
     const response = await fetch(DUKE_OUTAGE_URL, { signal });
 
     if (!response.ok) {

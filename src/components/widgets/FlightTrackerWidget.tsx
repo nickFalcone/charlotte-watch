@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from 'styled-components';
 import { useIntersectionObserver } from '../../hooks';
@@ -30,7 +30,7 @@ import {
 } from '../../utils/flightApi';
 import { queryKeys } from '../../utils/queryKeys';
 import { useWidgetMetadata } from '../Widget';
-import resetIcon from '../../assets/icons/reset.svg';
+import { MapRecenterButton } from '../common';
 import planeIcon from '../../assets/icons/plane.svg';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -42,8 +42,6 @@ import {
   MapContainer,
   MapOverlay,
   MapControls,
-  ResetButton,
-  ResetButtonIcon,
   LegendItem,
   LegendPlane,
   LoadingContainer,
@@ -53,6 +51,7 @@ import {
   ErrorIcon,
   ErrorText,
   RetryButton,
+  VisuallyHidden,
 } from './FlightTrackerWidget.styles';
 
 const DEFAULT_ZOOM = 7;
@@ -131,25 +130,113 @@ const createPlaneIcon = (color: string, heading: number, callsign: string, size:
   });
 };
 
-// Airport icon with accessible name
+// Airport icon with accessible name (28px for sufficient touch target per WCAG 2.5.8)
 const createAirportIcon = () =>
   L.divIcon({
     html: `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" role="img" aria-label="Charlotte Douglas International Airport">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28" role="img" aria-label="Charlotte Douglas International Airport">
       <title>Charlotte Douglas International Airport</title>
-      <circle cx="12" cy="12" r="8" fill="#f59e0b" stroke="#fbbf24" stroke-width="2"/>
-      <circle cx="12" cy="12" r="3" fill="#1a1a2e"/>
+      <circle cx="14" cy="14" r="10" fill="#f59e0b" stroke="#fbbf24" stroke-width="2"/>
+      <circle cx="14" cy="14" r="4" fill="#1a1a2e"/>
     </svg>
   `,
     className: 'airport-icon',
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
   });
 
 // Component to handle map reset
 function MapController({ mapRef }: { mapRef: React.MutableRefObject<LeafletMap | null> }) {
   const map = useMap();
   mapRef.current = map;
+  return null;
+}
+
+// Component to mark base map tiles as decorative for accessibility
+// Base map tiles are decorative because geographic context is provided via aria-label
+// and the informative content (aircraft markers) has its own accessible description
+function TileAccessibilityHandler() {
+  const map = useMap();
+
+  useEffect(() => {
+    const mapContainer = map.getContainer();
+
+    // Function to mark a tile as decorative
+    const markTileAsDecorative = (tile: Element) => {
+      if (!tile.hasAttribute('alt') || tile.getAttribute('alt') !== '') {
+        tile.setAttribute('alt', '');
+      }
+      if (!tile.hasAttribute('role')) {
+        tile.setAttribute('role', 'presentation');
+      }
+      if (!tile.hasAttribute('aria-hidden')) {
+        tile.setAttribute('aria-hidden', 'true');
+      }
+    };
+
+    // Process all existing tiles immediately
+    const processExistingTiles = () => {
+      const tileImages = mapContainer.querySelectorAll('.leaflet-tile-pane img');
+      tileImages.forEach(markTileAsDecorative);
+    };
+
+    // Initial processing
+    processExistingTiles();
+
+    // Use MutationObserver to catch tiles added dynamically
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node instanceof HTMLImageElement && node.classList.contains('leaflet-tile')) {
+            markTileAsDecorative(node);
+          }
+        });
+      });
+    });
+
+    // Observe the tile pane for new tiles
+    const tilePane = mapContainer.querySelector('.leaflet-tile-pane');
+    if (tilePane) {
+      observer.observe(tilePane, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
+    // Also listen for tile load events as a backup
+    const handleTileLoad = (e: L.TileEvent) => {
+      const tile = e.tile as HTMLImageElement;
+      if (tile) {
+        markTileAsDecorative(tile);
+      }
+    };
+
+    map.eachLayer(layer => {
+      if (layer instanceof L.TileLayer) {
+        layer.on('tileload', handleTileLoad);
+      }
+    });
+
+    // Re-process tiles after map events that might load new tiles
+    const reprocessTiles = () => {
+      setTimeout(processExistingTiles, 100);
+    };
+
+    map.on('moveend', reprocessTiles);
+    map.on('zoomend', reprocessTiles);
+
+    return () => {
+      observer.disconnect();
+      map.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) {
+          layer.off('tileload', handleTileLoad);
+        }
+      });
+      map.off('moveend', reprocessTiles);
+      map.off('zoomend', reprocessTiles);
+    };
+  }, [map]);
+
   return null;
 }
 
@@ -236,6 +323,7 @@ export function FlightTrackerWidget(_props: WidgetProps) {
   const theme = useTheme();
   const { setLastUpdated } = useWidgetMetadata();
   const [widgetRef, isWidgetVisible] = useIntersectionObserver<HTMLDivElement>();
+  const [liveAnnouncement, setLiveAnnouncement] = useState('');
 
   // Use different map tiles based on theme
   const mapTileUrl =
@@ -283,6 +371,16 @@ export function FlightTrackerWidget(_props: WidgetProps) {
     }
   };
 
+  // Announce aircraft count changes to screen readers
+  useEffect(() => {
+    if (aircraft !== undefined) {
+      const count = aircraft.length;
+      setLiveAnnouncement(
+        `${count} aircraft ${count === 1 ? 'is' : 'are'} currently visible in the radar area`
+      );
+    }
+  }, [aircraft]);
+
   if (isLoading) {
     return (
       <LoadingContainer>
@@ -316,6 +414,16 @@ export function FlightTrackerWidget(_props: WidgetProps) {
       </FlightHeader>
 
       <MapContainer>
+        <VisuallyHidden>
+          Interactive flight radar map showing aircraft near Charlotte Douglas International
+          Airport. Map displays aircraft within 200 kilometers, color-coded by flight phase:
+          departing, climbing, cruising, descending, approaching, or on ground. Click aircraft to
+          view details on FlightAware. Map shows range rings at 100km and 200km. Base map tiles are
+          decorative, aircraft positions and airport marker provide flight tracking information.
+        </VisuallyHidden>
+        <VisuallyHidden aria-live="polite" aria-atomic="true">
+          {liveAnnouncement}
+        </VisuallyHidden>
         <LeafletMapContainer
           center={DEFAULT_CENTER}
           zoom={DEFAULT_ZOOM}
@@ -325,8 +433,10 @@ export function FlightTrackerWidget(_props: WidgetProps) {
           wheelDebounceTime={100}
           minZoom={DEFAULT_ZOOM}
           maxZoom={10}
+          aria-label="Flight radar map for Charlotte Douglas International Airport showing nearby aircraft"
         >
           <MapController mapRef={mapRef} />
+          <TileAccessibilityHandler />
           <RetryTileLayer
             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
             url={mapTileUrl}
@@ -410,9 +520,7 @@ export function FlightTrackerWidget(_props: WidgetProps) {
         </MapOverlay>
 
         <MapControls>
-          <ResetButton onClick={handleResetView} title="Reset view">
-            <ResetButtonIcon src={resetIcon} alt="" aria-hidden />
-          </ResetButton>
+          <MapRecenterButton onClick={handleResetView} title="Reset view" aria-label="Reset view" />
         </MapControls>
       </MapContainer>
     </FlightContainer>

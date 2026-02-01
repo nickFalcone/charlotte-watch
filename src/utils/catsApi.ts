@@ -33,7 +33,7 @@ export function affectsLynxLightRail(alert: CATSEntity): boolean {
 }
 
 /**
- * Fetches CATS alerts from transit.land API via Netlify function
+ * Fetches CATS alerts from transit.land API via Cloudflare Function
  * Filters to only include LYNX light rail alerts
  */
 export async function fetchCATSAlerts(signal?: AbortSignal): Promise<CATSEntity[]> {

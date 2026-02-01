@@ -3,7 +3,7 @@
 //
 // SECURITY: Credentials are NEVER exposed to the client bundle.
 // - In development: Vite proxy injects credentials server-side
-// - In production: Netlify function handles auth server-side
+// - In production: Cloudflare Function handles auth server-side
 
 interface TokenData {
   accessToken: string;
@@ -22,12 +22,12 @@ const AUTH_ENDPOINT = import.meta.env.DEV
   : '/api/opensky-auth';
 
 // Fetch a new token from OpenSky (Keycloak realm)
-// Credentials are injected server-side by proxy (dev) or Netlify function (prod)
+// Credentials are injected server-side by proxy (dev) or Cloudflare Function (prod)
 async function fetchNewToken(): Promise<TokenData> {
   const response = await fetch(AUTH_ENDPOINT, {
     method: 'POST',
     // Note: In dev, Vite proxy intercepts and adds credentials + body
-    // In prod, Netlify function handles credentials server-side
+    // In prod, Cloudflare Function handles credentials server-side
   });
 
   if (!response.ok) {

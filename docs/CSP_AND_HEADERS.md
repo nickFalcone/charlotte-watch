@@ -9,7 +9,7 @@ All security headers are set statically via **`public/_headers`** (Cloudflare Pa
 | `default-src` | `'self'` | Baseline: only same-origin |
 | `script-src` | `'self' https://static.cloudflareinsights.com` | Vite bundle + Cloudflare analytics beacon |
 | `style-src` | `'self' 'unsafe-inline'` | CSS files + styled-components runtime styles |
-| `img-src` | `'self' data: https://*.basemaps.cartocdn.com` | Local images, data URIs, CARTO map tiles |
+| `img-src` | `'self' data: https://*.basemaps.cartocdn.com https://mesonet.agron.iastate.edu` | Local images, data URIs, CARTO map tiles, IEM NEXRAD radar overlay |
 | `connect-src` | `'self' https://api.weather.gov https://api.open-meteo.com https://air-quality-api.open-meteo.com https://eapps.ncdot.gov https://cmpdinfo.charlottenc.gov https://cloudflareinsights.com https://a.nel.cloudflare.com` | Same-origin API routes + direct client fetches |
 | `frame-ancestors` | `'none'` | Prevent embedding in iframes |
 | `base-uri` | `'self'` | Prevent base tag injection |
