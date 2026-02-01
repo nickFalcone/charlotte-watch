@@ -13,7 +13,8 @@ This file provides instructions for AI coding agents working on the Charlotte Mo
 ```bash
 npm run dev          # Start dev server
 npm run build        # Production build (also runs typecheck)
-npm test             # Run tests
+npm test             # Run all tests once
+npm run test:watch   # Run tests in watch mode
 npm run check:fix    # Format, lint, and typecheck (run after every change)
 ```
 
@@ -140,6 +141,7 @@ Read the relevant guide first:
 | Map/tile layer changes | [Map Tiles](./docs/MAP_TILES.md) |
 | Using or adding icons | [Icons](./docs/ICONS.md) |
 | Adding external origins or changing CSP | [CSP and security headers](./docs/CSP_AND_HEADERS.md) |
+| Writing or modifying tests | [Testing](./docs/TESTING.md) |
 
 See [Development Guide](./docs/DEVELOPMENT.md) for quality checks and testing.
 
@@ -156,13 +158,11 @@ This command:
 2. Lints with ESLint (auto-fixes issues)
 3. Type-checks with TypeScript
 
-**If you modified component logic or hooks:**
-
 ```bash
 npm test
 ```
 
-If tests fail, fix them before marking your work complete. Do not ignore test failures.
+If tests fail, fix them before marking your work complete. Do not ignore test failures. See [Testing](./docs/TESTING.md) for conventions.
 
 ## What to Ask vs. What to Do
 

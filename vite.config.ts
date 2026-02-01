@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import {
@@ -836,6 +837,11 @@ export default defineConfig(({ mode }) => {
       aiWeatherSummaryPlugin(env),
       dukeOutagePlugin(env),
     ],
+    test: {
+      environment: 'happy-dom',
+      include: ['src/**/*.test.{ts,tsx}'],
+      setupFiles: ['src/test/setup.ts'],
+    },
     server: {
       proxy: {
         // Order matters - more specific paths first

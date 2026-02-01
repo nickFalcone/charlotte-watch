@@ -59,7 +59,7 @@ function dedupeIncidents(incidents: NCDOTIncident[]): NCDOTIncident[] {
 /**
  * Extracts mile marker from location string (e.g., "Mile Marker 22.6 to 22.4")
  */
-function extractMileMarkers(location: string): { start: number; end: number } | null {
+export function extractMileMarkers(location: string): { start: number; end: number } | null {
   const match = location.match(/Mile Marker (\d+\.?\d*) to (\d+\.?\d*)/i);
   if (match) {
     return { start: parseFloat(match[1]), end: parseFloat(match[2]) };
@@ -71,7 +71,7 @@ function extractMileMarkers(location: string): { start: number; end: number } | 
  * Extract project number from reason string (e.g., "C204556")
  * Always returns with C prefix for consistency
  */
-function extractProjectNumber(reason: string): string | null {
+export function extractProjectNumber(reason: string): string | null {
   // Match patterns like "C204556", "project C204556", "C-204556", etc.
   const match = reason.match(/\b(C?-?\d{6})\b/i);
   if (!match) return null;

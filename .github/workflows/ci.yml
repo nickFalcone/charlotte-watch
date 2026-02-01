@@ -41,5 +41,8 @@ jobs:
       - name: Type check functions
         run: npm run type-check:functions
 
+      - name: Run tests
+        run: npm test
+
       - name: Build
         run: npm run build

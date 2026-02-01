@@ -87,7 +87,7 @@ function getGroupCentroid(group: HereFlowResult[]): { lat: number; lng: number }
 }
 
 /** Normalize road name to group major routes together (e.g., "I-77 N" -> "I-77", "I-77/US-21" -> "I-77") */
-function normalizeRoadName(name: string): string {
+export function normalizeRoadName(name: string): string {
   const cleaned = name.trim();
 
   // Only keep multi-interstate junctions separate (e.g., "I-85/I-77")
@@ -124,7 +124,7 @@ function normalizeRoadName(name: string): string {
 }
 
 /** Slug for routeId: lowercase, alphanumeric and hyphens only */
-function slug(name: string): string {
+export function slug(name: string): string {
   const s = name
     .trim()
     .toLowerCase()
@@ -137,7 +137,7 @@ function slug(name: string): string {
  * Effective speed in m/s. HERE omits top-level speed when traversability is "closed";
  * derive from subSegments (length-weighted, 0 for closed subSegments).
  */
-function getEffectiveSpeed(flow: HereFlowResult['currentFlow']): number {
+export function getEffectiveSpeed(flow: HereFlowResult['currentFlow']): number {
   if (typeof flow.speed === 'number' && Number.isFinite(flow.speed)) {
     return flow.speed;
   }
@@ -159,7 +159,7 @@ function getEffectiveSpeed(flow: HereFlowResult['currentFlow']): number {
 /**
  * Effective free-flow speed in m/s. Prefer top-level; fallback to first subSegment with freeFlow.
  */
-function getEffectiveFreeFlow(flow: HereFlowResult['currentFlow']): number {
+export function getEffectiveFreeFlow(flow: HereFlowResult['currentFlow']): number {
   if (typeof flow.freeFlow === 'number' && Number.isFinite(flow.freeFlow)) {
     return flow.freeFlow;
   }
