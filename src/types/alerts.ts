@@ -54,6 +54,8 @@ export type AlertMetadata =
       displaySeverity?: string;
       /** Operation center name, e.g. "Kannapolis", "Charlotte" */
       operationCenter?: string;
+      latitude?: number;
+      longitude?: number;
     }
   | {
       source: 'ncdot';
@@ -103,6 +105,8 @@ export type AlertMetadata =
       maxCongestionPercent: number;
       segmentCount: number;
       displaySeverity?: string;
+      latitude?: number;
+      longitude?: number;
     }
   | {
       source: 'traffic' | 'system' | 'custom';

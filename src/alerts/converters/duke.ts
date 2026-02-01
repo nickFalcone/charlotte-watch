@@ -84,6 +84,14 @@ export function convertDukeOutageToGeneric(outage: DukeOutage): GenericAlert {
       eventId: outage.sourceEventNumber,
       displaySeverity: ALERT_SEVERITY_CONFIG[severity].label,
       operationCenter: outage.operationCenterName,
+      latitude:
+        outage.deviceLatitudeLocation != null && Number.isFinite(outage.deviceLatitudeLocation)
+          ? outage.deviceLatitudeLocation
+          : undefined,
+      longitude:
+        outage.deviceLongitudeLocation != null && Number.isFinite(outage.deviceLongitudeLocation)
+          ? outage.deviceLongitudeLocation
+          : undefined,
     },
   };
 }
