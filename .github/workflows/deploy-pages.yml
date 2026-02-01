@@ -33,6 +33,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Update sitemap lastmod
+        run: |
+          TODAY=$(date -u +%Y-%m-%d)
+          sed -i "s|<lastmod>.*</lastmod>|<lastmod>${TODAY}</lastmod>|" public/sitemap.xml
+
       - name: Build
         run: npm run build
 

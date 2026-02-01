@@ -1,18 +1,26 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTheme } from 'styled-components';
+import * as Slider from '@radix-ui/react-slider';
 import { MapContainer as LeafletMapContainer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
 import { RetryTileLayer } from './RetryTileLayer';
 import { MapRecenterButton } from '../common';
+import playIcon from '../../assets/icons/play.svg';
+import pauseIcon from '../../assets/icons/pause.svg';
 import {
   RadarMapContainer,
   RadarMapControls,
   RadarControls,
   RadarControlRow,
   RadarPlayButton,
-  RadarTimeline,
+  RadarPlayButtonIcon,
+  RadarSliderRoot,
+  RadarSliderTrack,
+  RadarSliderRange,
+  RadarSliderThumb,
   RadarTimeDisplay,
+  VisuallyHidden,
 } from './WeatherWidget.styles';
 import 'leaflet/dist/leaflet.css';
 
@@ -184,6 +192,16 @@ function PreloadedRadarLayer({
         opacity: 0.28,
         interactive: false,
       }).addTo(map);
+
+      // Add accessibility attributes to radar overlay image
+      const overlayElement = overlayRef.current.getElement();
+      if (overlayElement) {
+        overlayElement.setAttribute(
+          'alt',
+          'NEXRAD weather radar showing precipitation patterns over Charlotte region'
+        );
+        overlayElement.setAttribute('role', 'img');
+      }
     }
 
     return () => {
@@ -203,6 +221,94 @@ function MapController({ mapRef }: { mapRef: React.MutableRefObject<LeafletMap |
   return null;
 }
 
+// Component to mark base map tiles as decorative for accessibility
+// Base map tiles are decorative because geographic context is provided via aria-label
+// and the informative content (radar overlay) has its own accessible description
+function TileAccessibilityHandler() {
+  const map = useMap();
+
+  useEffect(() => {
+    const mapContainer = map.getContainer();
+
+    // Function to mark a tile as decorative
+    const markTileAsDecorative = (tile: Element) => {
+      if (!tile.hasAttribute('alt') || tile.getAttribute('alt') !== '') {
+        tile.setAttribute('alt', '');
+      }
+      if (!tile.hasAttribute('role')) {
+        tile.setAttribute('role', 'presentation');
+      }
+      if (!tile.hasAttribute('aria-hidden')) {
+        tile.setAttribute('aria-hidden', 'true');
+      }
+    };
+
+    // Process all existing tiles immediately
+    const processExistingTiles = () => {
+      const tileImages = mapContainer.querySelectorAll('.leaflet-tile-pane img');
+      tileImages.forEach(markTileAsDecorative);
+    };
+
+    // Initial processing
+    processExistingTiles();
+
+    // Use MutationObserver to catch tiles added dynamically
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node instanceof HTMLImageElement && node.classList.contains('leaflet-tile')) {
+            markTileAsDecorative(node);
+          }
+        });
+      });
+    });
+
+    // Observe the tile pane for new tiles
+    const tilePane = mapContainer.querySelector('.leaflet-tile-pane');
+    if (tilePane) {
+      observer.observe(tilePane, {
+        childList: true,
+        subtree: true,
+      });
+    }
+
+    // Also listen for tile load events as a backup
+    const handleTileLoad = (e: L.TileEvent) => {
+      const tile = e.tile as HTMLImageElement;
+      if (tile) {
+        markTileAsDecorative(tile);
+      }
+    };
+
+    map.eachLayer(layer => {
+      if (layer instanceof L.TileLayer) {
+        layer.on('tileload', handleTileLoad);
+      }
+    });
+
+    // Re-process tiles after map events that might load new tiles
+    const reprocessTiles = () => {
+      setTimeout(processExistingTiles, 100);
+    };
+
+    map.on('moveend', reprocessTiles);
+    map.on('zoomend', reprocessTiles);
+
+    return () => {
+      observer.disconnect();
+      map.eachLayer(layer => {
+        if (layer instanceof L.TileLayer) {
+          layer.off('tileload', handleTileLoad);
+        }
+      });
+      map.off('moveend', reprocessTiles);
+      map.off('zoomend', reprocessTiles);
+    };
+  }, [map]);
+
+  return null;
+}
+
 export function WeatherRadarMap() {
   const mapRef = useRef<LeafletMap | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -211,6 +317,7 @@ export function WeatherRadarMap() {
   const [currentIndex, setCurrentIndex] = useState(timeSteps.length - 1); // Start at most recent
   const [isPlaying, setIsPlaying] = useState(false);
   const animationRef = useRef<number>();
+  const [liveAnnouncement, setLiveAnnouncement] = useState('');
 
   // When the widget is resized, tell Leaflet to recalculate size after resize settles (debounce to avoid loop)
   useEffect(() => {
@@ -258,7 +365,7 @@ export function WeatherRadarMap() {
           }
           return prev + 1;
         });
-      }, 350); // 350ms per frame - faster playback, steps still 10 min apart
+      }, 200); // 200ms per frame, 5 frames per second, frames are 10 min apart
 
       return () => {
         if (animationRef.current) {
@@ -272,14 +379,31 @@ export function WeatherRadarMap() {
     setIsPlaying(prev => !prev);
   }, []);
 
-  const handleTimelineChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newIndex = parseInt(e.target.value, 10);
-    setCurrentIndex(newIndex);
+  const handleSliderChange = useCallback((value: number[]) => {
+    setCurrentIndex(value[0]);
     setIsPlaying(false); // Pause when user scrubs
   }, []);
 
+  // Announce time changes to screen readers
+  useEffect(() => {
+    if (timeSteps[currentIndex]) {
+      const timeStr = formatTime(timeSteps[currentIndex]);
+      const isCurrent = currentIndex === timeSteps.length - 1;
+      setLiveAnnouncement(`Radar at ${timeStr}${isCurrent ? ', current time' : ''}`);
+    }
+  }, [currentIndex, timeSteps]);
+
   return (
     <RadarMapContainer ref={containerRef}>
+      <VisuallyHidden>
+        Interactive weather radar map showing NEXRAD precipitation data for the Charlotte, North
+        Carolina region over the past 4 hours. Use the play button to animate radar frames or the
+        slider to view specific times. Map can be panned and zoomed. Geographic base map tiles are
+        decorative, precipitation overlay shows weather patterns.
+      </VisuallyHidden>
+      <VisuallyHidden aria-live="polite" aria-atomic="true">
+        {liveAnnouncement}
+      </VisuallyHidden>
       <LeafletMapContainer
         center={RADAR_CENTER}
         zoom={RADAR_ZOOM}
@@ -287,14 +411,15 @@ export function WeatherRadarMap() {
         scrollWheelZoom={true}
         wheelPxPerZoomLevel={100}
         wheelDebounceTime={100}
-        // minZoom={RADAR_ZOOM}
         maxZoom={10}
         dragging={true}
         doubleClickZoom={true}
         touchZoom={true}
         style={{ height: '100%', width: '100%' }}
+        aria-label="NEXRAD weather radar map for Charlotte region, past 4 hours"
       >
         <MapController mapRef={mapRef} />
+        <TileAccessibilityHandler />
         <RetryTileLayer
           attribution='&copy; <a href="https://carto.com/">CARTO</a>'
           url={mapTileUrl}
@@ -314,17 +439,34 @@ export function WeatherRadarMap() {
 
       <RadarControls>
         <RadarControlRow>
-          <RadarPlayButton onClick={togglePlayPause} title={isPlaying ? 'Pause' : 'Play'}>
-            {isPlaying ? '⏸' : '▶'}
+          <RadarPlayButton
+            onClick={togglePlayPause}
+            title={isPlaying ? 'Pause' : 'Play'}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+          >
+            <RadarPlayButtonIcon src={isPlaying ? pauseIcon : playIcon} alt="" aria-hidden />
           </RadarPlayButton>
-          <RadarTimeline
-            type="range"
-            min="0"
-            max={timeSteps.length - 1}
-            value={currentIndex}
-            onChange={handleTimelineChange}
-            title="Drag to view different times"
-          />
+          <Slider.Root
+            value={[currentIndex]}
+            onValueChange={handleSliderChange}
+            min={0}
+            max={Math.max(0, timeSteps.length - 1)}
+            step={1}
+            asChild
+          >
+            <RadarSliderRoot>
+              <Slider.Track asChild>
+                <RadarSliderTrack>
+                  <Slider.Range asChild>
+                    <RadarSliderRange />
+                  </Slider.Range>
+                </RadarSliderTrack>
+              </Slider.Track>
+              <Slider.Thumb asChild>
+                <RadarSliderThumb aria-label="Select radar time frame" />
+              </Slider.Thumb>
+            </RadarSliderRoot>
+          </Slider.Root>
           <RadarTimeDisplay>
             {formatTime(currentTime)}
             {isCurrentTime && ' (Now)'}

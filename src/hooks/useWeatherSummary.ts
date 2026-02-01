@@ -9,7 +9,7 @@ interface UseWeatherSummaryOptions {
 }
 
 /**
- * Hook to fetch AI-generated weather summary for the next 24 hours.
+ * Hook to fetch AI-generated weather summary for the next 12 hours.
  * Uses hash-based caching keyed by current + hourly data; optionally includes air quality forecast.
  */
 export function useWeatherSummary(

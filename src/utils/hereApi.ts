@@ -41,7 +41,7 @@ async function fetchRouteFlow(route: HereRoute, signal?: AbortSignal): Promise<H
     minJamFactor: '8', // Jam 8+ approximates heavier congestion; 80% slower enforced by MIN_CONGESTION_PERCENT
   });
 
-  // In production, the Netlify function handles the API key
+  // In production, the Cloudflare Function handles the API key
   // In dev, the Vite proxy injects it
   const url = `${baseUrl}?${params}`;
 

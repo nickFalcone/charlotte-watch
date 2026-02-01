@@ -28,7 +28,7 @@ export const WeatherMain = styled.div`
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8px;
+  gap: 4px;
   flex: 0 0 auto;
   min-width: 0;
 `;
@@ -40,7 +40,6 @@ export const NowLabel = styled.span`
   font-weight: 600;
   letter-spacing: 0.3px;
   color: ${props => props.theme.colors.textSecondary};
-  // margin-bottom: 16px;
 `;
 
 export const Temperature = styled.div`
@@ -122,6 +121,25 @@ export const WeatherSummaryText = styled.p`
   border: 1px solid ${props => props.theme.colors.borderLight};
 `;
 
+/** Summary box (div) so it can contain inline info button at end of text. Same look as WeatherSummaryText. */
+export const SummaryBox = styled.div`
+  font-size: 13px;
+  color: ${props => props.theme.colors.textSecondary};
+  line-height: 1.55;
+  margin: 0;
+  padding: 10px 12px;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  border-radius: 6px;
+  border: 1px solid ${props => props.theme.colors.borderLight};
+`;
+
+/** Inline wrapper so info button sits at end of final sentence. */
+export const SummaryInlineTrigger = styled.span`
+  display: inline-block;
+  margin-left: 0.2em;
+  vertical-align: middle;
+`;
+
 export const WeatherSummaryList = styled.ul`
   margin: 0;
   padding: 10px 12px 10px 28px;
@@ -170,6 +188,12 @@ export const RadarMapContainer = styled.div`
         : 'brightness(1) contrast(1) saturate(1)'};
   }
 
+  .leaflet-tile-pane img {
+    /* Decorative: base map tiles provide visual context but geographic info is redundant
+       with interactive map controls. Screen readers get map description via aria-label. */
+    alt: '';
+  }
+
   .leaflet-control-zoom {
     border: 1px solid ${props => props.theme.colors.border} !important;
     border-radius: 4px !important;
@@ -187,6 +211,18 @@ export const RadarMapContainer = styled.div`
     font-size: 9px !important;
     padding: 2px 6px !important;
   }
+`;
+
+export const VisuallyHidden = styled.span`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 `;
 
 export const RadarMapControls = styled.div`
@@ -245,41 +281,53 @@ export const RadarPlayButton = styled.button`
   }
 `;
 
-export const RadarTimeline = styled.input`
+/** Play/pause icon on primary button; filter ensures white icon for contrast in both themes. */
+export const RadarPlayButtonIcon = styled.img`
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+`;
+
+/** Radix Slider parts for radar timeline - track container */
+export const RadarSliderRoot = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
   flex: 1;
+  min-width: 0;
+`;
+
+/** Radix Slider track (background) */
+export const RadarSliderTrack = styled.span`
+  position: relative;
+  flex-grow: 1;
   height: 4px;
   border-radius: 2px;
-  outline: none;
   background: ${props => props.theme.colors.backgroundTertiary};
-  -webkit-appearance: none;
   cursor: pointer;
+`;
 
-  &::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: ${props => props.theme.colors.primary};
-    cursor: pointer;
-    transition: all 0.15s ease;
+/** Radix Slider range (filled portion) */
+export const RadarSliderRange = styled.span`
+  position: absolute;
+  height: 100%;
+  border-radius: 2px;
+  background: ${props => props.theme.colors.primary};
+`;
 
-    &:hover {
-      transform: scale(1.2);
-    }
-  }
+/** Radix Slider thumb */
+export const RadarSliderThumb = styled.span`
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: ${props => props.theme.colors.primary};
+  cursor: pointer;
+  transition: transform 0.15s ease;
 
-  &::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border: none;
-    border-radius: 50%;
-    background: ${props => props.theme.colors.primary};
-    cursor: pointer;
-    transition: all 0.15s ease;
-
-    &:hover {
-      transform: scale(1.2);
-    }
+  &:hover {
+    transform: scale(1.2);
   }
 `;
 

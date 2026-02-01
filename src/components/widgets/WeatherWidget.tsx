@@ -28,25 +28,11 @@ import {
   RetryButton,
   Next12Section,
   SectionTitleRow,
-  SectionTitleSentenceCase,
   SectionTitle,
+  SummaryBox,
+  SummaryInlineTrigger,
   WeatherSummaryText,
 } from './WeatherWidget.styles';
-
-interface WeatherSummaryContentProps {
-  summaryLoading: boolean;
-  summaryData: { summary: string } | undefined;
-}
-
-function WeatherSummaryContent({ summaryLoading, summaryData }: WeatherSummaryContentProps) {
-  if (summaryLoading) {
-    return <WeatherSummaryText>Generating summary...</WeatherSummaryText>;
-  }
-  if (!summaryData?.summary) {
-    return null;
-  }
-  return <WeatherSummaryText>{summaryData.summary}</WeatherSummaryText>;
-}
 
 export function WeatherWidget(_props: WidgetProps) {
   const { setLastUpdated } = useWidgetMetadata();
@@ -134,22 +120,27 @@ export function WeatherWidget(_props: WidgetProps) {
           <FeelsLike>Feels like {formatTemp(current.apparent_temperature)}</FeelsLike>
         </WeatherMain>
         <Next12Section>
-          <SectionTitleRow>
-            <SectionTitleSentenceCase>Next 12 hours</SectionTitleSentenceCase>
-            <Popover.Root>
-              <Popover.Trigger asChild>
-                <InfoTrigger aria-label="About AI summary">
-                  <InfoIcon src={infoIcon} alt="" aria-hidden />
-                </InfoTrigger>
-              </Popover.Trigger>
-              <Popover.Portal>
-                <AnimatedPopoverContent side="top" sideOffset={6}>
-                  This is an AI-generated summary of the expected weather over the next 12 hours.
-                </AnimatedPopoverContent>
-              </Popover.Portal>
-            </Popover.Root>
-          </SectionTitleRow>
-          <WeatherSummaryContent summaryLoading={summaryLoading} summaryData={summaryData} />
+          {summaryLoading && <WeatherSummaryText>Generating summary...</WeatherSummaryText>}
+          {!summaryLoading && summaryData?.summary && (
+            <SummaryBox>
+              {summaryData.summary}
+              <SummaryInlineTrigger>
+                <Popover.Root>
+                  <Popover.Trigger asChild>
+                    <InfoTrigger aria-label="About AI summary">
+                      <InfoIcon src={infoIcon} alt="" aria-hidden />
+                    </InfoTrigger>
+                  </Popover.Trigger>
+                  <Popover.Portal>
+                    <AnimatedPopoverContent side="top" sideOffset={6}>
+                      This is an AI-generated summary of the expected weather over the next 12
+                      hours.
+                    </AnimatedPopoverContent>
+                  </Popover.Portal>
+                </Popover.Root>
+              </SummaryInlineTrigger>
+            </SummaryBox>
+          )}
         </Next12Section>
       </WeatherTopRow>
 

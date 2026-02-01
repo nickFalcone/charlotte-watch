@@ -117,7 +117,7 @@ If using an API key, add it to environment variables:
 # .env.local (dev)
 VITE_MAP_API_KEY=your-key
 
-# Netlify (prod)
+# Cloudflare (prod)
 # Add MAP_API_KEY in dashboard
 ```
 

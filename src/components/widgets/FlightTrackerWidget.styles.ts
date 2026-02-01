@@ -165,13 +165,19 @@ export const RadarIcon = styled.div`
   position: relative;
   width: 60px;
   height: 60px;
+  border: 3px solid ${props => props.theme.colors.secondary};
+  border-radius: 50%;
+  background: ${props => props.theme.colors.backgroundTertiary};
 
   &::before {
-    content: '📡';
-    font-size: 40px;
+    content: '';
     position: absolute;
     top: 50%;
     left: 50%;
+    width: 8px;
+    height: 8px;
+    background: ${props => props.theme.colors.secondary};
+    border-radius: 50%;
     transform: translate(-50%, -50%);
   }
 
@@ -306,4 +312,16 @@ export const TooltipLabel = styled.span`
 export const TooltipValue = styled.span`
   color: ${props => props.theme.colors.text};
   font-family: 'Monaco', 'Menlo', monospace;
+`;
+
+export const VisuallyHidden = styled.span`
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 `;

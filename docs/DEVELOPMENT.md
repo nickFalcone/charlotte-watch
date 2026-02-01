@@ -188,12 +188,12 @@ The production build:
 2. Bundles with Vite (minification, code splitting, tree shaking)
 3. Outputs to `dist/` folder
 
-Netlify runs this automatically on every push to `main`.
+Cloudflare Pages runs this automatically on every push to `main`.
 
 ## Deployment
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for:
+See deployment documentation for:
 - Environment variables
-- Netlify configuration
+- Cloudflare Pages configuration
 - Function deployment
 - Custom domain setup
