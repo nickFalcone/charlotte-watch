@@ -147,7 +147,7 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
 }
 
 const OPENWEBNINJA_HOST = 'real-time-news-data.p.rapidapi.com';
-const MAX_ARTICLES_TO_SEND = 100;
+const MAX_ARTICLES_TO_SEND = 200;
 
 interface RawArticleForParse {
   title: string;
@@ -180,7 +180,8 @@ function parseJsonArrayFromNews(text: string): unknown[] {
   return parsed;
 }
 
-// Dev-only plugin: news fetch + AI parse pipeline (at most ~2x/day from client)
+// Dev-only plugin: news fetch + AI parse pipeline (at most ~2x/day from client).
+// On cache miss, the request runs RapidAPI fetch + LLM parse and can take 1-2 minutes.
 function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
   return {
     name: 'news-charlotte-parsed',
@@ -223,7 +224,7 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
           const params = new URLSearchParams({
             query: 'charlotte north carolina',
             time_published: '1d',
-            limit: '100',
+            limit: '200',
           });
           const newsFetchOpts = {
             method: 'GET' as const,
@@ -233,17 +234,34 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
               Accept: 'application/json',
             },
           };
-          let newsResponse = await fetch(
-            `https://${OPENWEBNINJA_HOST}/search?${params}`,
-            newsFetchOpts
-          );
-          if (newsResponse.status === 429) {
-            await new Promise(r => setTimeout(r, 2000));
+
+          let newsResponse: Response;
+          try {
             newsResponse = await fetch(
               `https://${OPENWEBNINJA_HOST}/search?${params}`,
               newsFetchOpts
             );
+            if (newsResponse.status === 429) {
+              await new Promise(r => setTimeout(r, 2000));
+              newsResponse = await fetch(
+                `https://${OPENWEBNINJA_HOST}/search?${params}`,
+                newsFetchOpts
+              );
+            }
+          } catch (fetchErr) {
+            const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+            console.error('[news-charlotte-parsed] RapidAPI fetch failed:', fetchErr);
+            res.statusCode = 502;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(
+              JSON.stringify({
+                error: 'Failed to fetch news',
+                message: `RapidAPI request failed: ${msg}. Check network and RapidAPI availability.`,
+              })
+            );
+            return;
           }
+
           if (!newsResponse.ok) {
             const detail = await newsResponse.text();
             const isRateLimit = newsResponse.status === 429;
@@ -261,7 +279,22 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
             return;
           }
 
-          const newsJson = (await newsResponse.json()) as { data?: RawArticleForParse[] };
+          let newsJson: { data?: RawArticleForParse[] };
+          try {
+            newsJson = (await newsResponse.json()) as { data?: RawArticleForParse[] };
+          } catch (parseErr) {
+            console.error('[news-charlotte-parsed] RapidAPI response not JSON:', parseErr);
+            res.statusCode = 502;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(
+              JSON.stringify({
+                error: 'Failed to fetch news',
+                message: 'News API returned invalid JSON. Try again or use a smaller limit.',
+              })
+            );
+            return;
+          }
+
           const articles = newsJson.data ?? [];
 
           if (articles.length === 0) {
@@ -275,81 +308,95 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
           const userPrompt = buildNewsParseUserPrompt(articles);
 
           let rawOutput: string;
-          if (provider === 'anthropic') {
-            const response = await fetch('https://api.anthropic.com/v1/messages', {
-              method: 'POST',
-              headers: {
-                'x-api-key': apiKey,
-                'Content-Type': 'application/json',
-                'anthropic-version': '2023-06-01',
-              },
-              body: JSON.stringify({
-                model: 'claude-3-5-haiku-latest',
-                max_tokens: 4096,
-                system: NEWS_PARSING_SYSTEM_PROMPT,
-                messages: [{ role: 'user', content: userPrompt }],
-              }),
-            });
-            if (!response.ok) {
-              const err = await response.text();
-              if (response.status === 429) {
-                res.statusCode = 503;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(
-                  JSON.stringify({
-                    error: 'AI API rate limit exceeded',
-                    detail: err.slice(0, 200),
-                    retryAfter: 'Try again in a few minutes.',
-                  })
-                );
-                return;
+          try {
+            if (provider === 'anthropic') {
+              const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: {
+                  'x-api-key': apiKey,
+                  'Content-Type': 'application/json',
+                  'anthropic-version': '2023-06-01',
+                },
+                body: JSON.stringify({
+                  model: 'claude-3-5-haiku-latest',
+                  max_tokens: 4096,
+                  system: NEWS_PARSING_SYSTEM_PROMPT,
+                  messages: [{ role: 'user', content: userPrompt }],
+                }),
+              });
+              if (!response.ok) {
+                const err = await response.text();
+                if (response.status === 429) {
+                  res.statusCode = 503;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(
+                    JSON.stringify({
+                      error: 'AI API rate limit exceeded',
+                      detail: err.slice(0, 200),
+                      retryAfter: 'Try again in a few minutes.',
+                    })
+                  );
+                  return;
+                }
+                throw new Error(`Anthropic API error: ${response.status} - ${err}`);
               }
-              throw new Error(`Anthropic API error: ${response.status} - ${err}`);
-            }
-            const data = (await response.json()) as { content?: Array<{ text?: string }> };
-            rawOutput = data.content?.[0]?.text?.trim() ?? '[]';
-          } else {
-            const response = await fetch('https://api.openai.com/v1/responses', {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                model: 'gpt-4o-mini',
-                instructions: NEWS_PARSING_SYSTEM_PROMPT,
-                input: userPrompt,
-                max_output_tokens: 4096,
-                temperature: 0.2,
-                store: false,
-              }),
-            });
-            if (!response.ok) {
-              const err = await response.text();
-              if (response.status === 429) {
-                res.statusCode = 503;
-                res.setHeader('Content-Type', 'application/json');
-                res.end(
-                  JSON.stringify({
-                    error: 'AI API rate limit exceeded',
-                    detail: err.slice(0, 200),
-                    retryAfter: 'Try again in a few minutes.',
-                  })
-                );
-                return;
+              const data = (await response.json()) as { content?: Array<{ text?: string }> };
+              rawOutput = data.content?.[0]?.text?.trim() ?? '[]';
+            } else {
+              const response = await fetch('https://api.openai.com/v1/responses', {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${apiKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  model: 'gpt-4o-mini',
+                  instructions: NEWS_PARSING_SYSTEM_PROMPT,
+                  input: userPrompt,
+                  max_output_tokens: 4096,
+                  temperature: 0.2,
+                  store: false,
+                }),
+              });
+              if (!response.ok) {
+                const err = await response.text();
+                if (response.status === 429) {
+                  res.statusCode = 503;
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(
+                    JSON.stringify({
+                      error: 'AI API rate limit exceeded',
+                      detail: err.slice(0, 200),
+                      retryAfter: 'Try again in a few minutes.',
+                    })
+                  );
+                  return;
+                }
+                throw new Error(`OpenAI API error: ${response.status} - ${err}`);
               }
-              throw new Error(`OpenAI API error: ${response.status} - ${err}`);
+              const data = (await response.json()) as {
+                output?: Array<{ type: string; content?: Array<{ type: string; text?: string }> }>;
+              };
+              const messageOutput = data.output?.find(
+                (item: { type: string }) => item.type === 'message'
+              );
+              const textContent = messageOutput?.content?.find(
+                (c: { type: string }) => c.type === 'output_text'
+              );
+              rawOutput = textContent?.text?.trim() ?? '[]';
             }
-            const data = (await response.json()) as {
-              output?: Array<{ type: string; content?: Array<{ type: string; text?: string }> }>;
-            };
-            const messageOutput = data.output?.find(
-              (item: { type: string }) => item.type === 'message'
+          } catch (aiErr) {
+            const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
+            console.error('[news-charlotte-parsed] AI API request failed:', aiErr);
+            res.statusCode = 502;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(
+              JSON.stringify({
+                error: 'Failed to parse news',
+                message: `${provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} request failed: ${msg}. Check network and API key.`,
+              })
             );
-            const textContent = messageOutput?.content?.find(
-              (c: { type: string }) => c.type === 'output_text'
-            );
-            rawOutput = textContent?.text?.trim() ?? '[]';
+            return;
           }
 
           const data = parseJsonArrayFromNews(rawOutput);
