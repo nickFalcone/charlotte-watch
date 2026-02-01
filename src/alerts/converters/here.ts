@@ -75,6 +75,10 @@ export function convertHereFlowToGeneric(flow: HereRouteFlow): GenericAlert | nu
       maxCongestionPercent: flow.maxCongestionPercent,
       segmentCount: flow.segmentCount,
       displaySeverity: ALERT_SEVERITY_CONFIG['high'].label,
+      latitude:
+        flow.centerLat != null && Number.isFinite(flow.centerLat) ? flow.centerLat : undefined,
+      longitude:
+        flow.centerLng != null && Number.isFinite(flow.centerLng) ? flow.centerLng : undefined,
     },
   };
 }

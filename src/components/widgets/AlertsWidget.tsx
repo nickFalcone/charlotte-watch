@@ -18,6 +18,10 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { MapContainer as LeafletMapContainer, Marker } from 'react-leaflet';
+import { RetryTileLayer } from './RetryTileLayer';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   AnimatedDialogContent,
   AnimatedDialogOverlay,
@@ -78,6 +82,7 @@ import {
   AISummarySkeleton,
   AISummarySkeletonLine,
   AISummaryError,
+  AlertMapContainer,
 } from './AlertsWidget.styles';
 
 const SOURCE_LABELS: Record<AlertSource, string> = {
@@ -132,6 +137,46 @@ function AISummaryContent({ summary }: { summary: string }) {
   }
   return <>{lines[0] ?? raw}</>;
 }
+
+// Helper to extract coordinates from alert metadata
+function getAlertCoordinates(alert: GenericAlert): { lat: number; lng: number } | null {
+  if (!alert.metadata) return null;
+
+  if (
+    (alert.metadata.source === 'ncdot' ||
+      alert.metadata.source === 'cmpd' ||
+      alert.metadata.source === 'duke' ||
+      alert.metadata.source === 'here-flow') &&
+    'latitude' in alert.metadata &&
+    'longitude' in alert.metadata &&
+    typeof alert.metadata.latitude === 'number' &&
+    typeof alert.metadata.longitude === 'number'
+  ) {
+    return { lat: alert.metadata.latitude, lng: alert.metadata.longitude };
+  }
+
+  return null;
+}
+
+// Simple marker icon for alert location
+const createAlertMarkerIcon = (color: string) => {
+  return L.divIcon({
+    html: `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
+        <path
+          fill="${color}"
+          stroke="#fff"
+          stroke-width="2"
+          d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
+        />
+        <circle cx="12" cy="9" r="2.5" fill="#fff"/>
+      </svg>
+    `,
+    className: 'alert-marker-icon',
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+  });
+};
 
 export function AlertsWidget(_props: WidgetProps) {
   const theme = useTheme();
@@ -507,16 +552,53 @@ export function AlertsWidget(_props: WidgetProps) {
                       </AlertModalSection>
                     )}
 
+                    {(() => {
+                      const coords = getAlertCoordinates(selectedAlert);
+                      if (coords) {
+                        const severityConfig = ALERT_SEVERITY_CONFIG[selectedAlert.severity];
+                        const markerIcon = createAlertMarkerIcon(severityConfig.color);
+                        const mapTileUrl =
+                          theme.name === 'dark'
+                            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+                        return (
+                          <AlertModalSection>
+                            <AlertModalLabel>Location</AlertModalLabel>
+                            <AlertMapContainer>
+                              <LeafletMapContainer
+                                center={[coords.lat, coords.lng]}
+                                zoom={14}
+                                zoomControl={true}
+                                scrollWheelZoom={false}
+                                dragging={true}
+                                style={{ height: '100%', width: '100%' }}
+                              >
+                                <RetryTileLayer
+                                  attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                                  url={mapTileUrl}
+                                  maxRetries={3}
+                                  retryDelay={1000}
+                                />
+                                <Marker position={[coords.lat, coords.lng]} icon={markerIcon} />
+                              </LeafletMapContainer>
+                            </AlertMapContainer>
+                          </AlertModalSection>
+                        );
+                      }
+                      return null;
+                    })()}
+
                     {selectedAlert.url && (
                       <AlertModalSection>
                         <AlertModalLabel>
-                          {/x\.com|twitter\.com/.test(selectedAlert.url) ? 'Tweet' : 'Map'}
+                          {/x\.com|twitter\.com/.test(selectedAlert.url) ? 'Tweet' : 'Link'}
                         </AlertModalLabel>
                         <AlertModalText>
                           <a href={selectedAlert.url} target="_blank" rel="noopener noreferrer">
                             {/x\.com|twitter\.com/.test(selectedAlert.url)
                               ? 'View on X'
-                              : 'View on map'}
+                              : 'View external map'}
                           </a>
                         </AlertModalText>
                       </AlertModalSection>
