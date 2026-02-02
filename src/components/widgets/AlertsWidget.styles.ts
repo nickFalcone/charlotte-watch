@@ -64,7 +64,17 @@ export const AlertsHeader = styled.div`
   flex-shrink: 0;
 `;
 
+export const AlertsHeaderRow = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+`;
+
 export const AlertCount = styled.span<{ $hasAlerts: boolean; $allHidden?: boolean }>`
+  flex-shrink: 0;
   font-size: 12px;
   padding: 2px 8px;
   border-radius: 12px;
@@ -182,6 +192,7 @@ export const SourceToggleGroup = styled.div`
   gap: 8px;
   flex-wrap: wrap;
   min-width: 0;
+  flex: 1;
 `;
 
 export const SourceToggleItem = styled.button<{
@@ -293,20 +304,6 @@ export const AISummaryText = styled.div`
   min-width: 0;
 `;
 
-export const AISummaryTitleRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-`;
-
-export const AISummaryTitle = styled.h3`
-  font-size: 16px;
-  color: ${props => props.theme.colors.text};
-  line-height: 1.2;
-  margin: 0;
-`;
-
 export const AISummaryList = styled.ul`
   margin: 0;
   padding-left: 1.25em;
@@ -324,11 +321,17 @@ export const AISummaryListItem = styled.li`
   }
 `;
 
+export const AISummaryMetaRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+`;
+
 export const AISummaryGeneratedAt = styled.div`
   font-size: 10px;
   color: ${props => props.theme.colors.textMuted};
-  margin-top: 8px;
-  text-align: right;
 `;
 
 // Info popover components moved to src/components/common/InfoPopover.styles.ts
@@ -357,7 +360,7 @@ export const AISummarySkeletonLine = styled.div<{ $width?: string }>`
 `;
 
 export const AISummaryError = styled.div`
-  font-size: 12px;
+  font-size: 14px;
   color: ${props => props.theme.colors.textMuted};
   font-style: italic;
   flex: 1;
