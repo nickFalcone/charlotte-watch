@@ -1,5 +1,8 @@
 import type { GenericAlert } from '../types/alerts';
 
+/** Construction/lane-closure alerts older than this are excluded from the summary. */
+const CONSTRUCTION_SUMMARY_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+
 interface AlertForSummary {
   title: string;
   summary: string;
@@ -12,6 +15,41 @@ export interface SummarizeResponse {
   summary: string;
   hash: string;
   generatedAt: string;
+}
+
+/**
+ * True if the alert is NCDOT construction/maintenance/lane closure.
+ * Used to exclude stale construction from the summary.
+ */
+function isConstructionAlert(alert: GenericAlert): boolean {
+  if (alert.source !== 'ncdot') return false;
+  const meta = alert.metadata;
+  if (!meta || meta.source !== 'ncdot') return false;
+  const type = meta.incidentType.toLowerCase();
+  const cond = meta.condition.toLowerCase();
+  const reason = meta.reason.toLowerCase();
+  return (
+    meta.inWorkZone ||
+    /construction|maintenance/.test(type) ||
+    /construction|maintenance/.test(cond) ||
+    /construction|maintenance/.test(reason)
+  );
+}
+
+/**
+ * Alerts to send to the summarizer. Excludes construction alerts whose
+ * last updated date is older than 48 hours (they are not newsworthy).
+ */
+export function filterAlertsForSummary(alerts: GenericAlert[]): GenericAlert[] {
+  const cutoff = Date.now() - CONSTRUCTION_SUMMARY_MAX_AGE_MS;
+  return alerts.filter(alert => {
+    if (!isConstructionAlert(alert)) return true;
+    const updatedMs =
+      alert.updatedAt instanceof Date
+        ? alert.updatedAt.getTime()
+        : new Date(alert.updatedAt).getTime();
+    return updatedMs >= cutoff;
+  });
 }
 
 /**

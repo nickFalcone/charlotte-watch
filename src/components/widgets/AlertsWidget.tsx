@@ -35,6 +35,7 @@ import {
 import {
   AlertsContainer,
   AlertsHeader,
+  AlertsHeaderRow,
   AlertCount,
   AlertsList,
   AlertCard,
@@ -74,11 +75,10 @@ import {
   AISummaryContainer,
   AISummaryRow,
   AISummaryText,
-  AISummaryTitleRow,
   AISummaryList,
   AISummaryListItem,
   AISummaryGeneratedAt,
-  AISummaryTitle,
+  AISummaryMetaRow,
   AISummarySkeleton,
   AISummarySkeletonLine,
   AISummaryError,
@@ -298,67 +298,71 @@ export function AlertsWidget(_props: WidgetProps) {
   return (
     <AlertsContainer>
       <AlertsHeader>
-        <AlertCount
-          $hasAlerts={sortedAlerts.length > 0}
-          $allHidden={sortedAllAlerts.length > 0 && sortedAlerts.length === 0}
-        >
-          {sortedAllAlerts.length > 0 && sortedAlerts.length === 0
-            ? '0 ALERTS VISIBLE'
-            : `${sortedAlerts.length} ALERTS`}
-        </AlertCount>
-        {sources && visibleSources.size > 0 && (
-          <Tooltip.Provider delayDuration={300}>
-            <ToggleGroup.Root
-              type="multiple"
-              value={Array.from(visibleSources)}
-              onValueChange={handleVisibleSourcesChange}
-              asChild
-            >
-              <SourceToggleGroup>
-                {(
-                  Object.entries(sources) as [AlertSource, { success: boolean; error?: string }][]
-                ).map(([sourceKey, status]) => {
-                  const isVisible = visibleSources.has(sourceKey);
-                  return (
-                    <Tooltip.Root key={sourceKey}>
-                      <Tooltip.Trigger asChild>
-                        <ToggleGroup.Item value={sourceKey} asChild>
-                          <SourceToggleItem $success={status.success} $visible={isVisible}>
-                            {SOURCE_LABELS[sourceKey]}
-                          </SourceToggleItem>
-                        </ToggleGroup.Item>
-                      </Tooltip.Trigger>
-                      <Tooltip.Portal>
-                        <AnimatedTooltipContent side="top" sideOffset={5} asChild>
-                          <TooltipContent>
-                            <TooltipRow>{SOURCE_FULL_NAMES[sourceKey]}</TooltipRow>
-                            <TooltipRow
-                              $color={
-                                theme.name === 'dark'
-                                  ? status.success
-                                    ? '#4ade80'
-                                    : '#ffb0b0'
-                                  : status.success
-                                    ? theme.colors.success
-                                    : theme.colors.error
-                              }
-                            >
-                              {status.success ? 'Connected' : `Error: ${status.error || 'Failed'}`}
-                            </TooltipRow>
-                            <TooltipRow>{isVisible ? 'Visible' : 'Hidden'}</TooltipRow>
-                            <Tooltip.Arrow asChild>
-                              <TooltipArrow />
-                            </Tooltip.Arrow>
-                          </TooltipContent>
-                        </AnimatedTooltipContent>
-                      </Tooltip.Portal>
-                    </Tooltip.Root>
-                  );
-                })}
-              </SourceToggleGroup>
-            </ToggleGroup.Root>
-          </Tooltip.Provider>
-        )}
+        <AlertsHeaderRow>
+          <AlertCount
+            $hasAlerts={sortedAlerts.length > 0}
+            $allHidden={sortedAllAlerts.length > 0 && sortedAlerts.length === 0}
+          >
+            {sortedAllAlerts.length > 0 && sortedAlerts.length === 0
+              ? '0 ALERTS VISIBLE'
+              : `${sortedAlerts.length} ALERTS`}
+          </AlertCount>
+          {sources && visibleSources.size > 0 && (
+            <Tooltip.Provider delayDuration={300}>
+              <ToggleGroup.Root
+                type="multiple"
+                value={Array.from(visibleSources)}
+                onValueChange={handleVisibleSourcesChange}
+                asChild
+              >
+                <SourceToggleGroup>
+                  {(
+                    Object.entries(sources) as [AlertSource, { success: boolean; error?: string }][]
+                  ).map(([sourceKey, status]) => {
+                    const isVisible = visibleSources.has(sourceKey);
+                    return (
+                      <Tooltip.Root key={sourceKey}>
+                        <Tooltip.Trigger asChild>
+                          <ToggleGroup.Item value={sourceKey} asChild>
+                            <SourceToggleItem $success={status.success} $visible={isVisible}>
+                              {SOURCE_LABELS[sourceKey]}
+                            </SourceToggleItem>
+                          </ToggleGroup.Item>
+                        </Tooltip.Trigger>
+                        <Tooltip.Portal>
+                          <AnimatedTooltipContent side="top" sideOffset={5} asChild>
+                            <TooltipContent>
+                              <TooltipRow>{SOURCE_FULL_NAMES[sourceKey]}</TooltipRow>
+                              <TooltipRow
+                                $color={
+                                  theme.name === 'dark'
+                                    ? status.success
+                                      ? '#4ade80'
+                                      : '#ffb0b0'
+                                    : status.success
+                                      ? theme.colors.success
+                                      : theme.colors.error
+                                }
+                              >
+                                {status.success
+                                  ? 'Connected'
+                                  : `Error: ${status.error || 'Failed'}`}
+                              </TooltipRow>
+                              <TooltipRow>{isVisible ? 'Visible' : 'Hidden'}</TooltipRow>
+                              <Tooltip.Arrow asChild>
+                                <TooltipArrow />
+                              </Tooltip.Arrow>
+                            </TooltipContent>
+                          </AnimatedTooltipContent>
+                        </Tooltip.Portal>
+                      </Tooltip.Root>
+                    );
+                  })}
+                </SourceToggleGroup>
+              </ToggleGroup.Root>
+            </Tooltip.Provider>
+          )}
+        </AlertsHeaderRow>
       </AlertsHeader>
 
       {/* AI Summary - shows when there are alerts (based on all alerts, not filtered) */}
@@ -366,9 +370,6 @@ export function AlertsWidget(_props: WidgetProps) {
         <AISummaryContainer>
           {isSummaryLoading ? (
             <AISummarySkeleton>
-              <AISummaryTitleRow>
-                <AISummaryTitle>Generating alert summary...</AISummaryTitle>
-              </AISummaryTitleRow>
               {aiSummarySkeletonWidths.map((width, i) => (
                 <AISummarySkeletonLine key={i} $width={`${width}%`} />
               ))}
@@ -378,8 +379,13 @@ export function AlertsWidget(_props: WidgetProps) {
           ) : summaryData?.summary ? (
             <AISummaryRow>
               <AISummaryText>
-                <AISummaryTitleRow>
-                  <AISummaryTitle>Summary</AISummaryTitle>
+                <AISummaryContent summary={summaryData.summary} />
+                <AISummaryMetaRow>
+                  {summaryData.generatedAt && (
+                    <AISummaryGeneratedAt>
+                      Generated: {formatGeneratedAt(summaryData.generatedAt)}
+                    </AISummaryGeneratedAt>
+                  )}
                   <Popover.Root>
                     <Popover.Trigger asChild>
                       <InfoTrigger aria-label="About AI summary">
@@ -393,14 +399,7 @@ export function AlertsWidget(_props: WidgetProps) {
                       </AnimatedPopoverContent>
                     </Popover.Portal>
                   </Popover.Root>
-                </AISummaryTitleRow>
-                <AISummaryContent summary={summaryData.summary} />
-                {/* Server-provided generation time only; we never use client time */}
-                {summaryData.generatedAt && (
-                  <AISummaryGeneratedAt>
-                    Generated: {formatGeneratedAt(summaryData.generatedAt)}
-                  </AISummaryGeneratedAt>
-                )}
+                </AISummaryMetaRow>
               </AISummaryText>
             </AISummaryRow>
           ) : null}

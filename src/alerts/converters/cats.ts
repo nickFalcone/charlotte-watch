@@ -6,6 +6,14 @@ import { isLynxLightRailRoute } from '../../utils/catsApi';
 
 const TITLE_MAX_LEN = 80;
 
+/** Remove emoji and variation selectors from text (e.g. from CATS Twitter). */
+function stripEmojis(text: string): string {
+  return text
+    .replace(/\p{Extended_Pictographic}/gu, '')
+    .replace(/\uFE0F/g, '')
+    .trim();
+}
+
 function severityFromTweetText(text: string): AlertSeverity {
   const lower = text.toLowerCase();
   if (
@@ -99,8 +107,9 @@ const CATS_TWITTER_PROFILE = 'CATSRideTransit';
 
 // Convert CATS Twitter tweet to generic alert format (source still 'cats', category 'transit')
 export function convertCATSTweetToGeneric(tweet: CATSTweet): GenericAlert {
-  const severity = severityFromTweetText(tweet.text);
-  const title = firstLine(tweet.text, TITLE_MAX_LEN);
+  const text = stripEmojis(tweet.text);
+  const severity = severityFromTweetText(text);
+  const title = firstLine(text, TITLE_MAX_LEN);
   const updatedAt = tweet.createdAt ? new Date(tweet.createdAt) : new Date();
   const tweetUrl = `https://x.com/${CATS_TWITTER_PROFILE}/status/${tweet.id}`;
 
@@ -110,8 +119,8 @@ export function convertCATSTweetToGeneric(tweet: CATSTweet): GenericAlert {
     category: 'transit',
     severity,
     title,
-    summary: tweet.text,
-    description: tweet.text,
+    summary: text,
+    description: text,
     affectedArea: 'Charlotte Area Transit System',
     updatedAt,
     url: tweetUrl,

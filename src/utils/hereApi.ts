@@ -170,7 +170,7 @@ export function getEffectiveFreeFlow(flow: HereFlowResult['currentFlow']): numbe
 }
 
 const MIN_JAM_ALERT = 7; // maxJamFactor > 7
-const MIN_CONGESTION_PERCENT = 80; // only alert when at least 80% slower than free flow
+const MIN_CONGESTION_PERCENT = 90; // only alert when at least 80% slower than free flow
 const MIN_SEGMENT_COUNT = 10; // only alert when 10+ segments affected (filters isolated incidents)
 
 /**
