@@ -34,7 +34,7 @@ function severityFromTweetText(text: string): AlertSeverity {
   return 'minor';
 }
 
-// Re-export filtering function for backward compatibility
+// Re-export filtering function for use by consumers of this module
 export { isCMSAlertTweet } from '../../utils/cmsFilters';
 
 /** Convert CMS Twitter tweet to generic alert format */
