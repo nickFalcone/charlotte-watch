@@ -4,8 +4,7 @@ import { mapCATSSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 import type { AlertSeverity } from '../../types/alerts';
 import { isLynxLightRailRoute } from '../../utils/catsApi';
 import { stripEmojis } from '../../utils/textUtils';
-
-const TITLE_MAX_LEN = 80;
+import { firstLine, TITLE_MAX_LEN } from '../../utils/twitterHelpers';
 
 function severityFromTweetText(text: string): AlertSeverity {
   const lower = text.toLowerCase();
@@ -24,12 +23,6 @@ function severityFromTweetText(text: string): AlertSeverity {
   )
     return 'moderate';
   return 'minor';
-}
-
-function firstLine(s: string, maxLen: number): string {
-  const line = s.split(/\r?\n/)[0]?.trim() ?? s;
-  if (line.length <= maxLen) return line;
-  return line.slice(0, maxLen - 3) + '...';
 }
 
 // Convert CATS alert to generic alert format

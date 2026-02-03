@@ -1,5 +1,15 @@
 import type { Env } from '../_lib/env';
 import { callOpenAIResponses } from '../_lib/openaiResponses';
+import {
+  getAIProvider,
+  validateAPIKey,
+  parseJSONRequest,
+  checkCache,
+  storeInCache,
+  createSuccessResponse,
+  createErrorResponse,
+  callAnthropic,
+} from '../_lib/summarizationHelpers';
 import blufPrompt from '../../src/prompts/blufSummary.json';
 
 const BLUF_SYSTEM_PROMPT: string = blufPrompt.systemPrompt;
@@ -37,61 +47,16 @@ function buildUserPrompt(alerts: AlertInput[]): string {
   return `Current alerts (${alerts.length} total):\n${alertLines.join('\n')}`;
 }
 
-async function callAnthropic(alerts: AlertInput[], apiKey: string): Promise<string> {
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-3-5-haiku-latest',
-      max_tokens: 150,
-      system: BLUF_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: buildUserPrompt(alerts) }],
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Anthropic API error: ${response.status} - ${error}`);
-  }
-
-  interface AnthropicResponse {
-    content: Array<{ text?: string }>;
-  }
-
-  const data: AnthropicResponse = await response.json();
-  return data.content[0]?.text?.trim() || 'Unable to generate summary.';
-}
-
 export const onRequestPost: PagesFunction<Env> = async context => {
   // Determine which AI provider to use
-  const provider = context.env.AI_PROVIDER || 'openai';
-  const apiKey =
-    provider === 'anthropic' ? context.env.ANTHROPIC_API_KEY : context.env.OPENAI_API_KEY;
+  const { provider, apiKey } = getAIProvider(context.env);
 
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: `${provider.toUpperCase()} API key not configured` }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  }
+  const apiKeyError = validateAPIKey(apiKey, provider);
+  if (apiKeyError) return apiKeyError;
 
   // Parse request body
-  let request: SummarizeRequest;
-  try {
-    request = await context.request.json();
-  } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  const request = await parseJSONRequest<SummarizeRequest>(context.request);
+  if (request instanceof Response) return request;
 
   // Validate request
   if (!request.alerts || !Array.isArray(request.alerts)) {
@@ -110,36 +75,25 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   // Check KV cache (15min TTL, keyed by alert set hash)
   const cacheKey = `summary:${request.hash}`;
-  try {
-    const cached = await context.env.CACHE.get(cacheKey);
-    if (cached) {
-      return new Response(cached, {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'private, max-age=900',
-        },
-      });
-    }
-  } catch (e) {
-    console.error('KV cache read error:', e);
-  }
+  const cachedResponse = await checkCache(context.env.CACHE, cacheKey);
+  if (cachedResponse) return cachedResponse;
 
   // Limit alerts to prevent abuse
   const alerts = request.alerts.slice(0, MAX_ALERTS);
 
   try {
+    const userPrompt = buildUserPrompt(alerts);
     let summary: string;
 
     if (provider === 'anthropic') {
-      summary = await callAnthropic(alerts, apiKey);
+      summary = await callAnthropic(BLUF_SYSTEM_PROMPT, userPrompt, apiKey, 150);
     } else {
       // Use OpenAI Responses API
       summary = await callOpenAIResponses({
         apiKey,
         model: 'gpt-4o-mini',
         instructions: BLUF_SYSTEM_PROMPT,
-        input: buildUserPrompt(alerts),
+        input: userPrompt,
         maxOutputTokens: 150,
         temperature: 0.3,
       });
@@ -154,30 +108,10 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     const responseBody = JSON.stringify(response);
 
     // Store in KV cache (15min TTL); failures are non-fatal
-    try {
-      await context.env.CACHE.put(cacheKey, responseBody, { expirationTtl: 900 });
-    } catch (e) {
-      console.error('KV cache write error:', e);
-    }
+    await storeInCache(context.env.CACHE, cacheKey, responseBody);
 
-    return new Response(responseBody, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=900',
-      },
-    });
+    return createSuccessResponse(responseBody);
   } catch (error) {
-    console.error('AI summarization error:', error);
-    return new Response(
-      JSON.stringify({
-        error: 'Failed to generate summary',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return createErrorResponse(error, 'Failed to generate summary');
   }
 };

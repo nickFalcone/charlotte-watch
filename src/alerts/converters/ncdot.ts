@@ -3,6 +3,7 @@ import type { GenericAlert } from '../../types/alerts';
 import { mapNCDOTSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 import { getCharlotteRoadDisplay } from '../../utils/ncdotApi';
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
+import { formatEndTimeDisplay } from '../../utils/dateFormatting';
 
 /** Parse NCDOT WKT LINESTRING (lng lat, ...) into [lat, lng][] for map polyline */
 function parseNCDOTPolyline(polyline: string): [number, number][] | null {
@@ -81,26 +82,6 @@ function shouldFilterIncident(incident: NCDOTIncident): boolean {
   return false;
 }
 
-// Format incident end time for display
-function formatIncidentEndTime(endTime: string | undefined): string | undefined {
-  if (!endTime) return undefined;
-
-  try {
-    const date = new Date(endTime);
-    if (isNaN(date.getTime())) return undefined;
-
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-
-    if (isToday) {
-      return `Until ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} today`;
-    }
-    return `Until ${date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-  } catch {
-    return undefined;
-  }
-}
-
 // Convert NC DOT incident to generic alert format
 // Returns null for filtered nighttime maintenance/construction with <50% lane closures
 export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericAlert | null {
@@ -118,7 +99,7 @@ export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericA
   });
   const roadDisplay = getCharlotteRoadDisplay(incident.road);
   const direction = incident.direction ? ` ${incident.direction}` : '';
-  const endTimeDisplay = formatIncidentEndTime(incident.end);
+  const endTimeDisplay = formatEndTimeDisplay(incident.end);
 
   // Handle consolidated incidents
   const isConsolidated = (incident.consolidatedCount || 0) > 1;

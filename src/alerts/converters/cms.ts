@@ -3,8 +3,9 @@ import type { GenericAlert } from '../../types/alerts';
 import { ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 import type { AlertSeverity } from '../../types/alerts';
 import { stripEmojis } from '../../utils/textUtils';
+import { isCMSAlertTweet } from '../../utils/cmsFilters';
+import { firstLine, TITLE_MAX_LEN } from '../../utils/twitterHelpers';
 
-const TITLE_MAX_LEN = 80;
 const CMS_TWITTER_PROFILE = 'CharMeckSchools';
 
 /** Determine severity based on tweet content */
@@ -34,64 +35,9 @@ function severityFromTweetText(text: string): AlertSeverity {
 }
 
 /** Extract first line of text, truncate if too long */
-function firstLine(s: string, maxLen: number): string {
-  const line = s.split(/\r?\n/)[0]?.trim() ?? s;
-  if (line.length <= maxLen) return line;
-  return line.slice(0, maxLen - 3) + '...';
-}
 
-/**
- * Check if tweet is about a U.S. holiday closure (comprehensive filtering).
- * Returns true if the tweet appears to be a routine holiday closure announcement.
- */
-function isHolidayClosure(text: string): boolean {
-  const lower = text.toLowerCase();
-
-  // Holiday names
-  const holidayNames =
-    /martin luther king|mlk day|christmas|thanksgiving|memorial day|labor day|independence day|july 4th|president'?s day|new year/i;
-
-  // Date patterns for common school breaks
-  const datePatterns = /dec\.? 2[2-6]|dec\.? 24-26|jan\.? 1-2|jan\.? 19/i;
-
-  // Generic closure patterns combined with holiday context
-  const closurePattern =
-    /(closed|will be closed|schools closed|schools? and|offices? will be closed)/i;
-
-  // If it mentions a holiday name AND a closure pattern, it's likely a holiday announcement
-  if (holidayNames.test(text) && closurePattern.test(lower)) {
-    return true;
-  }
-
-  // If it mentions specific holiday date ranges, it's likely a holiday announcement
-  if (datePatterns.test(text)) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
- * Check if tweet is a time-sensitive CMS alert.
- * Must contain relevant keywords AND must NOT be a holiday closure.
- */
-export function isCMSAlertTweet(text: string): boolean {
-  const lower = text.toLowerCase();
-
-  // Must contain at least one of these keywords
-  const alertKeywords = /emergency|active shooter|lockdown|closed|canceled|delay|remote/i;
-
-  if (!alertKeywords.test(lower)) {
-    return false;
-  }
-
-  // Exclude holiday closures
-  if (isHolidayClosure(text)) {
-    return false;
-  }
-
-  return true;
-}
+// Re-export filtering function for backward compatibility
+export { isCMSAlertTweet } from '../../utils/cmsFilters';
 
 /** Convert CMS Twitter tweet to generic alert format */
 export function convertCMSTweetToGeneric(tweet: CMSTweet): GenericAlert {

@@ -1,5 +1,6 @@
 import type { CMPDTrafficEvent } from '../types/cmpd';
 import { isWithinCharlotteBounds } from '../types/cmpd';
+import { dedupeBy } from './dedupe';
 
 const CMPD_TRAFFIC_URL = 'https://cmpdinfo.charlottenc.gov/api/v2.1/Traffic';
 
@@ -64,17 +65,33 @@ function filterCharlotteBoundsEvents(events: CMPDTrafficEvent[]): CMPDTrafficEve
 }
 
 /**
- * Deduplicates events by event number
+ * Extracts the array of traffic events from the CMPD API response.
+ * The API may return data in multiple formats:
+ * - Direct array: [...]
+ * - Wrapped in .value: { value: [...] }
+ * - Wrapped in .results: { results: [...] }
+ * - Wrapped in .data: { data: [...] }
+ * - Wrapped in .incidents: { incidents: [...] }
  */
-function dedupeEvents(events: CMPDTrafficEvent[]): CMPDTrafficEvent[] {
-  const seen = new Set<string>();
-  return events.filter(event => {
-    if (seen.has(event.eventNo)) {
-      return false;
+function extractEventArray(data: unknown): CMPDTrafficEventRaw[] {
+  // Check if data is directly an array
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  // Check if data is an object with one of the known wrapper keys
+  if (data && typeof data === 'object') {
+    const possibleKeys = ['value', 'results', 'data', 'incidents'] as const;
+    for (const key of possibleKeys) {
+      const value = (data as Record<string, unknown>)[key];
+      if (Array.isArray(value)) {
+        return value;
+      }
     }
-    seen.add(event.eventNo);
-    return true;
-  });
+  }
+
+  // Return empty array if no valid format found
+  return [];
 }
 
 /**
@@ -95,22 +112,12 @@ export async function fetchCMPDTrafficEvents(signal?: AbortSignal): Promise<CMPD
     }
 
     const data = await response.json();
-    const rawList: CMPDTrafficEventRaw[] = Array.isArray(data)
-      ? data
-      : Array.isArray((data as { value?: unknown[] }).value)
-        ? (data as { value: CMPDTrafficEventRaw[] }).value
-        : Array.isArray((data as { results?: unknown[] }).results)
-          ? (data as { results: CMPDTrafficEventRaw[] }).results
-          : Array.isArray((data as { data?: unknown[] }).data)
-            ? (data as { data: CMPDTrafficEventRaw[] }).data
-            : Array.isArray((data as { incidents?: unknown[] }).incidents)
-              ? (data as { incidents: CMPDTrafficEventRaw[] }).incidents
-              : [];
+    const rawList = extractEventArray(data);
     const events: CMPDTrafficEvent[] = rawList.map(normalizeEvent);
 
     // Filter to Charlotte bounds and deduplicate
     const filteredEvents = filterCharlotteBoundsEvents(events);
-    const dedupedEvents = dedupeEvents(filteredEvents);
+    const dedupedEvents = dedupeBy(filteredEvents, event => event.eventNo);
 
     return dedupedEvents;
   } catch (error) {

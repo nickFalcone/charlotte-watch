@@ -6,6 +6,8 @@ import {
   NEWS_PARSING_SYSTEM_PROMPT,
   WEATHER_SYSTEM_PROMPT,
 } from './src/utils/aiPrompts';
+import { isServiceAlertTweet, isWithinLast12Hours } from './src/utils/catsFilters';
+import { isCMSAlertTweet } from './src/utils/cmsFilters';
 
 // In-memory TTL cache for dev plugins (mirrors KV caching in production)
 interface DevCacheEntry {
@@ -433,21 +435,6 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
 const TWITTER_API_HOST = 'twitter-api47.p.rapidapi.com';
 const CATS_TWITTER_USER_ID = '868028628';
 const CATS_TWITTER_CACHE_TTL_MS = 43200 * 1000; // 12h, match production
-const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
-
-function isServiceAlertTweet(text: string): boolean {
-  const lower = text.toLowerCase();
-  const serviceTerms =
-    /suspend|suspended|blue line|gold line|bus service|operational|on schedule|delays?|detour|road closed|no service|micro service|micro |tracks|blocked|ctc|station|route|reopening|winter weather|road conditions|express bus|streetcar/i;
-  const excludeTerms =
-    /live now|meeting|fare study|fare modernization|hosting a |join us|be there to share|want to learn more about fare|book demo/i;
-  return serviceTerms.test(lower) && !excludeTerms.test(lower);
-}
-
-function isWithinLast12Hours(createdAt: string): boolean {
-  const ts = new Date(createdAt).getTime();
-  return ts > Date.now() - TWELVE_HOURS_MS;
-}
 
 function catsTwitterPlugin(env: Record<string, string>): Plugin {
   return {
@@ -527,28 +514,6 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
 
 const CMS_TWITTER_USER_ID = '199341683';
 const CMS_TWITTER_CACHE_TTL_MS = 43200000; // 12 hours
-
-/** Check if tweet is about a U.S. holiday closure (comprehensive filtering) */
-function isHolidayClosure(text: string): boolean {
-  const lower = text.toLowerCase();
-  const holidayNames =
-    /martin luther king|mlk day|christmas|thanksgiving|memorial day|labor day|independence day|july 4th|president'?s day|new year/i;
-  const datePatterns = /dec\.? 2[2-6]|dec\.? 24-26|jan\.? 1-2|jan\.? 19/i;
-  const closurePattern =
-    /(closed|will be closed|schools closed|schools? and|offices? will be closed)/i;
-  if (holidayNames.test(text) && closurePattern.test(lower)) return true;
-  if (datePatterns.test(text)) return true;
-  return false;
-}
-
-/** Keep tweets that are time-sensitive CMS alerts */
-function isCMSAlertTweet(text: string): boolean {
-  const lower = text.toLowerCase();
-  const alertKeywords = /emergency|active shooter|lockdown|closed|canceled|delay|remote/i;
-  if (!alertKeywords.test(lower)) return false;
-  if (isHolidayClosure(text)) return false;
-  return true;
-}
 
 function cmsTwitterPlugin(env: Record<string, string>): Plugin {
   return {

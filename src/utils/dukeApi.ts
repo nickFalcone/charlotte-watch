@@ -4,6 +4,7 @@ import {
   DUKE_SEVERITY_THRESHOLDS,
   getDukeCustomersAffected,
 } from '../types/duke';
+import { dedupeBy } from './dedupe';
 
 // Use proxy in dev (auth injected by Vite proxy), Pages Function in production
 const DUKE_OUTAGE_URL = import.meta.env.DEV
@@ -32,20 +33,6 @@ function filterMecklenburgOutages(outages: DukeOutage[]): DukeOutage[] {
 }
 
 /**
- * Deduplicates outages by sourceEventNumber
- */
-function dedupeOutages(outages: DukeOutage[]): DukeOutage[] {
-  const seen = new Set<string>();
-  return outages.filter(outage => {
-    if (seen.has(outage.sourceEventNumber)) {
-      return false;
-    }
-    seen.add(outage.sourceEventNumber);
-    return true;
-  });
-}
-
-/**
  * Filters outages to only include those meeting minimum customer threshold for alert cards.
  * Under MIN_CARD (10): no card, not in summary. 10+: show card (severity from mapDukeOutageSeverity).
  */
@@ -71,7 +58,7 @@ export async function fetchDukeOutages(signal?: AbortSignal): Promise<DukeOutage
     const json: DukeOutageResponse = await response.json();
     const allOutages = json.data || [];
     const mecklenburgOutages = filterMecklenburgOutages(allOutages);
-    const dedupedOutages = dedupeOutages(mecklenburgOutages);
+    const dedupedOutages = dedupeBy(mecklenburgOutages, outage => outage.sourceEventNumber);
     const significantOutages = filterByMinimumCustomers(dedupedOutages);
 
     return significantOutages;
