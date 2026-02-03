@@ -149,6 +149,7 @@ See `.env.example` for a complete list of available environment variables.
 | Anthropic | AI alert summaries | Yes (limited) | [console.anthropic.com](https://console.anthropic.com) |
 | Finnhub | Stock quotes | Yes | [finnhub.io](https://finnhub.io) |
 | OpenSky Network | Flight tracking | Yes (anonymous), better with account | [opensky-network.org](https://opensky-network.org) |
+| RapidAPI | Required for CATS and CMS Twitter alerts (`RAPIDAPI_KEY`) | Varies by API | [rapidapi.com](https://rapidapi.com) |
 
 **Note:** API functions only work with `npm run dev:pages` (uses Wrangler) or in production. Regular `npm run dev` will show raw alerts without AI summaries.
 
