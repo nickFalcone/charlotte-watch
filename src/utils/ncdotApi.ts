@@ -1,5 +1,6 @@
 import type { NCDOTIncident } from '../types/ncdot';
 import { MECKLENBURG_COUNTY_ID, CHARLOTTE_ROADS } from '../types/ncdot';
+import { dedupeBy } from './dedupe';
 
 const NCDOT_BASE_URL = 'https://eapps.ncdot.gov/services/traffic-prod/v1';
 
@@ -40,20 +41,6 @@ function filterIgnoredConditions(incidents: NCDOTIncident[]): NCDOTIncident[] {
   return incidents.filter(
     incident => incident.condition.toLowerCase() !== 'shoulder closed' || incident.lanesClosed > 0
   );
-}
-
-/**
- * Deduplicates incidents by ID
- */
-function dedupeIncidents(incidents: NCDOTIncident[]): NCDOTIncident[] {
-  const seen = new Set<number>();
-  return incidents.filter(incident => {
-    if (seen.has(incident.id)) {
-      return false;
-    }
-    seen.add(incident.id);
-    return true;
-  });
 }
 
 /**
@@ -236,7 +223,7 @@ export async function fetchNCDOTIncidents(signal?: AbortSignal): Promise<NCDOTIn
     const incidents: NCDOTIncident[] = await response.json();
     const charlotteIncidents = filterCharlotteRoadIncidents(incidents);
     const filteredIncidents = filterIgnoredConditions(charlotteIncidents);
-    const dedupedIncidents = dedupeIncidents(filteredIncidents);
+    const dedupedIncidents = dedupeBy(filteredIncidents, incident => incident.id.toString());
     const consolidatedIncidents = consolidateSimilarIncidents(dedupedIncidents);
 
     return consolidatedIncidents;

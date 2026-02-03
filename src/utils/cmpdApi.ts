@@ -1,7 +1,56 @@
 import type { CMPDTrafficEvent } from '../types/cmpd';
 import { isWithinCharlotteBounds } from '../types/cmpd';
+import { dedupeBy } from './dedupe';
 
 const CMPD_TRAFFIC_URL = 'https://cmpdinfo.charlottenc.gov/api/v2.1/Traffic';
+
+/** API may return PascalCase (EventNo, Latitude); normalize to camelCase. */
+interface CMPDTrafficEventRaw {
+  eventNo?: string;
+  EventNo?: string;
+  eventDateTime?: string;
+  EventDateTime?: string;
+  addedDateTimeString?: string;
+  AddedDateTimeString?: string;
+  typeCode?: string;
+  TypeCode?: string;
+  typeDescription?: string;
+  TypeDescription?: string;
+  typeSubCode?: string;
+  TypeSubCode?: string;
+  typeSubDescription?: string;
+  TypeSubDescription?: string;
+  division?: string;
+  Division?: string;
+  xCoordinate?: number;
+  XCoordinate?: number;
+  yCoordinate?: number;
+  YCoordinate?: number;
+  latitude?: number;
+  Latitude?: number;
+  longitude?: number;
+  Longitude?: number;
+  address?: string;
+  Address?: string;
+}
+
+function normalizeEvent(raw: CMPDTrafficEventRaw): CMPDTrafficEvent {
+  return {
+    eventNo: raw.eventNo ?? raw.EventNo ?? '',
+    eventDateTime: raw.eventDateTime ?? raw.EventDateTime ?? '',
+    addedDateTimeString: raw.addedDateTimeString ?? raw.AddedDateTimeString ?? '',
+    typeCode: raw.typeCode ?? raw.TypeCode ?? '',
+    typeDescription: raw.typeDescription ?? raw.TypeDescription ?? '',
+    typeSubCode: raw.typeSubCode ?? raw.TypeSubCode ?? '',
+    typeSubDescription: raw.typeSubDescription ?? raw.TypeSubDescription ?? '',
+    division: raw.division ?? raw.Division ?? '',
+    xCoordinate: raw.xCoordinate ?? raw.XCoordinate ?? 0,
+    yCoordinate: raw.yCoordinate ?? raw.YCoordinate ?? 0,
+    latitude: raw.latitude ?? raw.Latitude ?? 0,
+    longitude: raw.longitude ?? raw.Longitude ?? 0,
+    address: raw.address ?? raw.Address ?? '',
+  };
+}
 
 /**
  * Filters events to only include those within Charlotte-Mecklenburg bounds
@@ -9,22 +58,40 @@ const CMPD_TRAFFIC_URL = 'https://cmpdinfo.charlottenc.gov/api/v2.1/Traffic';
 function filterCharlotteBoundsEvents(events: CMPDTrafficEvent[]): CMPDTrafficEvent[] {
   return events.filter(
     event =>
-      event.latitude && event.longitude && isWithinCharlotteBounds(event.latitude, event.longitude)
+      event.latitude != null &&
+      event.longitude != null &&
+      isWithinCharlotteBounds(event.latitude, event.longitude)
   );
 }
 
 /**
- * Deduplicates events by event number
+ * Extracts the array of traffic events from the CMPD API response.
+ * The API may return data in multiple formats:
+ * - Direct array: [...]
+ * - Wrapped in .value: { value: [...] }
+ * - Wrapped in .results: { results: [...] }
+ * - Wrapped in .data: { data: [...] }
+ * - Wrapped in .incidents: { incidents: [...] }
  */
-function dedupeEvents(events: CMPDTrafficEvent[]): CMPDTrafficEvent[] {
-  const seen = new Set<string>();
-  return events.filter(event => {
-    if (seen.has(event.eventNo)) {
-      return false;
+function extractEventArray(data: unknown): CMPDTrafficEventRaw[] {
+  // Check if data is directly an array
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  // Check if data is an object with one of the known wrapper keys
+  if (data && typeof data === 'object') {
+    const possibleKeys = ['value', 'results', 'data', 'incidents'] as const;
+    for (const key of possibleKeys) {
+      const value = (data as Record<string, unknown>)[key];
+      if (Array.isArray(value)) {
+        return value;
+      }
     }
-    seen.add(event.eventNo);
-    return true;
-  });
+  }
+
+  // Return empty array if no valid format found
+  return [];
 }
 
 /**
@@ -44,11 +111,13 @@ export async function fetchCMPDTrafficEvents(signal?: AbortSignal): Promise<CMPD
       throw new Error(`CMPD API returned ${response.status}: ${response.statusText}`);
     }
 
-    const events: CMPDTrafficEvent[] = await response.json();
+    const data = await response.json();
+    const rawList = extractEventArray(data);
+    const events: CMPDTrafficEvent[] = rawList.map(normalizeEvent);
 
     // Filter to Charlotte bounds and deduplicate
     const filteredEvents = filterCharlotteBoundsEvents(events);
-    const dedupedEvents = dedupeEvents(filteredEvents);
+    const dedupedEvents = dedupeBy(filteredEvents, event => event.eventNo);
 
     return dedupedEvents;
   } catch (error) {

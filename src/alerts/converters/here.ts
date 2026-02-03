@@ -2,7 +2,7 @@
  * HERE Traffic Flow to GenericAlert Converter
  *
  * Converts HERE traffic flow data into generic alert format.
- * Alerts only when maxJamFactor > 7 and congestionPercent >= 50. Severity
+ * Alerts only when maxCongestionPercent >= 90 and road-wide average congestion >= 50% (hereApi). Severity
  * and wording are driven by congestionPercent (not maxJamFactor) so a tiny
  * closed junction doesn’t produce "nearly stopped" when the road is ~free flow.
  * NaN-safe.
@@ -79,6 +79,7 @@ export function convertHereFlowToGeneric(flow: HereRouteFlow): GenericAlert | nu
         flow.centerLat != null && Number.isFinite(flow.centerLat) ? flow.centerLat : undefined,
       longitude:
         flow.centerLng != null && Number.isFinite(flow.centerLng) ? flow.centerLng : undefined,
+      ...(flow.shapePoints && flow.shapePoints.length > 0 ? { shapePoints: flow.shapePoints } : {}),
     },
   };
 }

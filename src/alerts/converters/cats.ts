@@ -3,16 +3,8 @@ import type { GenericAlert } from '../../types/alerts';
 import { mapCATSSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 import type { AlertSeverity } from '../../types/alerts';
 import { isLynxLightRailRoute } from '../../utils/catsApi';
-
-const TITLE_MAX_LEN = 80;
-
-/** Remove emoji and variation selectors from text (e.g. from CATS Twitter). */
-function stripEmojis(text: string): string {
-  return text
-    .replace(/\p{Extended_Pictographic}/gu, '')
-    .replace(/\uFE0F/g, '')
-    .trim();
-}
+import { stripEmojis } from '../../utils/textUtils';
+import { firstLine, TITLE_MAX_LEN } from '../../utils/twitterHelpers';
 
 function severityFromTweetText(text: string): AlertSeverity {
   const lower = text.toLowerCase();
@@ -31,12 +23,6 @@ function severityFromTweetText(text: string): AlertSeverity {
   )
     return 'moderate';
   return 'minor';
-}
-
-function firstLine(s: string, maxLen: number): string {
-  const line = s.split(/\r?\n/)[0]?.trim() ?? s;
-  if (line.length <= maxLen) return line;
-  return line.slice(0, maxLen - 3) + '...';
 }
 
 // Convert CATS alert to generic alert format

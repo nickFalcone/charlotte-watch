@@ -3,24 +3,15 @@ import type { GenericAlert } from '../../types/alerts';
 import { mapCMPDSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 import { getCMPDIncidentCategory } from '../../types/cmpd';
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
+import { formatTimeDisplay } from '../../utils/dateFormatting';
 
 // Filter thresholds
 const MAX_EVENT_AGE_HOURS = 3;
+const MAX_EVENT_AGE_HOURS_INJURY_OR_FATALITY = 12; // Personal injury / fatality stay visible longer
 const EXCLUDED_TYPES = new Set([
   'AC-R/PD', // Property-damage-only accidents
   'HR-R/PD', // Hit & run - property damage
 ]);
-
-// Format CMPD event time for display
-function formatCMPDEventTime(eventDateTime: string): string {
-  try {
-    const date = new Date(eventDateTime);
-    if (isNaN(date.getTime())) return eventDateTime;
-    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  } catch {
-    return eventDateTime;
-  }
-}
 
 // Check if event should be filtered out
 function shouldFilterEvent(event: CMPDTrafficEvent): boolean {
@@ -29,12 +20,16 @@ function shouldFilterEvent(event: CMPDTrafficEvent): boolean {
     return true;
   }
 
-  // Filter events older than threshold
+  // Filter events older than threshold (longer window for injury/fatality)
   try {
     const eventTime = new Date(event.eventDateTime).getTime();
     const now = Date.now();
     const ageHours = (now - eventTime) / (1000 * 60 * 60);
-    if (ageHours > MAX_EVENT_AGE_HOURS) {
+    const maxHours =
+      event.typeCode === 'AC-PI' || event.typeCode === 'AC-FI'
+        ? MAX_EVENT_AGE_HOURS_INJURY_OR_FATALITY
+        : MAX_EVENT_AGE_HOURS;
+    if (ageHours > maxHours) {
       return true;
     }
   } catch {
@@ -58,7 +53,7 @@ export function convertCMPDEventToGeneric(event: CMPDTrafficEvent): GenericAlert
     typeSubDescription: event.typeSubDescription,
   });
   const category = getCMPDIncidentCategory(event.typeCode);
-  const timeDisplay = formatCMPDEventTime(event.eventDateTime);
+  const timeDisplay = formatTimeDisplay(event.eventDateTime) ?? event.eventDateTime;
 
   // Build title from type (AlertIcon shows source/category icon in the UI)
   const typeDisplay = event.typeDescription

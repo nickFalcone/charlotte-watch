@@ -9,6 +9,7 @@ import powerIconUrl from '../assets/icons/power.svg';
 import hurricaneIconUrl from '../assets/icons/hurricane.svg';
 import planeIconUrl from '../assets/icons/plane.svg';
 import catsIconUrl from '../assets/icons/cats.svg';
+import schoolIconUrl from '../assets/icons/school.svg';
 
 /**
  * Theme-aware icon image that inverts colors in dark mode.
@@ -37,6 +38,7 @@ const SOURCE_ICON_MAP: Partial<Record<AlertSource, string>> = {
   nws: hurricaneIconUrl,
   faa: planeIconUrl,
   cats: catsIconUrl,
+  cms: schoolIconUrl,
 };
 
 /**

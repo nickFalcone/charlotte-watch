@@ -1,5 +1,15 @@
 import type { Env } from '../_lib/env';
 import { callOpenAIResponses } from '../_lib/openaiResponses';
+import {
+  getAIProvider,
+  validateAPIKey,
+  parseJSONRequest,
+  checkCache,
+  storeInCache,
+  createSuccessResponse,
+  createErrorResponse,
+  callAnthropic,
+} from '../_lib/summarizationHelpers';
 import weatherSummaryPrompt from '../../src/prompts/weatherSummary.json';
 
 const WEATHER_SYSTEM_PROMPT: string = weatherSummaryPrompt.systemPrompt;
@@ -101,75 +111,15 @@ function buildUserPrompt(
   return prompt;
 }
 
-async function callAnthropic(
-  current: WeatherCurrentInput,
-  hourly: WeatherHourInput[],
-  past12h: WeatherHourInput[],
-  temperaturePhrase: string,
-  apiKey: string,
-  airQualityNext12h?: AirQualityHourInput[],
-  airQualityPast12h?: AirQualityHourInput[]
-): Promise<string> {
-  const userContent = buildUserPrompt(
-    current,
-    hourly,
-    past12h,
-    temperaturePhrase,
-    airQualityNext12h,
-    airQualityPast12h
-  );
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': apiKey,
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-3-5-haiku-latest',
-      max_tokens: 350,
-      system: WEATHER_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userContent }],
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Anthropic API error: ${response.status} - ${error}`);
-  }
-
-  interface AnthropicResponse {
-    content: Array<{ text?: string }>;
-  }
-
-  const data: AnthropicResponse = await response.json();
-  return data.content[0]?.text?.trim() || 'Unable to generate summary.';
-}
-
 export const onRequestPost: PagesFunction<Env> = async context => {
-  const provider = context.env.AI_PROVIDER || 'openai';
-  const apiKey =
-    provider === 'anthropic' ? context.env.ANTHROPIC_API_KEY : context.env.OPENAI_API_KEY;
+  const { provider, apiKey } = getAIProvider(context.env);
 
-  if (!apiKey) {
-    return new Response(
-      JSON.stringify({ error: `${provider.toUpperCase()} API key not configured` }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-  }
+  const apiKeyError = validateAPIKey(apiKey, provider);
+  if (apiKeyError) return apiKeyError;
+  const key = apiKey as string; // narrow: validateAPIKey returned above if missing
 
-  let request: SummarizeWeatherRequest;
-  try {
-    request = await context.request.json();
-  } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  const request = await parseJSONRequest<SummarizeWeatherRequest>(context.request);
+  if (request instanceof Response) return request;
 
   if (!request.current || typeof request.current !== 'object') {
     return new Response(JSON.stringify({ error: 'current object is required' }), {
@@ -193,20 +143,8 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   }
 
   const cacheKey = `weather-summary:${request.hash}`;
-  try {
-    const cached = await context.env.CACHE.get(cacheKey);
-    if (cached) {
-      return new Response(cached, {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'private, max-age=900',
-        },
-      });
-    }
-  } catch (e) {
-    console.error('KV cache read error:', e);
-  }
+  const cachedResponse = await checkCache(context.env.CACHE, cacheKey);
+  if (cachedResponse) return cachedResponse;
 
   const hourly = request.hourly.slice(0, 12);
   const past12h = Array.isArray(request.past_12h) ? request.past_12h.slice(0, 12) : [];
@@ -219,31 +157,24 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const temperaturePhrase = getTemperaturePhrase(request.current, hourly);
 
   try {
+    const userPrompt = buildUserPrompt(
+      request.current,
+      hourly,
+      past12h,
+      temperaturePhrase,
+      airQualityNext12h,
+      airQualityPast12h
+    );
     let summary: string;
 
     if (provider === 'anthropic') {
-      summary = await callAnthropic(
-        request.current,
-        hourly,
-        past12h,
-        temperaturePhrase,
-        apiKey,
-        airQualityNext12h,
-        airQualityPast12h
-      );
+      summary = await callAnthropic(WEATHER_SYSTEM_PROMPT, userPrompt, key, 350);
     } else {
       summary = await callOpenAIResponses({
-        apiKey,
+        apiKey: key,
         model: 'gpt-4o-mini',
         instructions: WEATHER_SYSTEM_PROMPT,
-        input: buildUserPrompt(
-          request.current,
-          hourly,
-          past12h,
-          temperaturePhrase,
-          airQualityNext12h,
-          airQualityPast12h
-        ),
+        input: userPrompt,
         maxOutputTokens: 350,
         temperature: 0.3,
       });
@@ -257,38 +188,10 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
     const responseBody = JSON.stringify(response);
 
-    try {
-      await context.env.CACHE.put(cacheKey, responseBody, { expirationTtl: 900 });
-    } catch (e) {
-      console.error('KV cache write error:', e);
-    }
+    await storeInCache(context.env.CACHE, cacheKey, responseBody);
 
-    return new Response(responseBody, {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=900',
-      },
-    });
+    return createSuccessResponse(responseBody);
   } catch (error) {
-    const err = error instanceof Error ? error : new Error('Unknown error');
-    const cause = err.cause instanceof Error ? err.cause.message : String(err.cause ?? '');
-    console.error('Weather summarization error:', err.message, cause || '');
-    const message =
-      err.message === 'fetch failed' && cause
-        ? `fetch failed: ${cause}`
-        : err.message === 'fetch failed'
-          ? 'Network error calling AI provider. Check OPENAI_API_KEY and connectivity.'
-          : err.message;
-    return new Response(
-      JSON.stringify({
-        error: 'Failed to generate summary',
-        message,
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    return createErrorResponse(error, 'Failed to generate summary');
   }
 };

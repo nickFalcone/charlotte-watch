@@ -3,6 +3,27 @@ import type { GenericAlert } from '../../types/alerts';
 import { mapNCDOTSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 import { getCharlotteRoadDisplay } from '../../utils/ncdotApi';
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
+import { formatEndTimeDisplay } from '../../utils/dateFormatting';
+
+/** Parse NCDOT WKT LINESTRING (lng lat, ...) into [lat, lng][] for map polyline */
+function parseNCDOTPolyline(polyline: string): [number, number][] | null {
+  const trimmed = polyline?.trim();
+  if (!trimmed || !trimmed.toUpperCase().startsWith('LINESTRING')) return null;
+  const match = trimmed.match(/LINESTRING\s*\((.+)\)/i);
+  if (!match) return null;
+  const pairs = match[1].split(',').map(s => s.trim().split(/\s+/));
+  const points: [number, number][] = [];
+  for (const p of pairs) {
+    if (p.length >= 2) {
+      const lng = parseFloat(p[0]);
+      const lat = parseFloat(p[1]);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        points.push([lat, lng]);
+      }
+    }
+  }
+  return points.length >= 2 ? points : null;
+}
 
 // Nighttime hours (8 PM to 6 AM)
 const NIGHTTIME_START_HOUR = 20;
@@ -61,26 +82,6 @@ function shouldFilterIncident(incident: NCDOTIncident): boolean {
   return false;
 }
 
-// Format incident end time for display
-function formatIncidentEndTime(endTime: string | undefined): string | undefined {
-  if (!endTime) return undefined;
-
-  try {
-    const date = new Date(endTime);
-    if (isNaN(date.getTime())) return undefined;
-
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-
-    if (isToday) {
-      return `Until ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} today`;
-    }
-    return `Until ${date.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })} ${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-  } catch {
-    return undefined;
-  }
-}
-
 // Convert NC DOT incident to generic alert format
 // Returns null for filtered nighttime maintenance/construction with <50% lane closures
 export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericAlert | null {
@@ -98,7 +99,7 @@ export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericA
   });
   const roadDisplay = getCharlotteRoadDisplay(incident.road);
   const direction = incident.direction ? ` ${incident.direction}` : '';
-  const endTimeDisplay = formatIncidentEndTime(incident.end);
+  const endTimeDisplay = formatEndTimeDisplay(incident.end);
 
   // Handle consolidated incidents
   const isConsolidated = (incident.consolidatedCount || 0) > 1;
@@ -163,6 +164,8 @@ export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericA
     instruction = 'Expect delays. Consider alternate routes if possible.';
   }
 
+  const shapePoints = parseNCDOTPolyline(incident.polyline);
+
   return {
     id:
       isConsolidated && incident.consolidatedIds
@@ -197,6 +200,7 @@ export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericA
       consolidatedCount,
       consolidatedIds: incident.consolidatedIds,
       displaySeverity: ALERT_SEVERITY_CONFIG[severity].label,
+      ...(shapePoints && shapePoints.length > 0 ? { shapePoints } : {}),
     },
   };
 }

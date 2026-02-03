@@ -60,6 +60,31 @@ async function fetchRouteFlow(route: HereRoute, signal?: AbortSignal): Promise<H
   return response.json();
 }
 
+const MAX_SHAPE_POINTS = 200; // Cap for map polyline to avoid huge payloads
+
+/** All shape points in order (for polyline). Capped at MAX_SHAPE_POINTS. */
+function getGroupShapePoints(group: HereFlowResult[]): [number, number][] {
+  const points: [number, number][] = [];
+  for (const r of group) {
+    const shape = r.location?.shape;
+    if (!shape?.links) continue;
+    for (const link of shape.links) {
+      for (const p of link.points ?? []) {
+        if (points.length >= MAX_SHAPE_POINTS) return points;
+        if (
+          typeof p.lat !== 'number' ||
+          typeof p.lng !== 'number' ||
+          !Number.isFinite(p.lat) ||
+          !Number.isFinite(p.lng)
+        )
+          continue;
+        points.push([p.lat, p.lng]);
+      }
+    }
+  }
+  return points;
+}
+
 /** Centroid of all points in a group's location.shape. For map link. */
 function getGroupCentroid(group: HereFlowResult[]): { lat: number; lng: number } | null {
   let sumLat = 0;
@@ -170,12 +195,16 @@ export function getEffectiveFreeFlow(flow: HereFlowResult['currentFlow']): numbe
 }
 
 const MIN_JAM_ALERT = 7; // maxJamFactor > 7
-const MIN_CONGESTION_PERCENT = 90; // only alert when at least 80% slower than free flow
-const MIN_SEGMENT_COUNT = 10; // only alert when 10+ segments affected (filters isolated incidents)
+const MIN_CONGESTION_PERCENT = 90; // only alert when at least one segment is 90%+ slower than free flow
+const MIN_AVG_CONGESTION_PERCENT = 50; // road-wide average must be at least 50% slower (avoids "16% slower" from one bad segment)
+const MIN_SEGMENT_COUNT = 1; // API returns one result per segment; group by road can yield 1 segment per road
+
+/** Charlotte arterials to include in traffic alerts (HERE may return "Rd" or "Road", "Blvd" or "Boulevard") */
+const MAJOR_ARTERIALS = new Set(['park rd', 'park road', 'south blvd', 'south boulevard']);
 
 /**
  * Group results by location.description, compute per-road stats.
- * Returns one HereRouteFlow per road with maxJamFactor > 7 and congestionPercent >= 50.
+ * Returns one HereRouteFlow per road with maxJamFactor > 7, maxCongestionPercent >= 90, and avg congestion >= 50%.
  * Uses subSegments when top-level speed is omitted (e.g. closed).
  * Road names are normalized to consolidate major routes (e.g., "I-77 N" and "I-77 S" -> "I-77").
  */
@@ -231,26 +260,33 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
       const p = ((avgFree - avgSpeed) / avgFree) * 100;
       congestionPercent = Math.round(Math.max(0, Math.min(100, p)));
     }
-    const maxCongestionPercent = Math.round(Math.max(0, Math.min(100, maxCongestion)));
+    // When jam factor is 10 (road blocked), treat as severe congestion even if effective speed is high from open subSegments
+    const maxCongestionPercent =
+      maxJam >= 9 ? 100 : Math.round(Math.max(0, Math.min(100, maxCongestion)));
     if (maxCongestionPercent < MIN_CONGESTION_PERCENT) continue;
 
-    // Only alert on major routes (interstates, US highways, major NC routes)
+    // Require road-wide average slowdown so we don't alert on "one bad segment" (e.g. 16% slower overall)
+    if (congestionPercent < MIN_AVG_CONGESTION_PERCENT) continue;
+
+    // Only alert on major routes (interstates, US highways, major NC routes, key Charlotte arterials)
     // Skip minor roads, residential streets, etc. to reduce noise
+    const routeLower = routeName.toLowerCase().trim();
     const isMajorRoute =
-      routeName.startsWith('I-') || routeName.startsWith('US-') || routeName.startsWith('NC-');
+      routeName.startsWith('I-') ||
+      routeName.startsWith('US-') ||
+      routeName.startsWith('NC-') ||
+      MAJOR_ARTERIALS.has(routeLower);
     if (!isMajorRoute) {
       continue;
     }
 
-    // Require minimum segment count to filter isolated incidents
-    if (n < MIN_SEGMENT_COUNT) {
-      continue;
-    }
+    if (n < MIN_SEGMENT_COUNT) continue;
 
     const avgSpeedMph = Number.isFinite(avgSpeed) ? Math.round(metersPerSecToMph(avgSpeed)) : 0;
     const freeFlowMph = Number.isFinite(avgFree) ? Math.round(metersPerSecToMph(avgFree)) : 0;
 
     const centroid = getGroupCentroid(group);
+    const shapePoints = getGroupShapePoints(group);
 
     out.push({
       routeId: slug(routeName),
@@ -264,6 +300,7 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
       segmentCount: n,
       timestamp,
       ...(centroid ? { centerLat: centroid.lat, centerLng: centroid.lng } : {}),
+      ...(shapePoints.length > 0 ? { shapePoints } : {}),
     });
   }
   return out;
@@ -271,7 +308,7 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
 
 /**
  * Fetch traffic flow data for all priority routes.
- * Returns one HereRouteFlow per road with maxJamFactor > 7 (separate alerts per road).
+ * Returns one HereRouteFlow per road where: (1) at least one segment has congestionPercent >= 90%, AND (2) road-wide average congestion >= 50%.
  */
 export async function fetchAllRoutesFlow(signal?: AbortSignal): Promise<HereRouteFlow[]> {
   const routeFlows: HereRouteFlow[] = [];

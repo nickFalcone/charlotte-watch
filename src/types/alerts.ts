@@ -9,6 +9,7 @@ export type AlertSource =
   | 'ncdot'
   | 'cats'
   | 'cmpd'
+  | 'cms'
   | 'here-flow'
   | 'traffic'
   | 'system'
@@ -74,6 +75,8 @@ export type AlertMetadata =
       consolidatedCount?: number;
       consolidatedIds?: number[];
       displaySeverity?: string;
+      /** Shape points [lat, lng] from NCDOT polyline (LINESTRING) for map polyline */
+      shapePoints?: [number, number][];
     }
   | {
       source: 'cats';
@@ -95,6 +98,11 @@ export type AlertMetadata =
       displaySeverity?: string;
     }
   | {
+      source: 'cms';
+      tweetId: string;
+      displaySeverity?: string;
+    }
+  | {
       source: 'here-flow';
       routeId: string;
       jamFactor: number;
@@ -107,6 +115,8 @@ export type AlertMetadata =
       displaySeverity?: string;
       latitude?: number;
       longitude?: number;
+      /** Shape points [lat, lng] for drawing the route on a map */
+      shapePoints?: [number, number][];
     }
   | {
       source: 'traffic' | 'system' | 'custom';

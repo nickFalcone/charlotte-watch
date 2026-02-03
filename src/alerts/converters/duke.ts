@@ -3,28 +3,13 @@ import { getDukeCustomersAffected } from '../../types/duke';
 import type { GenericAlert } from '../../types/alerts';
 import { mapDukeOutageSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
-
-// Format estimated restoration time for display
-function formatEstimatedRestoration(etr: string | undefined): string | undefined {
-  if (!etr) return undefined;
-
-  try {
-    const date = new Date(etr);
-    if (isNaN(date.getTime())) {
-      // If not a valid ISO date, return as-is (might be descriptive like "Assessing")
-      return etr;
-    }
-    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  } catch {
-    return etr;
-  }
-}
+import { formatTimeDisplay } from '../../utils/dateFormatting';
 
 // Convert Duke Energy outage to generic alert format
 export function convertDukeOutageToGeneric(outage: DukeOutage): GenericAlert {
   const customersAffected = getDukeCustomersAffected(outage);
   const severity = mapDukeOutageSeverity(customersAffected);
-  const estimatedRestoration = formatEstimatedRestoration(outage.estimatedRestorationTime);
+  const estimatedRestoration = formatTimeDisplay(outage.estimatedRestorationTime);
   const isPlanned = outage.outageCause === 'planned';
 
   // Build summary

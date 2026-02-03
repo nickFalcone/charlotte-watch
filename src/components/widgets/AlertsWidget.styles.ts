@@ -326,7 +326,6 @@ export const AISummaryMetaRow = styled.div`
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 8px;
 `;
 
 export const AISummaryGeneratedAt = styled.div`

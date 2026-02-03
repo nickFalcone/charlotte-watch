@@ -18,7 +18,7 @@ import * as Dialog from '@radix-ui/react-dialog';
 import * as Popover from '@radix-ui/react-popover';
 import * as ToggleGroup from '@radix-ui/react-toggle-group';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { MapContainer as LeafletMapContainer, Marker } from 'react-leaflet';
+import { MapContainer as LeafletMapContainer, Marker, Polyline, useMap } from 'react-leaflet';
 import { RetryTileLayer } from './RetryTileLayer';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -92,6 +92,7 @@ const SOURCE_LABELS: Record<AlertSource, string> = {
   ncdot: 'NCDOT',
   cats: 'CATS',
   cmpd: 'CMPD',
+  cms: 'CMS',
   'here-flow': 'Traffic',
   traffic: 'Traffic',
   system: 'System',
@@ -105,6 +106,7 @@ const SOURCE_FULL_NAMES: Record<AlertSource, string> = {
   ncdot: 'NC Dept. of Transportation',
   cats: 'Charlotte Area Transit System',
   cmpd: 'Charlotte-Mecklenburg Police',
+  cms: 'Charlotte-Mecklenburg Schools',
   'here-flow': 'HERE Traffic Flow',
   traffic: 'Traffic',
   system: 'System',
@@ -122,23 +124,25 @@ function getDisplaySeverity(alert: GenericAlert): string | undefined {
 
 function AISummaryContent({ summary }: { summary: string }) {
   const raw = summary.trim();
-  const lines = raw
-    .split(/\n/)
-    .map(line => line.replace(/^\s*[-*•]\s*/, '').trim())
-    .filter(Boolean);
-  if (lines.length > 1) {
+  const lines = raw.split(/\n/).filter(Boolean);
+  // Normalize: if model returned a paragraph without bullet prefixes, treat as one bullet
+  const hasBulletPrefix = lines.some(line => /^\s*[-*•]\s/.test(line));
+  const normalizedLines = hasBulletPrefix
+    ? lines.map(line => line.replace(/^\s*[-*•]\s*/, '').trim()).filter(Boolean)
+    : [raw];
+  if (normalizedLines.length > 1 || (normalizedLines.length === 1 && normalizedLines[0])) {
     return (
       <AISummaryList>
-        {lines.map((line, i) => (
+        {normalizedLines.map((line, i) => (
           <AISummaryListItem key={i}>{line}</AISummaryListItem>
         ))}
       </AISummaryList>
     );
   }
-  return <>{lines[0] ?? raw}</>;
+  return <>{raw}</>;
 }
 
-// Helper to extract coordinates from alert metadata
+// Helper to extract a single coordinate from alert metadata
 function getAlertCoordinates(alert: GenericAlert): { lat: number; lng: number } | null {
   if (!alert.metadata) return null;
 
@@ -155,6 +159,34 @@ function getAlertCoordinates(alert: GenericAlert): { lat: number; lng: number } 
     return { lat: alert.metadata.latitude, lng: alert.metadata.longitude };
   }
 
+  return null;
+}
+
+// Helper to get all coordinates for an alert (shape polyline or single point)
+function getAlertCoordinateList(alert: GenericAlert): { lat: number; lng: number }[] {
+  if (
+    alert.metadata &&
+    'shapePoints' in alert.metadata &&
+    Array.isArray(alert.metadata.shapePoints) &&
+    alert.metadata.shapePoints.length > 0
+  ) {
+    return alert.metadata.shapePoints.map(([lat, lng]) => ({ lat, lng }));
+  }
+  const single = getAlertCoordinates(alert);
+  return single ? [single] : [];
+}
+
+// Fits the map bounds to include all positions (used when showing a polyline)
+function FitBounds({ positions }: { positions: [number, number][] }): null {
+  const map = useMap();
+  const positionsKey = positions.length < 2 ? '' : JSON.stringify(positions);
+
+  useEffect(() => {
+    if (positionsKey === '') return;
+    const coords = JSON.parse(positionsKey) as [number, number][];
+    const bounds = L.latLngBounds(coords);
+    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 14 });
+  }, [map, positionsKey]);
   return null;
 }
 
@@ -552,40 +584,57 @@ export function AlertsWidget(_props: WidgetProps) {
                     )}
 
                     {(() => {
-                      const coords = getAlertCoordinates(selectedAlert);
-                      if (coords) {
-                        const severityConfig = ALERT_SEVERITY_CONFIG[selectedAlert.severity];
-                        const markerIcon = createAlertMarkerIcon(severityConfig.color);
-                        const mapTileUrl =
-                          theme.name === 'dark'
-                            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                            : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+                      const coordinateList = getAlertCoordinateList(selectedAlert);
+                      if (coordinateList.length === 0) return null;
 
-                        return (
-                          <AlertModalSection>
-                            <AlertModalLabel>Location</AlertModalLabel>
-                            <AlertMapContainer>
-                              <LeafletMapContainer
-                                center={[coords.lat, coords.lng]}
-                                zoom={14}
-                                zoomControl={true}
-                                scrollWheelZoom={false}
-                                dragging={true}
-                                style={{ height: '100%', width: '100%' }}
-                              >
-                                <RetryTileLayer
-                                  attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                                  url={mapTileUrl}
-                                  maxRetries={3}
-                                  retryDelay={1000}
-                                />
-                                <Marker position={[coords.lat, coords.lng]} icon={markerIcon} />
-                              </LeafletMapContainer>
-                            </AlertMapContainer>
-                          </AlertModalSection>
-                        );
-                      }
-                      return null;
+                      const severityConfig = ALERT_SEVERITY_CONFIG[selectedAlert.severity];
+                      const markerIcon = createAlertMarkerIcon(severityConfig.color);
+                      const mapTileUrl =
+                        theme.name === 'dark'
+                          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                          : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+                      const center = coordinateList[0];
+                      const positions = coordinateList.map(c => [c.lat, c.lng] as [number, number]);
+                      const hasPolyline = positions.length > 1;
+
+                      return (
+                        <AlertModalSection>
+                          <AlertModalLabel>Location</AlertModalLabel>
+                          <AlertMapContainer>
+                            <LeafletMapContainer
+                              center={[center.lat, center.lng]}
+                              zoom={hasPolyline ? 12 : 14}
+                              zoomControl={true}
+                              scrollWheelZoom={false}
+                              dragging={true}
+                              style={{ height: '100%', width: '100%' }}
+                            >
+                              <RetryTileLayer
+                                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                                url={mapTileUrl}
+                                maxRetries={3}
+                                retryDelay={1000}
+                              />
+                              {hasPolyline ? (
+                                <>
+                                  <FitBounds positions={positions} />
+                                  <Polyline
+                                    positions={positions}
+                                    pathOptions={{
+                                      color: severityConfig.color,
+                                      weight: 5,
+                                      opacity: 0.9,
+                                    }}
+                                  />
+                                </>
+                              ) : (
+                                <Marker position={[center.lat, center.lng]} icon={markerIcon} />
+                              )}
+                            </LeafletMapContainer>
+                          </AlertMapContainer>
+                        </AlertModalSection>
+                      );
                     })()}
 
                     {selectedAlert.url && (
