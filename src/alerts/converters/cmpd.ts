@@ -6,6 +6,7 @@ import { buildMapUrlIfValid } from '../../utils/mapUrl';
 
 // Filter thresholds
 const MAX_EVENT_AGE_HOURS = 3;
+const MAX_EVENT_AGE_HOURS_INJURY_OR_FATALITY = 12; // Personal injury / fatality stay visible longer
 const EXCLUDED_TYPES = new Set([
   'AC-R/PD', // Property-damage-only accidents
   'HR-R/PD', // Hit & run - property damage
@@ -29,12 +30,16 @@ function shouldFilterEvent(event: CMPDTrafficEvent): boolean {
     return true;
   }
 
-  // Filter events older than threshold
+  // Filter events older than threshold (longer window for injury/fatality)
   try {
     const eventTime = new Date(event.eventDateTime).getTime();
     const now = Date.now();
     const ageHours = (now - eventTime) / (1000 * 60 * 60);
-    if (ageHours > MAX_EVENT_AGE_HOURS) {
+    const maxHours =
+      event.typeCode === 'AC-PI' || event.typeCode === 'AC-FI'
+        ? MAX_EVENT_AGE_HOURS_INJURY_OR_FATALITY
+        : MAX_EVENT_AGE_HOURS;
+    if (ageHours > maxHours) {
       return true;
     }
   } catch {

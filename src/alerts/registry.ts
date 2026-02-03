@@ -6,6 +6,7 @@ import {
   ncdotSource,
   catsSource,
   cmpdSource,
+  cmsSource,
   hereFlowSource,
 } from './sources';
 
@@ -37,6 +38,7 @@ export const alertSources: AlertSourceDefinition[] = [
   ncdotSource,
   catsSource,
   cmpdSource,
+  cmsSource,
   hereFlowSource,
 ];
 

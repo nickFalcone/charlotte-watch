@@ -525,6 +525,107 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
   };
 }
 
+const CMS_TWITTER_USER_ID = '199341683';
+const CMS_TWITTER_CACHE_TTL_MS = 43200000; // 12 hours
+
+/** Check if tweet is about a U.S. holiday closure (comprehensive filtering) */
+function isHolidayClosure(text: string): boolean {
+  const lower = text.toLowerCase();
+  const holidayNames =
+    /martin luther king|mlk day|christmas|thanksgiving|memorial day|labor day|independence day|july 4th|president'?s day|new year/i;
+  const datePatterns = /dec\.? 2[2-6]|dec\.? 24-26|jan\.? 1-2|jan\.? 19/i;
+  const closurePattern =
+    /(closed|will be closed|schools closed|schools? and|offices? will be closed)/i;
+  if (holidayNames.test(text) && closurePattern.test(lower)) return true;
+  if (datePatterns.test(text)) return true;
+  return false;
+}
+
+/** Keep tweets that are time-sensitive CMS alerts */
+function isCMSAlertTweet(text: string): boolean {
+  const lower = text.toLowerCase();
+  const alertKeywords = /emergency|active shooter|lockdown|closed|canceled|delay|remote/i;
+  if (!alertKeywords.test(lower)) return false;
+  if (isHolidayClosure(text)) return false;
+  return true;
+}
+
+function cmsTwitterPlugin(env: Record<string, string>): Plugin {
+  return {
+    name: 'cms-twitter',
+    configureServer(server) {
+      server.middlewares.use('/api/cms-twitter', async (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        const cached = devCacheGet('cms-twitter');
+        if (cached) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.end(cached);
+          return;
+        }
+
+        const apiKey = env.RAPIDAPI_KEY;
+        if (!apiKey) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ data: [] }));
+          return;
+        }
+
+        try {
+          const url = `https://${TWITTER_API_HOST}/v3/user/tweets?userId=${CMS_TWITTER_USER_ID}`;
+          const response = await fetch(url, {
+            headers: {
+              'x-rapidapi-host': TWITTER_API_HOST,
+              'x-rapidapi-key': apiKey,
+            },
+          });
+          if (!response.ok) {
+            res.statusCode = response.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: `Twitter API ${response.status}`, data: [] }));
+            return;
+          }
+          const body = (await response.json()) as {
+            data?: Array<{
+              author?: { id: string };
+              type?: string;
+              text: string;
+              createdAt: string;
+            }>;
+          };
+          const allTweets = body.data ?? [];
+          const cmsTweets = allTweets.filter(
+            t =>
+              t.author?.id === CMS_TWITTER_USER_ID &&
+              (t.type === 'tweet' || t.type === 'quote') &&
+              isCMSAlertTweet(t.text) &&
+              isWithinLast12Hours(t.createdAt)
+          );
+          const responseBody = JSON.stringify({ data: cmsTweets });
+          devCachePut('cms-twitter', responseBody, CMS_TWITTER_CACHE_TTL_MS);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.end(responseBody);
+        } catch (error) {
+          console.error('[cms-twitter] Error:', error);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ data: [] }));
+        }
+      });
+    },
+  };
+}
+
 // Dev-only plugin to handle AI summarization without Wrangler/Pages Functions
 function aiSummarizationPlugin(env: Record<string, string>): Plugin {
   return {
@@ -833,6 +934,7 @@ export default defineConfig(({ mode }) => {
       react(),
       newsCharlotteParsedPlugin(env),
       catsTwitterPlugin(env),
+      cmsTwitterPlugin(env),
       aiSummarizationPlugin(env),
       aiWeatherSummaryPlugin(env),
       dukeOutagePlugin(env),

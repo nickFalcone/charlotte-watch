@@ -3,16 +3,9 @@ import type { GenericAlert } from '../../types/alerts';
 import { mapCATSSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 import type { AlertSeverity } from '../../types/alerts';
 import { isLynxLightRailRoute } from '../../utils/catsApi';
+import { stripEmojis } from '../../utils/textUtils';
 
 const TITLE_MAX_LEN = 80;
-
-/** Remove emoji and variation selectors from text (e.g. from CATS Twitter). */
-function stripEmojis(text: string): string {
-  return text
-    .replace(/\p{Extended_Pictographic}/gu, '')
-    .replace(/\uFE0F/g, '')
-    .trim();
-}
 
 function severityFromTweetText(text: string): AlertSeverity {
   const lower = text.toLowerCase();

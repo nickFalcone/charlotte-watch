@@ -130,6 +130,8 @@ export interface HereRouteFlow {
   /** Centroid of segment shapes (for map link); from location.shape.links[].points */
   centerLat?: number;
   centerLng?: number;
+  /** Shape points [lat, lng] for drawing the route on a map (optional) */
+  shapePoints?: [number, number][];
 }
 
 /**
