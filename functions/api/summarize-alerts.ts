@@ -53,6 +53,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   const apiKeyError = validateAPIKey(apiKey, provider);
   if (apiKeyError) return apiKeyError;
+  const key = apiKey as string; // narrow: validateAPIKey returned above if missing
 
   // Parse request body
   const request = await parseJSONRequest<SummarizeRequest>(context.request);
@@ -86,11 +87,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     let summary: string;
 
     if (provider === 'anthropic') {
-      summary = await callAnthropic(BLUF_SYSTEM_PROMPT, userPrompt, apiKey, 150);
+      summary = await callAnthropic(BLUF_SYSTEM_PROMPT, userPrompt, key, 150);
     } else {
       // Use OpenAI Responses API
       summary = await callOpenAIResponses({
-        apiKey,
+        apiKey: key,
         model: 'gpt-4o-mini',
         instructions: BLUF_SYSTEM_PROMPT,
         input: userPrompt,

@@ -10,7 +10,10 @@ const CACHE_CONTROL_HEADER = 'private, max-age=900';
 /**
  * Determines which AI provider to use based on environment config
  */
-export function getAIProvider(env: Env): { provider: 'anthropic' | 'openai'; apiKey: string } {
+export function getAIProvider(env: Env): {
+  provider: 'anthropic' | 'openai';
+  apiKey: string | undefined;
+} {
   const provider = env.AI_PROVIDER || 'openai';
   const apiKey = provider === 'anthropic' ? env.ANTHROPIC_API_KEY : env.OPENAI_API_KEY;
   return { provider, apiKey };

@@ -18,8 +18,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "npm run format && npm run lint && npm run type-check",
-    "check:fix": "npm run format && npm run lint:fix && npm run type-check"
+    "check": "npm run format && npm run lint && npm run type-check && npm run type-check:functions",
+    "check:fix": "npm run format && npm run lint:fix && npm run type-check && npm run type-check:functions"
   },
   "dependencies": {
     "@nivo/treemap": "^0.99.0",

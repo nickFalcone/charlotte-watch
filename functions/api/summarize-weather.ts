@@ -116,6 +116,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   const apiKeyError = validateAPIKey(apiKey, provider);
   if (apiKeyError) return apiKeyError;
+  const key = apiKey as string; // narrow: validateAPIKey returned above if missing
 
   const request = await parseJSONRequest<SummarizeWeatherRequest>(context.request);
   if (request instanceof Response) return request;
@@ -167,10 +168,10 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     let summary: string;
 
     if (provider === 'anthropic') {
-      summary = await callAnthropic(WEATHER_SYSTEM_PROMPT, userPrompt, apiKey, 350);
+      summary = await callAnthropic(WEATHER_SYSTEM_PROMPT, userPrompt, key, 350);
     } else {
       summary = await callOpenAIResponses({
-        apiKey,
+        apiKey: key,
         model: 'gpt-4o-mini',
         instructions: WEATHER_SYSTEM_PROMPT,
         input: userPrompt,
