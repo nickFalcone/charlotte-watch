@@ -34,8 +34,6 @@ function severityFromTweetText(text: string): AlertSeverity {
   return 'minor';
 }
 
-/** Extract first line of text, truncate if too long */
-
 // Re-export filtering function for backward compatibility
 export { isCMSAlertTweet } from '../../utils/cmsFilters';
 
