@@ -177,14 +177,16 @@ function getAlertCoordinateList(alert: GenericAlert): { lat: number; lng: number
 }
 
 // Fits the map bounds to include all positions (used when showing a polyline)
-function FitBounds({ positions }: { positions: [number, number][] }) {
+function FitBounds({ positions }: { positions: [number, number][] }): null {
   const map = useMap();
+  const positionsKey = positions.length < 2 ? '' : JSON.stringify(positions);
 
   useEffect(() => {
-    if (positions.length < 2) return;
-    const bounds = L.latLngBounds(positions);
+    if (positionsKey === '') return;
+    const coords = JSON.parse(positionsKey) as [number, number][];
+    const bounds = L.latLngBounds(coords);
     map.fitBounds(bounds, { padding: [24, 24], maxZoom: 14 });
-  }, [map, positions]);
+  }, [map, positionsKey]);
   return null;
 }
 

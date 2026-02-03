@@ -308,7 +308,7 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
 
 /**
  * Fetch traffic flow data for all priority routes.
- * Returns one HereRouteFlow per road with maxJamFactor > 7 (separate alerts per road).
+ * Returns one HereRouteFlow per road where: (1) at least one segment has congestionPercent >= 90%, AND (2) road-wide average congestion >= 50%.
  */
 export async function fetchAllRoutesFlow(signal?: AbortSignal): Promise<HereRouteFlow[]> {
   const routeFlows: HereRouteFlow[] = [];
