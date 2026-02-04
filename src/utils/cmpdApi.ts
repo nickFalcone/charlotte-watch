@@ -35,6 +35,11 @@ interface CMPDTrafficEventRaw {
 }
 
 function normalizeEvent(raw: CMPDTrafficEventRaw): CMPDTrafficEvent {
+  // Helper to get coordinate value - undefined if not a valid number
+  const getCoord = (val: number | undefined): number | undefined => {
+    return typeof val === 'number' && Number.isFinite(val) ? val : undefined;
+  };
+
   return {
     eventNo: raw.eventNo ?? raw.EventNo ?? '',
     eventDateTime: raw.eventDateTime ?? raw.EventDateTime ?? '',
@@ -44,24 +49,34 @@ function normalizeEvent(raw: CMPDTrafficEventRaw): CMPDTrafficEvent {
     typeSubCode: raw.typeSubCode ?? raw.TypeSubCode ?? '',
     typeSubDescription: raw.typeSubDescription ?? raw.TypeSubDescription ?? '',
     division: raw.division ?? raw.Division ?? '',
-    xCoordinate: raw.xCoordinate ?? raw.XCoordinate ?? 0,
-    yCoordinate: raw.yCoordinate ?? raw.YCoordinate ?? 0,
-    latitude: raw.latitude ?? raw.Latitude ?? 0,
-    longitude: raw.longitude ?? raw.Longitude ?? 0,
+    // Use undefined instead of 0 for missing coordinates to avoid (0,0) false positives
+    xCoordinate: getCoord(raw.xCoordinate ?? raw.XCoordinate),
+    yCoordinate: getCoord(raw.yCoordinate ?? raw.YCoordinate),
+    latitude: getCoord(raw.latitude ?? raw.Latitude),
+    longitude: getCoord(raw.longitude ?? raw.Longitude),
     address: raw.address ?? raw.Address ?? '',
   };
 }
 
 /**
- * Filters events to only include those within Charlotte-Mecklenburg bounds
+ * Filters events to only include those within Charlotte-Mecklenburg bounds.
+ * Also filters out events with missing or invalid coordinates.
  */
 function filterCharlotteBoundsEvents(events: CMPDTrafficEvent[]): CMPDTrafficEvent[] {
-  return events.filter(
-    event =>
-      event.latitude != null &&
-      event.longitude != null &&
-      isWithinCharlotteBounds(event.latitude, event.longitude)
-  );
+  return events.filter(event => {
+    // Require valid coordinates (not undefined, not null, must be finite numbers)
+    if (
+      event.latitude == null ||
+      event.longitude == null ||
+      !Number.isFinite(event.latitude) ||
+      !Number.isFinite(event.longitude)
+    ) {
+      return false;
+    }
+
+    // Check if within Charlotte-Mecklenburg bounds
+    return isWithinCharlotteBounds(event.latitude, event.longitude);
+  });
 }
 
 /**

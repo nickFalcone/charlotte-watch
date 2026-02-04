@@ -125,12 +125,12 @@ function getDisplaySeverity(alert: GenericAlert): string | undefined {
 function AISummaryContent({ summary }: { summary: string }) {
   const raw = summary.trim();
   const lines = raw.split(/\n/).filter(Boolean);
-  // Normalize: if model returned a paragraph without bullet prefixes, treat as one bullet
+  // Normalize: strip bullet prefixes if present, otherwise split on newlines
   const hasBulletPrefix = lines.some(line => /^\s*[-*•]\s/.test(line));
   const normalizedLines = hasBulletPrefix
     ? lines.map(line => line.replace(/^\s*[-*•]\s*/, '').trim()).filter(Boolean)
-    : [raw];
-  if (normalizedLines.length > 1 || (normalizedLines.length === 1 && normalizedLines[0])) {
+    : lines.map(line => line.trim()).filter(Boolean);
+  if (normalizedLines.length > 0) {
     return (
       <AISummaryList>
         {normalizedLines.map((line, i) => (

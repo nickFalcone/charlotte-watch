@@ -15,7 +15,7 @@ import newsParsingPrompt from '../src/prompts/newsParsing.json';
 const NEWS_PARSING_SYSTEM_PROMPT: string = newsParsingPrompt.systemPrompt;
 const OPENWEBNINJA_HOST = 'real-time-news-data.p.rapidapi.com';
 const CACHE_KEY = 'news:parsed';
-const MAX_ARTICLES_TO_SEND = 200;
+const MAX_ARTICLES_TO_SEND = 100;
 
 export interface Env {
   CACHE: KVNamespace;

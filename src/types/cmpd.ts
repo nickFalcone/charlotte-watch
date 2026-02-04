@@ -13,10 +13,10 @@ export interface CMPDTrafficEvent {
   typeSubCode: string; // Sub-type code (e.g., "JST-OCC")
   typeSubDescription: string; // Sub-type description (e.g., "JUST OCCURRED")
   division: string; // CMPD division (e.g., "PROVIDENCE", "METRO")
-  xCoordinate: number; // NC State Plane (NAD83) X coordinate
-  yCoordinate: number; // NC State Plane (NAD83) Y coordinate
-  latitude: number; // WGS84 latitude
-  longitude: number; // WGS84 longitude
+  xCoordinate: number | undefined; // NC State Plane (NAD83) X coordinate
+  yCoordinate: number | undefined; // NC State Plane (NAD83) Y coordinate
+  latitude: number | undefined; // WGS84 latitude
+  longitude: number | undefined; // WGS84 longitude
   address: string; // Street address or intersection
 }
 

@@ -198,14 +198,105 @@ const MIN_JAM_ALERT = 7; // maxJamFactor > 7
 const MIN_CONGESTION_PERCENT = 90; // only alert when at least one segment is 90%+ slower than free flow
 const MIN_AVG_CONGESTION_PERCENT = 50; // road-wide average must be at least 50% slower (avoids "16% slower" from one bad segment)
 const MIN_SEGMENT_COUNT = 1; // API returns one result per segment; group by road can yield 1 segment per road
+const MIN_OPEN_ROAD_PERCENT = 50; // require at least 50% of road to be open (not closed for construction, etc.)
+const MIN_OPEN_ROAD_METERS = 100; // or at least 100m of open road
 
 /** Charlotte arterials to include in traffic alerts (HERE may return "Rd" or "Road", "Blvd" or "Boulevard") */
 const MAJOR_ARTERIALS = new Set(['park rd', 'park road', 'south blvd', 'south boulevard']);
 
 /**
+ * Check if a result has sufficient open road to generate a congestion alert.
+ * Returns true if the road has at least MIN_OPEN_ROAD_PERCENT open OR MIN_OPEN_ROAD_METERS open.
+ */
+export function hasSufficientOpenRoad(result: HereFlowResult): boolean {
+  const subs = result.currentFlow.subSegments;
+
+  // No subsegments - check top-level traversability
+  if (!subs || subs.length === 0) {
+    return result.currentFlow.traversability !== 'closed';
+  }
+
+  // Calculate total and open lengths
+  let totalLength = 0;
+  let openLength = 0;
+
+  for (const sub of subs) {
+    const len = typeof sub.length === 'number' && sub.length >= 0 ? sub.length : 0;
+    totalLength += len;
+    // Subsegments are open unless explicitly marked closed
+    if (sub.traversability !== 'closed') {
+      openLength += len;
+    }
+  }
+
+  // Require minimum open road (percentage OR absolute)
+  if (totalLength === 0) return false;
+  const openPercent = (openLength / totalLength) * 100;
+  return openPercent >= MIN_OPEN_ROAD_PERCENT || openLength >= MIN_OPEN_ROAD_METERS;
+}
+
+/**
+ * Get jam factor and speed statistics from open subsegments only.
+ * Returns { jamFactor, speed, freeFlow } considering only open portions of the road.
+ */
+export function getOpenSubsegmentStats(flow: HereFlowResult['currentFlow']): {
+  jamFactor: number;
+  speed: number;
+  freeFlow: number;
+} {
+  const subs = flow.subSegments;
+
+  // No subsegments - use top-level values
+  if (!subs || subs.length === 0) {
+    return {
+      jamFactor:
+        typeof flow.jamFactor === 'number' && Number.isFinite(flow.jamFactor) ? flow.jamFactor : 0,
+      speed: getEffectiveSpeed(flow),
+      freeFlow: getEffectiveFreeFlow(flow),
+    };
+  }
+
+  // Calculate length-weighted averages from open subsegments only
+  let totalJam = 0;
+  let totalSpeed = 0;
+  let totalFree = 0;
+  let totalLength = 0;
+
+  for (const sub of subs) {
+    // Skip closed subsegments
+    if (sub.traversability === 'closed') continue;
+
+    const len = typeof sub.length === 'number' && sub.length >= 0 ? sub.length : 0;
+    if (len === 0) continue;
+
+    const jam =
+      typeof sub.jamFactor === 'number' && Number.isFinite(sub.jamFactor) ? sub.jamFactor : 0;
+    const speed = typeof sub.speed === 'number' && Number.isFinite(sub.speed) ? sub.speed : 0;
+    const free =
+      typeof sub.freeFlow === 'number' && Number.isFinite(sub.freeFlow) ? sub.freeFlow : 0;
+
+    totalJam += jam * len;
+    totalSpeed += speed * len;
+    totalFree += free * len;
+    totalLength += len;
+  }
+
+  // Return length-weighted averages
+  if (totalLength === 0) {
+    return { jamFactor: 0, speed: 0, freeFlow: 0 };
+  }
+
+  return {
+    jamFactor: totalJam / totalLength,
+    speed: totalSpeed / totalLength,
+    freeFlow: totalFree / totalLength,
+  };
+}
+
+/**
  * Group results by location.description, compute per-road stats.
  * Returns one HereRouteFlow per road with maxJamFactor > 7, maxCongestionPercent >= 90, and avg congestion >= 50%.
- * Uses subSegments when top-level speed is omitted (e.g. closed).
+ * Only considers open subsegments to avoid false alerts on road closures.
  * Road names are normalized to consolidate major routes (e.g., "I-77 N" and "I-77 S" -> "I-77").
  */
 function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string): HereRouteFlow[] {
@@ -214,6 +305,8 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
   for (const r of results) {
     const name = r.location?.description?.trim() || 'Unnamed';
     if (name === 'Unnamed') continue; // skip segments without a road name — not actionable
+    // Skip segments without sufficient open road (mostly closed for construction, etc.)
+    if (!hasSufficientOpenRoad(r)) continue;
     const normalizedName = normalizeRoadName(name);
     const arr = byRoad.get(normalizedName) ?? [];
     arr.push(r);
@@ -233,18 +326,15 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
     let maxCongestion = 0;
 
     for (const r of group) {
-      const flow = r.currentFlow;
-      const j =
-        typeof flow.jamFactor === 'number' && Number.isFinite(flow.jamFactor) ? flow.jamFactor : 0;
-      totalJam += j;
-      maxJam = Math.max(maxJam, j);
-      const speed = getEffectiveSpeed(flow);
-      const free = getEffectiveFreeFlow(flow);
-      totalSpeed += speed;
-      totalFree += free;
-      // Calculate congestion percent for this segment
-      if (free > 0 && Number.isFinite(speed)) {
-        const segmentCongestion = ((free - speed) / free) * 100;
+      // Get statistics from open subsegments only
+      const stats = getOpenSubsegmentStats(r.currentFlow);
+      totalJam += stats.jamFactor;
+      maxJam = Math.max(maxJam, stats.jamFactor);
+      totalSpeed += stats.speed;
+      totalFree += stats.freeFlow;
+      // Calculate congestion percent for this segment (from open portions only)
+      if (stats.freeFlow > 0 && Number.isFinite(stats.speed)) {
+        const segmentCongestion = ((stats.freeFlow - stats.speed) / stats.freeFlow) * 100;
         maxCongestion = Math.max(maxCongestion, segmentCongestion);
       }
     }
