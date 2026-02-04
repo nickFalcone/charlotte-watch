@@ -3,7 +3,7 @@
  * Used by both client code and Cloudflare Functions (via ../../src/utils/ import).
  */
 
-import { isWithinLast12Hours } from './twitterFilters';
+import { isWithinLast24Hours } from './twitterFilters';
 
 /**
  * Keep tweets that mention service status (suspensions, delays, Blue/Gold Line, etc.).
@@ -19,4 +19,4 @@ export function isServiceAlertTweet(text: string): boolean {
 }
 
 // Re-export from shared Twitter filters
-export { isWithinLast12Hours };
+export { isWithinLast24Hours };

@@ -6,7 +6,7 @@ import {
   NEWS_PARSING_SYSTEM_PROMPT,
   WEATHER_SYSTEM_PROMPT,
 } from './src/utils/aiPrompts';
-import { isServiceAlertTweet, isWithinLast12Hours } from './src/utils/catsFilters';
+import { isServiceAlertTweet, isWithinLast24Hours } from './src/utils/catsFilters';
 import { isCMSAlertTweet } from './src/utils/cmsFilters';
 
 // In-memory TTL cache for dev plugins (mirrors KV caching in production)
@@ -493,7 +493,7 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
               t.author?.id === CATS_TWITTER_USER_ID &&
               (t.type === 'tweet' || t.type === 'quote') &&
               isServiceAlertTweet(t.text) &&
-              isWithinLast12Hours(t.createdAt)
+              isWithinLast24Hours(t.createdAt)
           );
           const responseBody = JSON.stringify({ data: catsTweets });
           devCachePut('cats-twitter', responseBody, CATS_TWITTER_CACHE_TTL_MS);
@@ -572,7 +572,7 @@ function cmsTwitterPlugin(env: Record<string, string>): Plugin {
               t.author?.id === CMS_TWITTER_USER_ID &&
               (t.type === 'tweet' || t.type === 'quote') &&
               isCMSAlertTweet(t.text) &&
-              isWithinLast12Hours(t.createdAt)
+              isWithinLast24Hours(t.createdAt)
           );
           const responseBody = JSON.stringify({ data: cmsTweets });
           devCachePut('cms-twitter', responseBody, CMS_TWITTER_CACHE_TTL_MS);

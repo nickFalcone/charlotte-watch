@@ -1,5 +1,5 @@
 import type { Env } from '../_lib/env';
-import { isServiceAlertTweet, isWithinLast12Hours } from '../../src/utils/catsFilters';
+import { isServiceAlertTweet, isWithinLast24Hours } from '../../src/utils/catsFilters';
 import { jsonResponse, errorResponse, getCached, setCached } from '../_lib/responseHelpers';
 
 const TWITTER_API_HOST = 'twitter-api47.p.rapidapi.com';
@@ -57,7 +57,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         t.author?.id === CATS_TWITTER_USER_ID &&
         (t.type === 'tweet' || t.type === 'quote') &&
         isServiceAlertTweet(t.text) &&
-        isWithinLast12Hours(t.createdAt)
+        isWithinLast24Hours(t.createdAt)
     );
 
     const responseData = { data: catsTweets };
