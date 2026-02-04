@@ -1,7 +1,6 @@
 /**
  * Shared Twitter filtering utilities.
- * NOTE: This file is duplicated in functions/_lib/twitterFilters.ts for the Cloudflare Pages Function.
- * Keep both files in sync when making changes.
+ * Used by both client code and Cloudflare Functions (via ../../src/utils/ import).
  */
 
 export const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
