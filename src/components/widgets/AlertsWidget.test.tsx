@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
-// Extract the normalization logic for testing
+// Extract the normalization logic for testing (matches AlertsWidget.tsx implementation)
 function normalizeAISummary(summary: string): string[] {
   const raw = summary.trim();
   const lines = raw.split(/\n/).filter(Boolean);
   const hasBulletPrefix = lines.some(line => /^\s*[-*•]\s/.test(line));
   const normalizedLines = hasBulletPrefix
     ? lines.map(line => line.replace(/^\s*[-*•]\s*/, '').trim()).filter(Boolean)
-    : [raw];
+    : lines.map(line => line.trim()).filter(Boolean);
   return normalizedLines;
 }
 
@@ -38,36 +38,16 @@ describe('AI Summary Normalization Logic', () => {
     });
   });
 
-  describe('without bullet prefixes - THE ISSUE', () => {
-    it('currently treats multi-line as single item with newlines', () => {
+  describe('without bullet prefixes (FIXED)', () => {
+    it('splits multi-line text into separate items', () => {
       const summary = `First line
 Second line
 Third line`;
       const result = normalizeAISummary(summary);
 
-      // CURRENT BEHAVIOR: Returns the entire raw text as one item
-      expect(result).toHaveLength(1);
-      expect(result[0]).toBe('First line\nSecond line\nThird line');
-
-      // PROBLEM: When rendered in React, this becomes one <li> with
-      // text content including \n characters, which don't render as line breaks
-    });
-
-    it('DESIRED: should split multi-line into separate items', () => {
-      // What we actually want is to split on newlines
-      const summary = `First line
-Second line
-Third line`;
-
-      // Proposed fix: split on newlines even without bullets
-      const raw = summary.trim();
-      const lines = raw.split(/\n/).filter(Boolean);
-      const hasBulletPrefix = lines.some(line => /^\s*[-*•]\s/.test(line));
-      const normalizedLines = hasBulletPrefix
-        ? lines.map(line => line.replace(/^\s*[-*•]\s*/, '').trim()).filter(Boolean)
-        : lines.map(line => line.trim()).filter(Boolean); // FIX: split lines even without bullets
-
-      expect(normalizedLines).toEqual(['First line', 'Second line', 'Third line']);
+      expect(result).toHaveLength(3);
+      expect(result).toEqual(['First line', 'Second line', 'Third line']);
+      // This renders correctly in React as separate <li> elements
     });
 
     it('handles single-line summary correctly', () => {
@@ -75,19 +55,24 @@ Third line`;
       const result = normalizeAISummary(summary);
       expect(result).toEqual(['Single line summary']);
     });
+
+    it('trims whitespace from each line', () => {
+      const summary = `  First line
+  Second line
+  Third line  `;
+      const result = normalizeAISummary(summary);
+      expect(result).toEqual(['First line', 'Second line', 'Third line']);
+    });
   });
 
   describe('edge cases', () => {
     it('handles empty summary', () => {
       const result = normalizeAISummary('');
-      // Current: returns [''] - will be fixed when we apply the solution
-      expect(result).toEqual(['']);
+      expect(result).toEqual([]);
     });
 
     it('handles whitespace-only summary', () => {
       const result = normalizeAISummary('   \n  \n  ');
-      // Current: returns empty string in array
-      // After fix: should return empty array
       expect(result.length).toBeGreaterThanOrEqual(0);
     });
 
