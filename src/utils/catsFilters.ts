@@ -1,7 +1,6 @@
 /**
  * Shared CATS Twitter filtering utilities.
- * NOTE: This file is duplicated in functions/_lib/catsFilters.ts for the Cloudflare Pages Function.
- * Keep both files in sync when making changes.
+ * Used by both client code and Cloudflare Functions (via ../../src/utils/ import).
  */
 
 import { isWithinLast12Hours } from './twitterFilters';

@@ -6,8 +6,10 @@ import {
   getEffectiveFreeFlow,
   getCongestionSeverity,
   filterCongestedRoutes,
+  hasSufficientOpenRoad,
+  getOpenSubsegmentStats,
 } from './hereApi';
-import type { HereCurrentFlow, HereRouteFlow } from '../types/here';
+import type { HereCurrentFlow, HereRouteFlow, HereFlowResult } from '../types/here';
 import { JAM_FACTOR_THRESHOLDS } from '../types/here';
 
 describe('normalizeRoadName', () => {
@@ -196,5 +198,161 @@ describe('filterCongestedRoutes', () => {
   it('returns empty when no routes exceed threshold', () => {
     const result = filterCongestedRoutes(routes, 10);
     expect(result).toHaveLength(0);
+  });
+});
+
+describe('hasSufficientOpenRoad', () => {
+  it('returns true when road is fully open (no subsegments)', () => {
+    const result: HereFlowResult = {
+      location: { description: 'Test Road', length: 100, shape: { links: [] } },
+      currentFlow: {
+        jamFactor: 5,
+        speed: 15,
+        freeFlow: 25,
+      },
+    };
+    expect(hasSufficientOpenRoad(result)).toBe(true);
+  });
+
+  it('returns false when road is closed (no subsegments)', () => {
+    const result: HereFlowResult = {
+      location: { description: 'Test Road', length: 100, shape: { links: [] } },
+      currentFlow: {
+        jamFactor: 10,
+        traversability: 'closed',
+      },
+    };
+    expect(hasSufficientOpenRoad(result)).toBe(false);
+  });
+
+  it('returns true when >50% of road is open', () => {
+    const result: HereFlowResult = {
+      location: { description: 'Test Road', length: 100, shape: { links: [] } },
+      currentFlow: {
+        jamFactor: 8,
+        subSegments: [
+          { length: 60, traversability: 'open', jamFactor: 8, speed: 10, freeFlow: 25 },
+          { length: 40, traversability: 'closed', jamFactor: 10 },
+        ],
+      },
+    };
+    expect(hasSufficientOpenRoad(result)).toBe(true);
+  });
+
+  it('returns false when <50% of road is open and <100m', () => {
+    const result: HereFlowResult = {
+      location: { description: 'Test Road', length: 60, shape: { links: [] } },
+      currentFlow: {
+        jamFactor: 10,
+        subSegments: [
+          { length: 10, traversability: 'open', jamFactor: 2, speed: 20, freeFlow: 25 },
+          { length: 50, traversability: 'closed', jamFactor: 10 },
+        ],
+      },
+    };
+    expect(hasSufficientOpenRoad(result)).toBe(false);
+  });
+
+  it('returns true when <50% open but >100m absolute', () => {
+    const result: HereFlowResult = {
+      location: { description: 'Test Road', length: 300, shape: { links: [] } },
+      currentFlow: {
+        jamFactor: 8,
+        subSegments: [
+          { length: 120, traversability: 'open', jamFactor: 7, speed: 15, freeFlow: 25 },
+          { length: 180, traversability: 'closed', jamFactor: 10 },
+        ],
+      },
+    };
+    expect(hasSufficientOpenRoad(result)).toBe(true);
+  });
+
+  it('treats subsegments without traversability as open', () => {
+    const result: HereFlowResult = {
+      location: { description: 'Test Road', length: 100, shape: { links: [] } },
+      currentFlow: {
+        jamFactor: 8,
+        subSegments: [
+          { length: 60, speed: 15, freeFlow: 25 }, // no traversability
+          { length: 40, traversability: 'closed', jamFactor: 10 },
+        ],
+      },
+    };
+    expect(hasSufficientOpenRoad(result)).toBe(true);
+  });
+});
+
+describe('getOpenSubsegmentStats', () => {
+  it('returns top-level stats when no subsegments', () => {
+    const flow: HereCurrentFlow = {
+      jamFactor: 5,
+      speed: 15,
+      freeFlow: 25,
+    };
+    const stats = getOpenSubsegmentStats(flow);
+    expect(stats.jamFactor).toBe(5);
+    expect(stats.speed).toBe(15);
+    expect(stats.freeFlow).toBe(25);
+  });
+
+  it('only includes open subsegments in calculation', () => {
+    const flow: HereCurrentFlow = {
+      jamFactor: 10,
+      traversability: 'closed',
+      subSegments: [
+        { length: 10, traversability: 'open', jamFactor: 2, speed: 20, freeFlow: 25 },
+        { length: 50, traversability: 'closed', jamFactor: 10 },
+      ],
+    };
+    const stats = getOpenSubsegmentStats(flow);
+    // Should only consider the 10m open segment, not the closed one
+    expect(stats.jamFactor).toBe(2);
+    expect(stats.speed).toBe(20);
+    expect(stats.freeFlow).toBe(25);
+  });
+
+  it('calculates length-weighted average from multiple open subsegments', () => {
+    const flow: HereCurrentFlow = {
+      jamFactor: 10,
+      subSegments: [
+        { length: 100, traversability: 'open', jamFactor: 8, speed: 10, freeFlow: 25 },
+        { length: 50, traversability: 'closed', jamFactor: 10 },
+        { length: 100, traversability: 'open', jamFactor: 4, speed: 20, freeFlow: 25 },
+      ],
+    };
+    const stats = getOpenSubsegmentStats(flow);
+    // Length-weighted average of two open segments (100m @ jam 8, 100m @ jam 4)
+    expect(stats.jamFactor).toBe(6); // (8*100 + 4*100) / 200 = 6
+    expect(stats.speed).toBe(15); // (10*100 + 20*100) / 200 = 15
+    expect(stats.freeFlow).toBe(25);
+  });
+
+  it('returns zeros when all subsegments are closed', () => {
+    const flow: HereCurrentFlow = {
+      jamFactor: 10,
+      subSegments: [
+        { length: 50, traversability: 'closed', jamFactor: 10 },
+        { length: 50, traversability: 'closed', jamFactor: 10 },
+      ],
+    };
+    const stats = getOpenSubsegmentStats(flow);
+    expect(stats.jamFactor).toBe(0);
+    expect(stats.speed).toBe(0);
+    expect(stats.freeFlow).toBe(0);
+  });
+
+  it('treats subsegments without traversability as open', () => {
+    const flow: HereCurrentFlow = {
+      jamFactor: 8,
+      subSegments: [
+        { length: 100, jamFactor: 5, speed: 15, freeFlow: 25 }, // no traversability
+        { length: 100, traversability: 'closed', jamFactor: 10 },
+      ],
+    };
+    const stats = getOpenSubsegmentStats(flow);
+    // Should only consider the first segment (no traversability = open)
+    expect(stats.jamFactor).toBe(5);
+    expect(stats.speed).toBe(15);
+    expect(stats.freeFlow).toBe(25);
   });
 });

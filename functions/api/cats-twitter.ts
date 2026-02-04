@@ -1,5 +1,5 @@
 import type { Env } from '../_lib/env';
-import { isServiceAlertTweet, isWithinLast12Hours } from '../_lib/catsFilters';
+import { isServiceAlertTweet, isWithinLast12Hours } from '../../src/utils/catsFilters';
 import { jsonResponse, errorResponse, getCached, setCached } from '../_lib/responseHelpers';
 
 const TWITTER_API_HOST = 'twitter-api47.p.rapidapi.com';
