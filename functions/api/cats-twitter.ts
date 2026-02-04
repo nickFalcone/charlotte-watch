@@ -4,9 +4,9 @@ import { jsonResponse, errorResponse, getCached, setCached } from '../_lib/respo
 
 const TWITTER_API_HOST = 'twitter-api47.p.rapidapi.com';
 const CATS_TWITTER_USER_ID = '868028628';
-// 12h TTL: at most ~2 requests/day to stay under 100 requests/month
+// 16h TTL: at most ~1.5 requests/day to stay under 100 requests/month
 // https://rapidapi.com/restocked-gAGxip8a_/api/twitter-api47
-const CACHE_TTL_SECONDS = 43200;
+const CACHE_TTL_SECONDS = 57600;
 
 interface TwitterTweet {
   id: string;

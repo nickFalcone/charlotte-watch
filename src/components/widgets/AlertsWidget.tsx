@@ -231,8 +231,8 @@ export function AlertsWidget(_props: WidgetProps) {
   } = useQuery({
     queryKey: queryKeys.alerts.all,
     queryFn: ({ signal }) => fetchAllAlertsWithStatus(signal),
-    staleTime: 1000 * 60 * 15, // 15 minutes — matches refetchInterval so focus/mount don't refetch more often
-    refetchInterval: 1000 * 60 * 15, // 15 minutes
+    staleTime: 1000 * 60 * 60, // 60 minutes — matches refetchInterval so focus/mount don't refetch more often
+    refetchInterval: 1000 * 60 * 60, // 60 minutes
     // Override global "refetchOnMount: false" so alerts refresh when stale after
     // rehydration from persistence or when returning to the tab
     refetchOnMount: true,
