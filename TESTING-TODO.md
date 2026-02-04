@@ -233,9 +233,9 @@ High-value testing opportunities for the Charlotte Monitor dashboard, prioritize
   - Combined logic
 
 **Twitter Filters:**
-- `isWithinLast12Hours()` - Time-based filtering
-  - Recent tweets (within 12h)
-  - Old tweets (> 12h)
+- `isWithinLast24Hours()` - Time-based filtering
+  - Recent tweets (within 24h)
+  - Old tweets (> 24h)
   - Invalid dates
 
 **Test scenarios:**

@@ -3,7 +3,7 @@
  * Used by both client code and Cloudflare Functions (via ../../src/utils/ import).
  */
 
-import { isWithinLast12Hours } from './twitterFilters';
+import { isWithinLast24Hours } from './twitterFilters';
 
 /**
  * Check if tweet is about a U.S. holiday closure (comprehensive filtering).
@@ -55,4 +55,4 @@ export function isCMSAlertTweet(text: string): boolean {
 }
 
 // Re-export from shared Twitter filters
-export { isWithinLast12Hours };
+export { isWithinLast24Hours };
