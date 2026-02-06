@@ -9,6 +9,8 @@ interface AlertForSummary {
   severity: string;
   source: string;
   category: string;
+  /** ISO 8601 timestamp; use for preferring most recent when alerts conflict */
+  updatedAt: string;
 }
 
 export interface SummarizeResponse {
@@ -78,13 +80,20 @@ export function computeAlertsHash(alerts: GenericAlert[]): string {
  * can mention major interstate congestion and accidents when present.
  */
 function prepareAlertsForSummary(alerts: GenericAlert[]): AlertForSummary[] {
-  return alerts.map(alert => ({
-    title: alert.title,
-    summary: alert.summary,
-    severity: alert.severity,
-    source: alert.source,
-    category: alert.category,
-  }));
+  return alerts.map(alert => {
+    const updatedAt =
+      alert.updatedAt instanceof Date
+        ? alert.updatedAt.toISOString()
+        : new Date(alert.updatedAt).toISOString();
+    return {
+      title: alert.title,
+      summary: alert.summary,
+      severity: alert.severity,
+      source: alert.source,
+      category: alert.category,
+      updatedAt,
+    };
+  });
 }
 
 /**
