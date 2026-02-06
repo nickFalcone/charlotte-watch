@@ -20,6 +20,8 @@ interface AlertInput {
   severity: string;
   source: string;
   category: string;
+  /** ISO 8601; prefer alerts with later updatedAt when same service has conflicting status */
+  updatedAt?: string;
 }
 
 interface SummarizeRequest {
@@ -41,10 +43,11 @@ function buildUserPrompt(alerts: AlertInput[]): string {
   }
 
   const alertLines = alerts.map((alert, i) => {
-    return `${i + 1}. [${alert.severity.toUpperCase()}] ${alert.source.toUpperCase()}: ${alert.title} - ${alert.summary}`;
+    const timePart = alert.updatedAt ? ` [updated ${alert.updatedAt}]` : '';
+    return `${i + 1}. [${alert.severity.toUpperCase()}] ${alert.source.toUpperCase()}: ${alert.title} - ${alert.summary}${timePart}`;
   });
 
-  return `Current alerts (${alerts.length} total):\n${alertLines.join('\n')}`;
+  return `Current alerts (${alerts.length} total). Each alert may include [updated <ISO timestamp>]; when the same service has conflicting status (e.g. suspended vs resumed), prefer the alert with the later updated timestamp as the current state.\n\n${alertLines.join('\n')}`;
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
