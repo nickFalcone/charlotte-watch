@@ -43,6 +43,27 @@ describe('computeAlertsHash', () => {
     expect(computeAlertsHash(alerts1)).not.toBe(computeAlertsHash(alerts2));
   });
 
+  it('produces different hash when updatedAt changes', () => {
+    const alerts1 = [makeAlert({ id: 'a1', updatedAt: new Date('2024-01-15T12:00:00Z') })];
+    const alerts2 = [makeAlert({ id: 'a1', updatedAt: new Date('2024-01-15T13:00:00Z') })];
+
+    expect(computeAlertsHash(alerts1)).not.toBe(computeAlertsHash(alerts2));
+  });
+
+  it('produces different hash when title changes', () => {
+    const alerts1 = [makeAlert({ id: 'a1', title: 'Flood Warning' })];
+    const alerts2 = [makeAlert({ id: 'a1', title: 'Flood Watch' })];
+
+    expect(computeAlertsHash(alerts1)).not.toBe(computeAlertsHash(alerts2));
+  });
+
+  it('produces different hash when summary changes', () => {
+    const alerts1 = [makeAlert({ id: 'a1', summary: 'Service suspended' })];
+    const alerts2 = [makeAlert({ id: 'a1', summary: 'Service resumed' })];
+
+    expect(computeAlertsHash(alerts1)).not.toBe(computeAlertsHash(alerts2));
+  });
+
   it('produces different hash when alert set changes', () => {
     const alert1 = makeAlert({ id: 'a1' });
     const alert2 = makeAlert({ id: 'b2' });

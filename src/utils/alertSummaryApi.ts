@@ -61,9 +61,15 @@ export function filterAlertsForSummary(alerts: GenericAlert[]): GenericAlert[] {
 export function computeAlertsHash(alerts: GenericAlert[]): string {
   if (alerts.length === 0) return 'empty';
 
-  // Sort by ID for stable ordering, include severity to detect changes
+  // Sort by ID for stable ordering; include all fields that affect summarization
   const sortedAlerts = [...alerts].sort((a, b) => a.id.localeCompare(b.id));
-  const hashInput = sortedAlerts.map(a => `${a.id}:${a.severity}`).join('|');
+  const hashInput = sortedAlerts
+    .map(a => {
+      const updatedAt =
+        a.updatedAt instanceof Date ? a.updatedAt.toISOString() : String(a.updatedAt);
+      return `${a.id}:${a.severity}:${a.title}:${a.summary}:${updatedAt}`;
+    })
+    .join('|');
 
   // Simple hash function (djb2)
   let hash = 5381;
