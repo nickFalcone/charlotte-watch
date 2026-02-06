@@ -66,7 +66,9 @@ export function computeAlertsHash(alerts: GenericAlert[]): string {
   const hashInput = sortedAlerts
     .map(a => {
       const updatedAt =
-        a.updatedAt instanceof Date ? a.updatedAt.toISOString() : String(a.updatedAt);
+        a.updatedAt instanceof Date
+          ? a.updatedAt.toISOString()
+          : new Date(a.updatedAt).toISOString();
       return `${a.id}:${a.severity}:${a.title}:${a.summary}:${updatedAt}`;
     })
     .join('|');
