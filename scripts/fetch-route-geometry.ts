@@ -13,7 +13,10 @@
  */
 
 import { writeFileSync } from 'fs';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Hatch 0.10 layer - mile marker hatches at 0.10 mile intervals
 const HATCH_LAYER_URL =
@@ -346,13 +349,7 @@ async function main() {
   console.error(`Total: ${totalPoints} points across ${routes.length} routes`);
 
   const tsContent = generateTypeScript(routes);
-  const outPath = join(
-    import.meta.dirname || process.cwd(),
-    '..',
-    'src',
-    'data',
-    'charlotteRouteGeometry.ts'
-  );
+  const outPath = join(__dirname, '..', 'src', 'data', 'charlotteRouteGeometry.ts');
   writeFileSync(outPath, tsContent, 'utf-8');
   console.error(`\nWrote ${outPath}`);
 }
