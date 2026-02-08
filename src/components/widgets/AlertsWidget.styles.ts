@@ -366,6 +366,31 @@ export const AISummaryError = styled.div`
   flex: 1;
 `;
 
+export const SegmentCard = styled.div`
+  padding: 10px 12px;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  border: 1px solid ${props => props.theme.colors.border};
+  border-radius: 6px;
+  margin-top: 6px;
+
+  &:first-of-type {
+    margin-top: 0;
+  }
+`;
+
+export const SegmentHeader = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: ${props => props.theme.colors.text};
+  margin-bottom: 4px;
+`;
+
+export const SegmentDetail = styled.div`
+  font-size: 12px;
+  color: ${props => props.theme.colors.textSecondary};
+  line-height: 1.4;
+`;
+
 export const AlertMapContainer = styled.div`
   width: 100%;
   height: 250px;

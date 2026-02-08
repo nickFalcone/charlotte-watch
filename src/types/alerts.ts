@@ -57,6 +57,8 @@ export type AlertMetadata =
       operationCenter?: string;
       latitude?: number;
       longitude?: number;
+      /** Outage area polygon vertices [lat, lng][] for shaded map region */
+      polygon?: [number, number][];
     }
   | {
       source: 'ncdot';
@@ -77,6 +79,21 @@ export type AlertMetadata =
       displaySeverity?: string;
       /** Shape points [lat, lng] from NCDOT polyline (LINESTRING) for map polyline */
       shapePoints?: [number, number][];
+      /** Per-segment details for road-level consolidated alerts */
+      segments?: {
+        location: string;
+        direction: string;
+        condition: string;
+        reason: string;
+        lanesClosed: number;
+        lanesTotal: number;
+        start: string;
+        end: string;
+        incidentId: number;
+        latitude?: number;
+        longitude?: number;
+        shapePoints?: [number, number][];
+      }[];
     }
   | {
       source: 'cats';

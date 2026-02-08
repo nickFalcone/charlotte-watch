@@ -408,9 +408,7 @@ export function WeatherRadarMap() {
         center={RADAR_CENTER}
         zoom={RADAR_ZOOM}
         zoomControl={true}
-        scrollWheelZoom={true}
-        wheelPxPerZoomLevel={100}
-        wheelDebounceTime={100}
+        scrollWheelZoom={false}
         maxZoom={10}
         dragging={true}
         doubleClickZoom={true}

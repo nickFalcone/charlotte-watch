@@ -12,6 +12,8 @@ export interface DukeOutage {
   /** May be 'planned', 'unplanned', or missing entirely. */
   outageCause?: 'planned' | 'unplanned' | string;
   convexHull?: { lat: number; lng: number }[] | null;
+  /** Polygon vertices defining the outage area boundary */
+  trfPolygonXyLoc?: { lat: number; lng: number }[] | null;
   /** Human-readable cause, e.g. "Unknown at this time.", "Animal contact." */
   causeDescription?: string;
   /** Crew status, e.g. "Crew Working". API field name is crewStatTxt. */

@@ -54,6 +54,7 @@ export interface NCDOTIncident {
   // Added for consolidated incidents
   consolidatedIds?: number[];
   consolidatedCount?: number;
+  consolidatedIncidents?: NCDOTIncident[];
 }
 
 // Mecklenburg County ID from NC DOT API
