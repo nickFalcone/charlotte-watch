@@ -135,8 +135,11 @@ function consolidateSimilarIncidents(incidents: NCDOTIncident[]): NCDOTIncident[
       const minMarker = Math.min(...allMarkers);
       const maxMarker = Math.max(...allMarkers);
 
-      // Update location to show full span
-      const locationPrefix = base.location.replace(/Mile Marker [\d.]+ to [\d.]+/i, '').trim();
+      // Update location to show full span (strip both "Mile Marker X to Y" and "Mile Marker X")
+      const locationPrefix = base.location
+        .replace(/Mile Marker [\d.]+\s+to\s+[\d.]+/i, '')
+        .replace(/Mile Marker [\d.]+/i, '')
+        .trim();
       base.location = `${locationPrefix} Mile Marker ${maxMarker} to ${minMarker}`.trim();
     }
 
