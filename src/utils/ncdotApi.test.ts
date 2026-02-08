@@ -102,6 +102,27 @@ describe('extractMileMarkers', () => {
       end: 3.2,
     });
   });
+
+  it('extracts single mile marker', () => {
+    expect(extractMileMarkers('Mile Marker 10')).toEqual({
+      start: 10,
+      end: 10,
+    });
+  });
+
+  it('extracts single decimal mile marker', () => {
+    expect(extractMileMarkers('Mile Marker 15.3')).toEqual({
+      start: 15.3,
+      end: 15.3,
+    });
+  });
+
+  it('extracts single mile marker with surrounding text', () => {
+    expect(extractMileMarkers('I-77 S Mile Marker 22 near Exit 18')).toEqual({
+      start: 22,
+      end: 22,
+    });
+  });
 });
 
 describe('extractProjectNumber', () => {

@@ -428,9 +428,7 @@ export function FlightTrackerWidget(_props: WidgetProps) {
           center={DEFAULT_CENTER}
           zoom={DEFAULT_ZOOM}
           zoomControl={true}
-          scrollWheelZoom={true}
-          wheelPxPerZoomLevel={100}
-          wheelDebounceTime={100}
+          scrollWheelZoom={false}
           minZoom={DEFAULT_ZOOM}
           maxZoom={10}
           aria-label="Flight radar map for Charlotte Douglas International Airport showing nearby aircraft"

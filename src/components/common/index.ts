@@ -7,3 +7,4 @@ export * from './formatTimestamp';
 export * from './InfoPopover.styles';
 export * from './MapRecenterButton';
 export * from './WidgetStates.styles';
+export * from './WidgetTabs';

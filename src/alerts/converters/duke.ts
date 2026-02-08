@@ -5,6 +5,19 @@ import { mapDukeOutageSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
 import { formatTimeDisplay } from '../../utils/dateFormatting';
 
+/**
+ * Extract outage area polygon from trfPolygonXyLoc or convexHull.
+ * Returns polygon as [lat, lng][] only when there are 3+ vertices (a real area).
+ */
+function extractOutagePolygon(outage: DukeOutage): { polygon: [number, number][] } | object {
+  const points = outage.trfPolygonXyLoc ?? outage.convexHull;
+  if (!Array.isArray(points) || points.length < 3) return {};
+  const polygon: [number, number][] = points
+    .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng))
+    .map(p => [p.lat, p.lng]);
+  return polygon.length >= 3 ? { polygon } : {};
+}
+
 // Convert Duke Energy outage to generic alert format
 export function convertDukeOutageToGeneric(outage: DukeOutage): GenericAlert {
   const customersAffected = getDukeCustomersAffected(outage);
@@ -77,6 +90,7 @@ export function convertDukeOutageToGeneric(outage: DukeOutage): GenericAlert {
         outage.deviceLongitudeLocation != null && Number.isFinite(outage.deviceLongitudeLocation)
           ? outage.deviceLongitudeLocation
           : undefined,
+      ...extractOutagePolygon(outage),
     },
   };
 }

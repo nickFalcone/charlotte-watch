@@ -1,9 +1,10 @@
 import type { NCDOTIncident } from '../../types/ncdot';
 import type { GenericAlert } from '../../types/alerts';
 import { mapNCDOTSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
-import { getCharlotteRoadDisplay } from '../../utils/ncdotApi';
+import { getCharlotteRoadDisplay, extractMileMarkers } from '../../utils/ncdotApi';
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
 import { formatEndTimeDisplay } from '../../utils/dateFormatting';
+import { getPolylineForMileRange, getPolylineForSingleMile } from '../../utils/routeGeometry';
 
 /** Parse NCDOT WKT LINESTRING (lng lat, ...) into [lat, lng][] for map polyline */
 function parseNCDOTPolyline(polyline: string): [number, number][] | null {
@@ -23,6 +24,31 @@ function parseNCDOTPolyline(polyline: string): [number, number][] | null {
     }
   }
   return points.length >= 2 ? points : null;
+}
+
+/**
+ * Generate shapePoints from mile marker data using static route geometry.
+ * Returns null if route or mile markers are not available.
+ */
+function generateShapePointsFromMileMarkers(incident: NCDOTIncident): [number, number][] | null {
+  const routeId = getCharlotteRoadDisplay(incident.road);
+  const markers = extractMileMarkers(incident.location);
+  if (!markers) return null;
+
+  if (markers.start === markers.end) {
+    return getPolylineForSingleMile(routeId, markers.start);
+  }
+  return getPolylineForMileRange(routeId, markers.start, markers.end);
+}
+
+/**
+ * Get shapePoints for an incident using fallback chain:
+ * 1. API-provided polyline
+ * 2. Generated from mile markers via reference route data
+ * 3. null (caller falls back to single lat/lng marker)
+ */
+function getIncidentShapePoints(incident: NCDOTIncident): [number, number][] | null {
+  return parseNCDOTPolyline(incident.polyline) ?? generateShapePointsFromMileMarkers(incident);
 }
 
 // Nighttime hours (8 PM to 6 AM)
@@ -82,6 +108,57 @@ function shouldFilterIncident(incident: NCDOTIncident): boolean {
   return false;
 }
 
+/**
+ * Determine the highest severity across a group of incidents
+ */
+function getMaxSeverity(incidents: NCDOTIncident[]): ReturnType<typeof mapNCDOTSeverity> {
+  const severityOrder: Record<string, number> = {
+    critical: 0,
+    high: 1,
+    moderate: 2,
+    minor: 3,
+  };
+  let maxSeverity = mapNCDOTSeverity(incidents[0]);
+  for (let i = 1; i < incidents.length; i++) {
+    const s = mapNCDOTSeverity(incidents[i]);
+    if (severityOrder[s] < severityOrder[maxSeverity]) {
+      maxSeverity = s;
+    }
+  }
+  return maxSeverity;
+}
+
+/**
+ * Build a generic title for a consolidated road-level card
+ */
+function buildConsolidatedTitle(
+  incidents: NCDOTIncident[],
+  roadDisplay: string,
+  count: number
+): string {
+  // Check what types of incidents are present
+  const types = new Set(incidents.map(inc => inc.incidentType.toLowerCase()));
+  const hasCrash = [...types].some(
+    t => t.includes('accident') || t.includes('collision') || t.includes('crash')
+  );
+  const hasConstruction = [...types].some(
+    t => t.includes('construction') || t.includes('maintenance')
+  );
+
+  let label: string;
+  if (hasCrash && hasConstruction) {
+    label = 'Traffic Incidents';
+  } else if (hasCrash) {
+    label = 'Traffic Incident';
+  } else if (hasConstruction) {
+    label = 'Road Work';
+  } else {
+    label = 'Traffic Incidents';
+  }
+
+  return `${label} - ${roadDisplay} (${count} incidents)`;
+}
+
 // Convert NC DOT incident to generic alert format
 // Returns null for filtered nighttime maintenance/construction with <50% lane closures
 export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericAlert | null {
@@ -89,27 +166,24 @@ export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericA
   if (shouldFilterIncident(incident)) {
     return null;
   }
-  const severity = mapNCDOTSeverity({
-    fatality: incident.fatality,
-    bridgeInvolved: incident.bridgeInvolved,
-    condition: incident.condition,
-    incidentType: incident.incidentType,
-    lanesClosed: incident.lanesClosed,
-    lanesTotal: incident.lanesTotal,
-  });
+
   const roadDisplay = getCharlotteRoadDisplay(incident.road);
-  const direction = incident.direction ? ` ${incident.direction}` : '';
   const endTimeDisplay = formatEndTimeDisplay(incident.end);
 
-  // Handle consolidated incidents
+  // Handle consolidated incidents (road-level grouping)
   const isConsolidated = (incident.consolidatedCount || 0) > 1;
   const consolidatedCount = incident.consolidatedCount || 1;
+  const members = incident.consolidatedIncidents || [incident];
 
-  // Build title - add consolidation info for consolidated incidents
-  const incidentTypeDisplay = incident.incidentType || incident.condition || 'Incident';
+  // Use max severity across all members for consolidated alerts
+  const severity = isConsolidated ? getMaxSeverity(members) : mapNCDOTSeverity(incident);
+
+  const direction = incident.direction ? ` ${incident.direction}` : '';
+
+  // Build title
   const title = isConsolidated
-    ? `${incidentTypeDisplay} - ${roadDisplay}${direction} (${consolidatedCount} incidents)`
-    : `${incidentTypeDisplay} - ${roadDisplay}${direction}`;
+    ? buildConsolidatedTitle(members, roadDisplay, consolidatedCount)
+    : `${incident.incidentType || incident.condition || 'Incident'} - ${roadDisplay}${direction}`;
 
   // Build summary
   const summaryParts: string[] = [];
@@ -117,13 +191,13 @@ export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericA
     summaryParts.push(incident.location);
   }
   if (incident.lanesClosed > 0 && incident.lanesTotal > 0) {
-    summaryParts.push(`${incident.lanesClosed} of ${incident.lanesTotal} lanes closed`);
+    summaryParts.push(`Up to ${incident.lanesClosed} of ${incident.lanesTotal} lanes closed`);
   }
   if (endTimeDisplay) {
     summaryParts.push(endTimeDisplay);
   }
   if (isConsolidated) {
-    summaryParts.push(`${consolidatedCount} related incidents`);
+    summaryParts.push(`${consolidatedCount} incidents`);
   }
   const summary =
     summaryParts.length > 0 ? summaryParts.join(' • ') : incident.reason || 'Traffic incident';
@@ -164,7 +238,37 @@ export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericA
     instruction = 'Expect delays. Consider alternate routes if possible.';
   }
 
-  const shapePoints = parseNCDOTPolyline(incident.polyline);
+  // Build segments for consolidated alerts
+  const segments = isConsolidated
+    ? members.map(inc => {
+        const segPoints = getIncidentShapePoints(inc);
+        return {
+          location: inc.location,
+          direction: inc.direction,
+          condition: inc.condition,
+          reason: inc.reason,
+          lanesClosed: inc.lanesClosed,
+          lanesTotal: inc.lanesTotal,
+          start: inc.start,
+          end: inc.end,
+          incidentId: inc.id,
+          latitude: inc.latitude,
+          longitude: inc.longitude,
+          ...(segPoints ? { shapePoints: segPoints } : {}),
+        };
+      })
+    : undefined;
+
+  // For single incidents, use fallback chain for top-level shapePoints.
+  // For consolidated alerts, per-segment shapePoints are rendered individually
+  // by the map (combining them into one polyline creates straight-line artifacts
+  // between non-contiguous segments).
+  const shapePoints = isConsolidated ? null : getIncidentShapePoints(incident);
+
+  // For consolidated alerts spanning multiple directions, omit direction from affected area
+  const affectedArea = isConsolidated
+    ? `${roadDisplay}${incident.city ? `, ${incident.city}` : ''}`
+    : `${roadDisplay}${direction}${incident.city ? `, ${incident.city}` : ''}`;
 
   return {
     id:
@@ -178,7 +282,7 @@ export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericA
     summary,
     description: descriptionParts.join('\n'),
     instruction,
-    affectedArea: `${roadDisplay}${direction}${incident.city ? `, ${incident.city}` : ''}`,
+    affectedArea,
     startTime: incident.start ? new Date(incident.start) : undefined,
     endTime: incident.end ? new Date(incident.end) : undefined,
     updatedAt: incident.lastUpdate ? new Date(incident.lastUpdate) : new Date(),
@@ -201,6 +305,7 @@ export function convertNCDOTIncidentToGeneric(incident: NCDOTIncident): GenericA
       consolidatedIds: incident.consolidatedIds,
       displaySeverity: ALERT_SEVERITY_CONFIG[severity].label,
       ...(shapePoints && shapePoints.length > 0 ? { shapePoints } : {}),
+      ...(segments ? { segments } : {}),
     },
   };
 }

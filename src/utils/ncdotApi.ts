@@ -44,12 +44,21 @@ function filterIgnoredConditions(incidents: NCDOTIncident[]): NCDOTIncident[] {
 }
 
 /**
- * Extracts mile marker from location string (e.g., "Mile Marker 22.6 to 22.4")
+ * Extracts mile marker(s) from location string.
+ * Handles ranges ("Mile Marker 22.6 to 22.4") and single markers ("Mile Marker 10").
+ * For single markers, start === end.
  */
 export function extractMileMarkers(location: string): { start: number; end: number } | null {
-  const match = location.match(/Mile Marker (\d+\.?\d*) to (\d+\.?\d*)/i);
-  if (match) {
-    return { start: parseFloat(match[1]), end: parseFloat(match[2]) };
+  // Range: "Mile Marker X to Y"
+  const rangeMatch = location.match(/Mile Marker (\d+\.?\d*)\s+to\s+(\d+\.?\d*)/i);
+  if (rangeMatch) {
+    return { start: parseFloat(rangeMatch[1]), end: parseFloat(rangeMatch[2]) };
+  }
+  // Single: "Mile Marker X" (not followed by "to")
+  const singleMatch = location.match(/Mile Marker (\d+\.?\d*)(?!\s+to\b)/i);
+  if (singleMatch) {
+    const mile = parseFloat(singleMatch[1]);
+    return { start: mile, end: mile };
   }
   return null;
 }
@@ -78,57 +87,11 @@ function normalizeRoadForConsolidation(road: string): string {
 }
 
 /**
- * Check if incident is maintenance or construction
- */
-function isMaintenanceOrConstruction(incident: NCDOTIncident): boolean {
-  const type = incident.incidentType.toLowerCase();
-  const reason = incident.reason.toLowerCase();
-  const condition = incident.condition.toLowerCase();
-
-  return (
-    type.includes('construction') ||
-    type.includes('maintenance') ||
-    reason.includes('construction') ||
-    reason.includes('maintenance') ||
-    condition.includes('construction') ||
-    condition.includes('maintenance') ||
-    incident.inWorkZone
-  );
-}
-
-/**
  * Creates a grouping key for similar incidents
- * Incidents with the same key can potentially be consolidated
+ * Groups all incidents on the same road into a single card
  */
 function getConsolidationKey(incident: NCDOTIncident): string {
-  const normalizedRoad = normalizeRoadForConsolidation(incident.road);
-  const projectNumber = extractProjectNumber(incident.reason);
-
-  // For construction projects with a project number, group by project
-  // This consolidates different segments/directions of the same project
-  if (projectNumber) {
-    return [normalizedRoad, projectNumber].join('|');
-  }
-
-  // For recurring maintenance (no project number), group by location and type
-  // This consolidates maintenance windows on different days at the same location
-  if (isMaintenanceOrConstruction(incident)) {
-    return [
-      normalizedRoad,
-      incident.direction,
-      incident.location, // Include mile marker range
-      incident.condition.toLowerCase().trim(),
-    ].join('|');
-  }
-
-  // For crashes and other incidents, include date for strict grouping
-  return [
-    normalizedRoad,
-    incident.direction,
-    incident.reason.toLowerCase().trim(),
-    incident.condition.toLowerCase().trim(),
-    incident.start?.slice(0, 10) || '', // Same start date
-  ].join('|');
+  return normalizeRoadForConsolidation(incident.road);
 }
 
 /**
@@ -177,6 +140,12 @@ function consolidateSimilarIncidents(incidents: NCDOTIncident[]): NCDOTIncident[
       base.location = `${locationPrefix} Mile Marker ${maxMarker} to ${minMarker}`.trim();
     }
 
+    // Clear direction since consolidated card spans multiple directions
+    const uniqueDirections = new Set(group.map(inc => inc.direction).filter(Boolean));
+    if (uniqueDirections.size > 1) {
+      base.direction = '';
+    }
+
     // Use earliest start and latest end time
     const startTimes = group.map(inc => new Date(inc.start).getTime()).filter(t => !isNaN(t));
     const endTimes = group.map(inc => new Date(inc.end).getTime()).filter(t => !isNaN(t));
@@ -191,9 +160,20 @@ function consolidateSimilarIncidents(incidents: NCDOTIncident[]): NCDOTIncident[
     base.lanesClosed = Math.max(...group.map(inc => inc.lanesClosed));
     base.lanesTotal = Math.max(...group.map(inc => inc.lanesTotal));
 
+    // Merge all non-empty polylines into a single LINESTRING
+    const allCoordPairs = group
+      .map(inc => inc.polyline?.trim())
+      .filter((p): p is string => !!p && p.toUpperCase().startsWith('LINESTRING'))
+      .map(p => p.match(/LINESTRING\s*\((.+)\)/i)?.[1])
+      .filter((coords): coords is string => !!coords);
+    if (allCoordPairs.length > 0) {
+      base.polyline = `LINESTRING (${allCoordPairs.join(', ')})`;
+    }
+
     // Track consolidated incident info
     base.consolidatedIds = group.map(inc => inc.id);
     base.consolidatedCount = group.length;
+    base.consolidatedIncidents = group;
 
     consolidated.push(base);
   }

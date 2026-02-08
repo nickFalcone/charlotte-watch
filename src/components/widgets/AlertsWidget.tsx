@@ -12,57 +12,36 @@ import { fetchAllAlertsWithStatus } from '../../alerts';
 import { queryKeys } from '../../utils/queryKeys';
 import alertsIcon from '../../assets/icons/alerts.svg';
 import closeIcon from '../../assets/icons/close.svg';
-import infoIcon from '../../assets/icons/info.svg';
-import noResultsIcon from '../../assets/icons/no-results.svg';
 import * as Dialog from '@radix-ui/react-dialog';
-import * as Popover from '@radix-ui/react-popover';
-import * as ToggleGroup from '@radix-ui/react-toggle-group';
-import * as Tooltip from '@radix-ui/react-tooltip';
-import { MapContainer as LeafletMapContainer, Marker, Polyline, useMap } from 'react-leaflet';
+import { MapContainer as LeafletMapContainer, Marker, Polygon, Polyline } from 'react-leaflet';
 import { RetryTileLayer } from './RetryTileLayer';
-import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
   AnimatedDialogContent,
   AnimatedDialogOverlay,
-  AnimatedPopoverContent,
-  AnimatedTooltipContent,
-  formatGeneratedAt,
   formatTimestamp,
-  InfoIcon,
-  InfoTrigger,
+  TabPanel,
+  WidgetTabs,
 } from '../common';
 import {
-  AlertsContainer,
-  AlertsHeader,
-  AlertsHeaderRow,
-  AlertCount,
-  AlertsList,
-  AlertCard,
-  AlertCardHeader,
-  AlertTitleRow,
-  AlertSourceIcon,
-  AlertTitle,
-  AlertSeverityBadge,
-  AlertSummary,
-  AlertMeta,
-  AlertMetaItem,
-  NoAlertsContainer,
-  NoAlertsIcon,
-  NoAlertsText,
-  NoAlertsSubtext,
-  SelectAllLink,
+  getAlertCoordinateList,
+  getAlertPolylineSegments,
+  getAlertPolygon,
+  getDisplaySeverity,
+  createAlertMarkerIcon,
+  FitBounds,
+} from './alertsMapUtils';
+import { AlertsIncidentsTab } from './AlertsIncidentsTab';
+import { AlertsMapTab } from './AlertsMapTab';
+import {
   LoadingContainer,
   LoadingIcon,
   LoadingText,
   ErrorContainer,
   ErrorText,
   RetryButton,
-  SourceToggleGroup,
-  SourceToggleItem,
-  TooltipContent,
-  TooltipRow,
-  TooltipArrow,
+  AlertSourceIcon,
+  AlertSeverityBadge,
   AlertModalHeader,
   AlertModalTitle,
   AlertModalTitleText,
@@ -72,148 +51,17 @@ import {
   AlertModalSection,
   AlertModalLabel,
   AlertModalText,
-  AISummaryContainer,
-  AISummaryRow,
-  AISummaryText,
-  AISummaryList,
-  AISummaryListItem,
-  AISummaryGeneratedAt,
-  AISummaryMetaRow,
-  AISummarySkeleton,
-  AISummarySkeletonLine,
-  AISummaryError,
   AlertMapContainer,
+  SegmentCard,
+  SegmentHeader,
+  SegmentDetail,
 } from './AlertsWidget.styles';
-
-const SOURCE_LABELS: Record<AlertSource, string> = {
-  nws: 'NWS',
-  faa: 'FAA',
-  duke: 'Duke',
-  ncdot: 'NCDOT',
-  cats: 'CATS',
-  cmpd: 'CMPD',
-  cms: 'CMS',
-  'here-flow': 'Traffic',
-  traffic: 'Traffic',
-  system: 'System',
-  custom: 'Custom',
-};
-
-const SOURCE_FULL_NAMES: Record<AlertSource, string> = {
-  nws: 'National Weather Service',
-  faa: 'Federal Aviation Administration',
-  duke: 'Duke Energy',
-  ncdot: 'NC Dept. of Transportation',
-  cats: 'Charlotte Area Transit System',
-  cmpd: 'Charlotte-Mecklenburg Police',
-  cms: 'Charlotte-Mecklenburg Schools',
-  'here-flow': 'HERE Traffic Flow',
-  traffic: 'Traffic',
-  system: 'System',
-  custom: 'Custom',
-};
-
-// Helper to extract displaySeverity from typed metadata
-function getDisplaySeverity(alert: GenericAlert): string | undefined {
-  if (!alert.metadata) return undefined;
-  if ('displaySeverity' in alert.metadata && typeof alert.metadata.displaySeverity === 'string') {
-    return alert.metadata.displaySeverity;
-  }
-  return undefined;
-}
-
-function AISummaryContent({ summary }: { summary: string }) {
-  const raw = summary.trim();
-  const lines = raw.split(/\n/).filter(Boolean);
-  // Normalize: strip bullet prefixes if present, otherwise split on newlines
-  const hasBulletPrefix = lines.some(line => /^\s*[-*•]\s/.test(line));
-  const normalizedLines = hasBulletPrefix
-    ? lines.map(line => line.replace(/^\s*[-*•]\s*/, '').trim()).filter(Boolean)
-    : lines.map(line => line.trim()).filter(Boolean);
-  if (normalizedLines.length > 0) {
-    return (
-      <AISummaryList>
-        {normalizedLines.map((line, i) => (
-          <AISummaryListItem key={i}>{line}</AISummaryListItem>
-        ))}
-      </AISummaryList>
-    );
-  }
-  return <>{raw}</>;
-}
-
-// Helper to extract a single coordinate from alert metadata
-function getAlertCoordinates(alert: GenericAlert): { lat: number; lng: number } | null {
-  if (!alert.metadata) return null;
-
-  if (
-    (alert.metadata.source === 'ncdot' ||
-      alert.metadata.source === 'cmpd' ||
-      alert.metadata.source === 'duke' ||
-      alert.metadata.source === 'here-flow') &&
-    'latitude' in alert.metadata &&
-    'longitude' in alert.metadata &&
-    typeof alert.metadata.latitude === 'number' &&
-    typeof alert.metadata.longitude === 'number'
-  ) {
-    return { lat: alert.metadata.latitude, lng: alert.metadata.longitude };
-  }
-
-  return null;
-}
-
-// Helper to get all coordinates for an alert (shape polyline or single point)
-function getAlertCoordinateList(alert: GenericAlert): { lat: number; lng: number }[] {
-  if (
-    alert.metadata &&
-    'shapePoints' in alert.metadata &&
-    Array.isArray(alert.metadata.shapePoints) &&
-    alert.metadata.shapePoints.length > 0
-  ) {
-    return alert.metadata.shapePoints.map(([lat, lng]) => ({ lat, lng }));
-  }
-  const single = getAlertCoordinates(alert);
-  return single ? [single] : [];
-}
-
-// Fits the map bounds to include all positions (used when showing a polyline)
-function FitBounds({ positions }: { positions: [number, number][] }): null {
-  const map = useMap();
-  const positionsKey = positions.length < 2 ? '' : JSON.stringify(positions);
-
-  useEffect(() => {
-    if (positionsKey === '') return;
-    const coords = JSON.parse(positionsKey) as [number, number][];
-    const bounds = L.latLngBounds(coords);
-    map.fitBounds(bounds, { padding: [24, 24], maxZoom: 14 });
-  }, [map, positionsKey]);
-  return null;
-}
-
-// Simple marker icon for alert location
-const createAlertMarkerIcon = (color: string) => {
-  return L.divIcon({
-    html: `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
-        <path
-          fill="${color}"
-          stroke="#fff"
-          stroke-width="2"
-          d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
-        />
-        <circle cx="12" cy="9" r="2.5" fill="#fff"/>
-      </svg>
-    `,
-    className: 'alert-marker-icon',
-    iconSize: [32, 32],
-    iconAnchor: [16, 32],
-  });
-};
 
 export function AlertsWidget(_props: WidgetProps) {
   const theme = useTheme();
   const ALERT_SEVERITY_CONFIG = getAlertSeverityConfig(theme);
   const [selectedAlert, setSelectedAlert] = useState<GenericAlert | null>(null);
+  const [activeTab, setActiveTab] = useState('incidents');
   const { setLastUpdated } = useWidgetMetadata();
 
   // Persisted alert source filter from store
@@ -231,10 +79,8 @@ export function AlertsWidget(_props: WidgetProps) {
   } = useQuery({
     queryKey: queryKeys.alerts.all,
     queryFn: ({ signal }) => fetchAllAlertsWithStatus(signal),
-    staleTime: 1000 * 60 * 60, // 60 minutes — matches refetchInterval so focus/mount don't refetch more often
+    staleTime: 1000 * 60 * 60, // 60 minutes
     refetchInterval: 1000 * 60 * 60, // 60 minutes
-    // Override global "refetchOnMount: false" so alerts refresh when stale after
-    // rehydration from persistence or when returning to the tab
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
@@ -253,7 +99,6 @@ export function AlertsWidget(_props: WidgetProps) {
   const handleVisibleSourcesChange = useCallback(
     (values: string[]) => {
       if (!sources) return;
-      // Require at least one source to be selected
       if (values.length === 0) return;
       const allSourceKeys = Object.keys(sources) as AlertSource[];
       const visibleSet = new Set(values as AlertSource[]);
@@ -263,18 +108,17 @@ export function AlertsWidget(_props: WidgetProps) {
     [sources, setHiddenAlertSources]
   );
 
-  // Derive alerts data (needed before hooks that depend on it)
+  // Derive alerts data
   const allAlerts = useMemo(() => alertsResult?.alerts || [], [alertsResult?.alerts]);
   const sortedAllAlerts = useMemo(() => sortAlertsBySeverity(allAlerts), [allAlerts]);
 
-  // Filter alerts by visible sources (memoized for performance)
+  // Filter alerts by visible sources (memoized)
   const sortedAlerts = useMemo(() => {
     if (visibleSources.size === 0) return sortedAllAlerts;
     return sortedAllAlerts.filter(alert => visibleSources.has(alert.source));
   }, [sortedAllAlerts, visibleSources]);
 
   // AI-generated summary - uses ALL alerts, not filtered by visible sources
-  // Must be called before any early returns to satisfy React hooks rules
   const {
     data: summaryData,
     isLoading: isSummaryLoading,
@@ -283,14 +127,7 @@ export function AlertsWidget(_props: WidgetProps) {
     enabled: sortedAllAlerts.length > 0 && !isLoading,
   });
 
-  // Stable random skeleton line widths (30–100%) so loading state looks varied but consistent
-  const aiSummarySkeletonWidths = useMemo(
-    () => Array.from({ length: 9 }, () => Math.round(30 + Math.random() * 70)),
-    []
-  );
-
-  // Sync last-fetch time to widget metadata. Prefer TanStack's dataUpdatedAt
-  // (set on every successful fetch); fall back to fetchedAt for rehydrated caches.
+  // Sync last-fetch time to widget metadata
   useEffect(() => {
     if (dataUpdatedAt > 0) {
       setLastUpdated(dataUpdatedAt);
@@ -328,212 +165,32 @@ export function AlertsWidget(_props: WidgetProps) {
   }
 
   return (
-    <AlertsContainer>
-      <AlertsHeader>
-        <AlertsHeaderRow>
-          <AlertCount
-            $hasAlerts={sortedAlerts.length > 0}
-            $allHidden={sortedAllAlerts.length > 0 && sortedAlerts.length === 0}
-          >
-            {sortedAllAlerts.length > 0 && sortedAlerts.length === 0
-              ? '0 ALERTS VISIBLE'
-              : `${sortedAlerts.length} ALERTS`}
-          </AlertCount>
-          {sources && visibleSources.size > 0 && (
-            <Tooltip.Provider delayDuration={300}>
-              <ToggleGroup.Root
-                type="multiple"
-                value={Array.from(visibleSources)}
-                onValueChange={handleVisibleSourcesChange}
-                asChild
-              >
-                <SourceToggleGroup>
-                  {(
-                    Object.entries(sources) as [AlertSource, { success: boolean; error?: string }][]
-                  ).map(([sourceKey, status]) => {
-                    const isVisible = visibleSources.has(sourceKey);
-                    return (
-                      <Tooltip.Root key={sourceKey}>
-                        <Tooltip.Trigger asChild>
-                          <ToggleGroup.Item value={sourceKey} asChild>
-                            <SourceToggleItem $success={status.success} $visible={isVisible}>
-                              {SOURCE_LABELS[sourceKey]}
-                            </SourceToggleItem>
-                          </ToggleGroup.Item>
-                        </Tooltip.Trigger>
-                        <Tooltip.Portal>
-                          <AnimatedTooltipContent side="top" sideOffset={5} asChild>
-                            <TooltipContent>
-                              <TooltipRow>{SOURCE_FULL_NAMES[sourceKey]}</TooltipRow>
-                              <TooltipRow
-                                $color={
-                                  theme.name === 'dark'
-                                    ? status.success
-                                      ? '#4ade80'
-                                      : '#ffb0b0'
-                                    : status.success
-                                      ? theme.colors.success
-                                      : theme.colors.error
-                                }
-                              >
-                                {status.success
-                                  ? 'Connected'
-                                  : `Error: ${status.error || 'Failed'}`}
-                              </TooltipRow>
-                              <TooltipRow>{isVisible ? 'Visible' : 'Hidden'}</TooltipRow>
-                              <Tooltip.Arrow asChild>
-                                <TooltipArrow />
-                              </Tooltip.Arrow>
-                            </TooltipContent>
-                          </AnimatedTooltipContent>
-                        </Tooltip.Portal>
-                      </Tooltip.Root>
-                    );
-                  })}
-                </SourceToggleGroup>
-              </ToggleGroup.Root>
-            </Tooltip.Provider>
-          )}
-        </AlertsHeaderRow>
-      </AlertsHeader>
-
-      {/* AI Summary - shows when there are alerts (based on all alerts, not filtered) */}
-      {sortedAllAlerts.length > 0 && (
-        <AISummaryContainer>
-          {isSummaryLoading ? (
-            <AISummarySkeleton>
-              {aiSummarySkeletonWidths.map((width, i) => (
-                <AISummarySkeletonLine key={i} $width={`${width}%`} />
-              ))}
-            </AISummarySkeleton>
-          ) : isSummaryError ? (
-            <AISummaryError>Summary unavailable</AISummaryError>
-          ) : summaryData?.summary ? (
-            <AISummaryRow>
-              <AISummaryText>
-                <AISummaryContent summary={summaryData.summary} />
-                <AISummaryMetaRow>
-                  {summaryData.generatedAt && (
-                    <AISummaryGeneratedAt>
-                      Generated: {formatGeneratedAt(summaryData.generatedAt)}
-                    </AISummaryGeneratedAt>
-                  )}
-                  <Popover.Root>
-                    <Popover.Trigger asChild>
-                      <InfoTrigger aria-label="About AI summary">
-                        <InfoIcon src={infoIcon} alt="" aria-hidden />
-                      </InfoTrigger>
-                    </Popover.Trigger>
-                    <Popover.Portal>
-                      <AnimatedPopoverContent side="top" sideOffset={6}>
-                        This is an AI-generated summary of the most important alerts. Always confirm
-                        details with source references.
-                      </AnimatedPopoverContent>
-                    </Popover.Portal>
-                  </Popover.Root>
-                </AISummaryMetaRow>
-              </AISummaryText>
-            </AISummaryRow>
-          ) : null}
-        </AISummaryContainer>
-      )}
-
-      {sortedAlerts.length === 0 ? (
-        sources && Object.values(sources).some(status => !status.success) ? (
-          <NoAlertsContainer>
-            <NoAlertsText>Alert Sources Unavailable</NoAlertsText>
-            <NoAlertsSubtext>
-              {(() => {
-                const unavailable = (
-                  Object.entries(sources) as [AlertSource, { success: boolean }][]
-                )
-                  .filter(([_, status]) => !status.success)
-                  .map(([key]) => SOURCE_LABELS[key]);
-                return `${unavailable.join(', ')} ${unavailable.length === 1 ? 'is' : 'are'} currently unavailable`;
-              })()}
-            </NoAlertsSubtext>
-          </NoAlertsContainer>
-        ) : (
-          (() => {
-            const allAlertsHidden = sortedAllAlerts.length > 0 && sortedAlerts.length === 0;
-            return (
-              <NoAlertsContainer>
-                <NoAlertsIcon src={noResultsIcon} alt="" />
-                <NoAlertsText $variant={allAlertsHidden ? 'warning' : undefined}>
-                  {allAlertsHidden ? 'No Visible Alerts' : 'No Active Alerts'}
-                </NoAlertsText>
-                <NoAlertsSubtext>
-                  {allAlertsHidden ? (
-                    <>
-                      {sortedAllAlerts.length}{' '}
-                      {sortedAllAlerts.length === 1 ? 'alert is' : 'alerts are'} in hidden sources.{' '}
-                      <SelectAllLink onClick={showAllAlertSources}>View all sources</SelectAllLink>.
-                    </>
-                  ) : !sources ? (
-                    'All systems normal'
-                  ) : (
-                    (() => {
-                      const totalSources = Object.keys(sources).length;
-                      const hiddenCount = totalSources - visibleSources.size;
-                      if (hiddenCount > 0) {
-                        return (
-                          <>
-                            {hiddenCount} {hiddenCount === 1 ? 'source is' : 'sources are'} hidden
-                            (summary considers all sources).{' '}
-                            <SelectAllLink onClick={showAllAlertSources}>
-                              View all sources
-                            </SelectAllLink>
-                            .
-                          </>
-                        );
-                      }
-                      return 'All systems normal';
-                    })()
-                  )}
-                </NoAlertsSubtext>
-              </NoAlertsContainer>
-            );
-          })()
-        )
-      ) : (
-        <AlertsList tabIndex={0} role="region" aria-label="Alerts list">
-          {sortedAlerts.map(alert => {
-            const severityConfig = ALERT_SEVERITY_CONFIG[alert.severity];
-
-            return (
-              <AlertCard
-                key={alert.id}
-                type="button"
-                $accentColor={severityConfig.color}
-                $accentBg={severityConfig.bgColor}
-                onClick={() => setSelectedAlert(alert)}
-              >
-                <AlertCardHeader>
-                  <AlertTitleRow>
-                    <AlertSourceIcon>
-                      <AlertIcon source={alert.source} size={16} />
-                    </AlertSourceIcon>
-                    <AlertTitle>{alert.title}</AlertTitle>
-                  </AlertTitleRow>
-                  <AlertSeverityBadge $color={severityConfig.color} $bg={severityConfig.bgColor}>
-                    {getDisplaySeverity(alert) || severityConfig.label}
-                  </AlertSeverityBadge>
-                </AlertCardHeader>
-                <AlertSummary>{alert.summary}</AlertSummary>
-                <AlertMeta>
-                  {alert.affectedArea && (
-                    <AlertMetaItem>
-                      {alert.affectedArea.length > 160
-                        ? `${alert.affectedArea.slice(0, 160)}...`
-                        : alert.affectedArea}
-                    </AlertMetaItem>
-                  )}
-                </AlertMeta>
-              </AlertCard>
-            );
-          })}
-        </AlertsList>
-      )}
+    <>
+      <WidgetTabs defaultValue="incidents" onValueChange={setActiveTab}>
+        <TabPanel value="incidents" label="Incidents">
+          <AlertsIncidentsTab
+            sortedAlerts={sortedAlerts}
+            sortedAllAlerts={sortedAllAlerts}
+            sources={sources}
+            visibleSources={visibleSources}
+            handleVisibleSourcesChange={handleVisibleSourcesChange}
+            showAllAlertSources={showAllAlertSources}
+            summaryData={summaryData}
+            isSummaryLoading={isSummaryLoading}
+            isSummaryError={isSummaryError}
+            alertSeverityConfig={ALERT_SEVERITY_CONFIG}
+            onAlertSelect={setSelectedAlert}
+          />
+        </TabPanel>
+        <TabPanel value="map" label="Map" forceMount>
+          <AlertsMapTab
+            alerts={sortedAlerts}
+            alertSeverityConfig={ALERT_SEVERITY_CONFIG}
+            onAlertSelect={setSelectedAlert}
+            active={activeTab === 'map'}
+          />
+        </TabPanel>
+      </WidgetTabs>
 
       <Dialog.Root
         open={selectedAlert !== null}
@@ -584,6 +241,36 @@ export function AlertsWidget(_props: WidgetProps) {
                     )}
 
                     {(() => {
+                      const meta = selectedAlert.metadata;
+                      if (meta?.source !== 'ncdot' || !meta.segments || meta.segments.length <= 1) {
+                        return null;
+                      }
+                      return (
+                        <AlertModalSection>
+                          <AlertModalLabel>Segments ({meta.segments.length})</AlertModalLabel>
+                          {meta.segments.map(seg => (
+                            <SegmentCard key={seg.incidentId}>
+                              <SegmentHeader>
+                                {seg.condition}
+                                {seg.direction ? ` - ${seg.direction}` : ''}
+                              </SegmentHeader>
+                              {seg.location && <SegmentDetail>{seg.location}</SegmentDetail>}
+                              {seg.lanesClosed > 0 && seg.lanesTotal > 0 && (
+                                <SegmentDetail>
+                                  {seg.lanesClosed} of {seg.lanesTotal} lanes closed
+                                </SegmentDetail>
+                              )}
+                              {seg.reason && <SegmentDetail>{seg.reason}</SegmentDetail>}
+                              {seg.end && (
+                                <SegmentDetail>{formatTimestamp(new Date(seg.end))}</SegmentDetail>
+                              )}
+                            </SegmentCard>
+                          ))}
+                        </AlertModalSection>
+                      );
+                    })()}
+
+                    {(() => {
                       const coordinateList = getAlertCoordinateList(selectedAlert);
                       if (coordinateList.length === 0) return null;
 
@@ -595,8 +282,12 @@ export function AlertsWidget(_props: WidgetProps) {
                           : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
                       const center = coordinateList[0];
-                      const positions = coordinateList.map(c => [c.lat, c.lng] as [number, number]);
-                      const hasPolyline = positions.length > 1;
+                      const polylineSegments = getAlertPolylineSegments(selectedAlert);
+                      const alertPolygon = getAlertPolygon(selectedAlert);
+                      const allPositions = coordinateList.map(
+                        c => [c.lat, c.lng] as [number, number]
+                      );
+                      const hasShape = alertPolygon !== null || polylineSegments.length > 0;
 
                       return (
                         <AlertModalSection>
@@ -604,7 +295,7 @@ export function AlertsWidget(_props: WidgetProps) {
                           <AlertMapContainer>
                             <LeafletMapContainer
                               center={[center.lat, center.lng]}
-                              zoom={hasPolyline ? 12 : 14}
+                              zoom={hasShape ? 12 : 14}
                               zoomControl={true}
                               scrollWheelZoom={false}
                               dragging={true}
@@ -616,17 +307,34 @@ export function AlertsWidget(_props: WidgetProps) {
                                 maxRetries={3}
                                 retryDelay={1000}
                               />
-                              {hasPolyline ? (
+                              {alertPolygon ? (
                                 <>
-                                  <FitBounds positions={positions} />
-                                  <Polyline
-                                    positions={positions}
+                                  <FitBounds positions={allPositions} />
+                                  <Polygon
+                                    positions={alertPolygon}
                                     pathOptions={{
                                       color: severityConfig.color,
-                                      weight: 5,
-                                      opacity: 0.9,
+                                      fillColor: severityConfig.color,
+                                      fillOpacity: 0.25,
+                                      weight: 2,
+                                      opacity: 0.8,
                                     }}
                                   />
+                                </>
+                              ) : polylineSegments.length > 0 ? (
+                                <>
+                                  <FitBounds positions={allPositions} />
+                                  {polylineSegments.map((segment, i) => (
+                                    <Polyline
+                                      key={i}
+                                      positions={segment}
+                                      pathOptions={{
+                                        color: severityConfig.color,
+                                        weight: 5,
+                                        opacity: 0.9,
+                                      }}
+                                    />
+                                  ))}
                                 </>
                               ) : (
                                 <Marker position={[center.lat, center.lng]} icon={markerIcon} />
@@ -697,6 +405,6 @@ export function AlertsWidget(_props: WidgetProps) {
           </AnimatedDialogOverlay>
         </Dialog.Portal>
       </Dialog.Root>
-    </AlertsContainer>
+    </>
   );
 }
