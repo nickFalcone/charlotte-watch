@@ -50,8 +50,9 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
 
 /**
  * Validate that a generated polyline is near the incident's reported coordinates.
- * Returns true if the polyline's start point is within a reasonable distance
- * of the incident location.
+ * Returns true if ANY point on the polyline is within the maximum allowed distance
+ * of the incident location. This handles cases where the incident's lat/lng falls
+ * in the middle or end of a mile marker range, not just at the start.
  */
 function validatePolylineLocation(
   polyline: [number, number][],
@@ -59,9 +60,17 @@ function validatePolylineLocation(
   incidentLng: number
 ): boolean {
   if (polyline.length === 0) return false;
-  const [startLat, startLng] = polyline[0];
-  const distance = calculateDistance(incidentLat, incidentLng, startLat, startLng);
-  return distance < MAX_POLYLINE_DISTANCE_MILES;
+
+  // Find minimum distance from incident to any point on the polyline
+  let minDistance = Infinity;
+  for (const [lat, lng] of polyline) {
+    const distance = calculateDistance(incidentLat, incidentLng, lat, lng);
+    if (distance < minDistance) {
+      minDistance = distance;
+    }
+  }
+
+  return minDistance < MAX_POLYLINE_DISTANCE_MILES;
 }
 
 /**
