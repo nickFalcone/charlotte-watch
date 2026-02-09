@@ -6,6 +6,12 @@ import { buildMapUrlIfValid } from '../../utils/mapUrl';
 import { formatEndTimeDisplay } from '../../utils/dateFormatting';
 import { getPolylineForMileRange, getPolylineForSingleMile } from '../../utils/routeGeometry';
 
+// Earth's radius in miles (for Haversine distance calculation)
+const EARTH_RADIUS_MILES = 3959;
+
+// Maximum allowed distance (in miles) between generated polyline and incident coordinates
+const MAX_POLYLINE_DISTANCE_MILES = 5;
+
 /** Parse NCDOT WKT LINESTRING (lng lat, ...) into [lat, lng][] for map polyline */
 function parseNCDOTPolyline(polyline: string): [number, number][] | null {
   const trimmed = polyline?.trim();
@@ -30,7 +36,6 @@ function parseNCDOTPolyline(polyline: string): [number, number][] | null {
  * Calculate distance in miles between two lat/lng points using Haversine formula
  */
 function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 3959; // Earth's radius in miles
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const a =
@@ -40,13 +45,13 @@ function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
       Math.sin(dLng / 2) *
       Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  return EARTH_RADIUS_MILES * c;
 }
 
 /**
  * Validate that a generated polyline is near the incident's reported coordinates.
  * Returns true if the polyline's start point is within a reasonable distance
- * of the incident location (5 miles threshold).
+ * of the incident location.
  */
 function validatePolylineLocation(
   polyline: [number, number][],
@@ -56,8 +61,7 @@ function validatePolylineLocation(
   if (polyline.length === 0) return false;
   const [startLat, startLng] = polyline[0];
   const distance = calculateDistance(incidentLat, incidentLng, startLat, startLng);
-  // Allow up to 5 miles of discrepancy (accounts for incidents spanning large ranges)
-  return distance < 5;
+  return distance < MAX_POLYLINE_DISTANCE_MILES;
 }
 
 /**
