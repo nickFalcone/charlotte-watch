@@ -27,6 +27,40 @@ function parseNCDOTPolyline(polyline: string): [number, number][] | null {
 }
 
 /**
+ * Calculate distance in miles between two lat/lng points using Haversine formula
+ */
+function calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 3959; // Earth's radius in miles
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Validate that a generated polyline is near the incident's reported coordinates.
+ * Returns true if the polyline's start point is within a reasonable distance
+ * of the incident location (5 miles threshold).
+ */
+function validatePolylineLocation(
+  polyline: [number, number][],
+  incidentLat: number,
+  incidentLng: number
+): boolean {
+  if (polyline.length === 0) return false;
+  const [startLat, startLng] = polyline[0];
+  const distance = calculateDistance(incidentLat, incidentLng, startLat, startLng);
+  // Allow up to 5 miles of discrepancy (accounts for incidents spanning large ranges)
+  return distance < 5;
+}
+
+/**
  * Generate shapePoints from mile marker data using static route geometry.
  * Returns null if route or mile markers are not available.
  */
@@ -35,17 +69,29 @@ function generateShapePointsFromMileMarkers(incident: NCDOTIncident): [number, n
   const markers = extractMileMarkers(incident.location);
   if (!markers) return null;
 
-  if (markers.start === markers.end) {
-    return getPolylineForSingleMile(routeId, markers.start);
+  const polyline =
+    markers.start === markers.end
+      ? getPolylineForSingleMile(routeId, markers.start)
+      : getPolylineForMileRange(routeId, markers.start, markers.end);
+
+  // Validate that the generated polyline is near the incident's actual location
+  if (polyline && validatePolylineLocation(polyline, incident.latitude, incident.longitude)) {
+    return polyline;
   }
-  return getPolylineForMileRange(routeId, markers.start, markers.end);
+
+  return null;
 }
 
 /**
  * Get shapePoints for an incident using fallback chain:
  * 1. API-provided polyline
- * 2. Generated from mile markers via reference route data
+ * 2. Generated from mile markers via reference route data (with validation)
  * 3. null (caller falls back to single lat/lng marker)
+ *
+ * Note: Mile marker generation includes validation to ensure the generated polyline
+ * is near the incident's actual coordinates. Some routes (e.g., I-485 loop) have
+ * mile marker numbering in the API that doesn't match our reference geometry, so
+ * validation prevents incorrect polyline rendering.
  */
 function getIncidentShapePoints(incident: NCDOTIncident): [number, number][] | null {
   return parseNCDOTPolyline(incident.polyline) ?? generateShapePointsFromMileMarkers(incident);
