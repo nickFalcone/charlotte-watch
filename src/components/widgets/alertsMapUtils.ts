@@ -141,9 +141,14 @@ export function FitBounds({ positions }: { positions: [number, number][] }): nul
   return null;
 }
 
-/** Create a severity-colored marker icon for alert location */
-export const createAlertMarkerIcon = (color: string) => {
-  return L.divIcon({
+/** Create a severity-colored marker icon for alert location (cached by color) */
+const markerIconCache = new Map<string, L.DivIcon>();
+
+export const createAlertMarkerIcon = (color: string): L.DivIcon => {
+  const cached = markerIconCache.get(color);
+  if (cached) return cached;
+
+  const icon = L.divIcon({
     html: `
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
         <path
@@ -159,4 +164,7 @@ export const createAlertMarkerIcon = (color: string) => {
     iconSize: [32, 32],
     iconAnchor: [16, 32],
   });
+
+  markerIconCache.set(color, icon);
+  return icon;
 };

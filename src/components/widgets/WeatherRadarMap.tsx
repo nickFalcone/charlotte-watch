@@ -6,6 +6,7 @@ import L from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
 import { RetryTileLayer } from './RetryTileLayer';
 import { MapRecenterButton } from '../common';
+import { getMapTileUrl } from '../../utils/mapTileUrl';
 import playIcon from '../../assets/icons/play.svg';
 import pauseIcon from '../../assets/icons/pause.svg';
 import {
@@ -346,10 +347,7 @@ export function WeatherRadarMap() {
     }
   }, []);
 
-  const mapTileUrl =
-    theme.name === 'dark'
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+  const mapTileUrl = getMapTileUrl(theme.name);
 
   const currentTime = timeSteps[currentIndex] || new Date();
   const isCurrentTime = currentIndex === timeSteps.length - 1;

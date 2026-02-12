@@ -29,6 +29,7 @@ import {
   lastContactToMs,
 } from '../../utils/flightApi';
 import { queryKeys } from '../../utils/queryKeys';
+import { getMapTileUrl } from '../../utils/mapTileUrl';
 import { useWidgetMetadata } from '../Widget';
 import { MapRecenterButton } from '../common';
 import planeIcon from '../../assets/icons/plane.svg';
@@ -326,10 +327,7 @@ export function FlightTrackerWidget(_props: WidgetProps) {
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
 
   // Use different map tiles based on theme
-  const mapTileUrl =
-    theme.name === 'dark'
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+  const mapTileUrl = getMapTileUrl(theme.name);
 
   const {
     data: aircraft,
