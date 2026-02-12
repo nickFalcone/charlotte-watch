@@ -311,6 +311,7 @@ export function AlertsIncidentsTab({
               <AlertCard
                 key={alert.id}
                 type="button"
+                aria-label={`${severityConfig.label}: ${alert.title}`}
                 $accentColor={severityConfig.color}
                 $accentBg={severityConfig.bgColor}
                 onClick={() => onAlertSelect(alert)}

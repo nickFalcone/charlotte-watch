@@ -6,34 +6,15 @@ import type { GenericAlert, AlertSource } from '../../types/alerts';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { useWidgetMetadata } from '../Widget/useWidgetMetadata';
 import { useAlertSummary } from '../../hooks/useAlertSummary';
-import { AlertIcon } from '../AlertIcon';
 import { getAlertSeverityConfig, sortAlertsBySeverity } from '../../types/alerts';
 import { fetchAllAlertsWithStatus } from '../../alerts';
 import { queryKeys } from '../../utils/queryKeys';
 import alertsIcon from '../../assets/icons/alerts.svg';
-import closeIcon from '../../assets/icons/close.svg';
-import * as Dialog from '@radix-ui/react-dialog';
-import { MapContainer as LeafletMapContainer, Marker, Polygon, Polyline } from 'react-leaflet';
-import { RetryTileLayer } from './RetryTileLayer';
 import 'leaflet/dist/leaflet.css';
-import {
-  AnimatedDialogContent,
-  AnimatedDialogOverlay,
-  formatTimestamp,
-  TabPanel,
-  WidgetTabs,
-} from '../common';
-import {
-  getAlertCoordinateList,
-  getAlertPolylineSegments,
-  getAlertPolygon,
-  getAlertSegmentCoordinates,
-  getDisplaySeverity,
-  createAlertMarkerIcon,
-  FitBounds,
-} from './alertsMapUtils';
+import { TabPanel, WidgetTabs } from '../common';
 import { AlertsIncidentsTab } from './AlertsIncidentsTab';
 import { AlertsMapTab } from './AlertsMapTab';
+import { AlertDetailModal } from './AlertDetailModal';
 import {
   LoadingContainer,
   LoadingIcon,
@@ -41,21 +22,6 @@ import {
   ErrorContainer,
   ErrorText,
   RetryButton,
-  AlertSourceIcon,
-  AlertSeverityBadge,
-  AlertModalHeader,
-  AlertModalTitle,
-  AlertModalTitleText,
-  AlertModalClose,
-  AlertModalCloseIcon,
-  AlertModalBody,
-  AlertModalSection,
-  AlertModalLabel,
-  AlertModalText,
-  AlertMapContainer,
-  SegmentCard,
-  SegmentHeader,
-  SegmentDetail,
 } from './AlertsWidget.styles';
 
 export function AlertsWidget(_props: WidgetProps) {
@@ -193,236 +159,11 @@ export function AlertsWidget(_props: WidgetProps) {
         </TabPanel>
       </WidgetTabs>
 
-      <Dialog.Root
-        open={selectedAlert !== null}
-        onOpenChange={open => {
-          if (!open) setSelectedAlert(null);
-        }}
-      >
-        <Dialog.Portal>
-          <AnimatedDialogOverlay>
-            <AnimatedDialogContent>
-              {selectedAlert && (
-                <>
-                  <AlertModalHeader $color={ALERT_SEVERITY_CONFIG[selectedAlert.severity].color}>
-                    <AlertModalTitle>
-                      <AlertSourceIcon>
-                        <AlertIcon source={selectedAlert.source} size={20} />
-                      </AlertSourceIcon>
-                      <Dialog.Title asChild>
-                        <AlertModalTitleText>{selectedAlert.title}</AlertModalTitleText>
-                      </Dialog.Title>
-                      <AlertSeverityBadge
-                        $color={ALERT_SEVERITY_CONFIG[selectedAlert.severity].color}
-                        $bg={ALERT_SEVERITY_CONFIG[selectedAlert.severity].bgColor}
-                      >
-                        {getDisplaySeverity(selectedAlert) ||
-                          ALERT_SEVERITY_CONFIG[selectedAlert.severity].label}
-                      </AlertSeverityBadge>
-                    </AlertModalTitle>
-                    <Dialog.Close asChild>
-                      <AlertModalClose aria-label="Close">
-                        <AlertModalCloseIcon src={closeIcon} alt="" aria-hidden />
-                      </AlertModalClose>
-                    </Dialog.Close>
-                  </AlertModalHeader>
-                  <AlertModalBody>
-                    <AlertModalSection>
-                      <AlertModalLabel>Source</AlertModalLabel>
-                      <AlertModalText>
-                        {selectedAlert.source.toUpperCase()} - {selectedAlert.category}
-                      </AlertModalText>
-                    </AlertModalSection>
-
-                    {selectedAlert.affectedArea && (
-                      <AlertModalSection>
-                        <AlertModalLabel>Affected Area</AlertModalLabel>
-                        <AlertModalText>{selectedAlert.affectedArea}</AlertModalText>
-                      </AlertModalSection>
-                    )}
-
-                    {(() => {
-                      const meta = selectedAlert.metadata;
-                      if (meta?.source !== 'ncdot' || !meta.segments || meta.segments.length <= 1) {
-                        return null;
-                      }
-                      return (
-                        <AlertModalSection>
-                          <AlertModalLabel>Segments ({meta.segments.length})</AlertModalLabel>
-                          {meta.segments.map(seg => (
-                            <SegmentCard key={seg.incidentId}>
-                              <SegmentHeader>
-                                {seg.condition}
-                                {seg.direction ? ` - ${seg.direction}` : ''}
-                              </SegmentHeader>
-                              {seg.location && <SegmentDetail>{seg.location}</SegmentDetail>}
-                              {seg.lanesClosed > 0 && seg.lanesTotal > 0 && (
-                                <SegmentDetail>
-                                  {seg.lanesClosed} of {seg.lanesTotal} lanes closed
-                                </SegmentDetail>
-                              )}
-                              {seg.reason && <SegmentDetail>{seg.reason}</SegmentDetail>}
-                              {seg.end && (
-                                <SegmentDetail>{formatTimestamp(new Date(seg.end))}</SegmentDetail>
-                              )}
-                            </SegmentCard>
-                          ))}
-                        </AlertModalSection>
-                      );
-                    })()}
-
-                    {(() => {
-                      const coordinateList = getAlertCoordinateList(selectedAlert);
-                      if (coordinateList.length === 0) return null;
-
-                      const severityConfig = ALERT_SEVERITY_CONFIG[selectedAlert.severity];
-                      const markerIcon = createAlertMarkerIcon(severityConfig.color);
-                      const mapTileUrl =
-                        theme.name === 'dark'
-                          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-                          : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-
-                      const center = coordinateList[0];
-                      const polylineSegments = getAlertPolylineSegments(selectedAlert);
-                      const alertPolygon = getAlertPolygon(selectedAlert);
-                      const segmentCoords = getAlertSegmentCoordinates(selectedAlert);
-                      const allPositions = coordinateList.map(
-                        c => [c.lat, c.lng] as [number, number]
-                      );
-                      const hasShape =
-                        alertPolygon !== null ||
-                        polylineSegments.length > 0 ||
-                        segmentCoords.length > 1;
-                      const hasMultipleMarkers =
-                        segmentCoords.length > 1 && polylineSegments.length === 0 && !alertPolygon;
-
-                      return (
-                        <AlertModalSection>
-                          <AlertModalLabel>Location</AlertModalLabel>
-                          <AlertMapContainer>
-                            <LeafletMapContainer
-                              center={[center.lat, center.lng]}
-                              zoom={hasShape ? 12 : 14}
-                              zoomControl={true}
-                              scrollWheelZoom={false}
-                              dragging={true}
-                              style={{ height: '100%', width: '100%' }}
-                            >
-                              <RetryTileLayer
-                                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                                url={mapTileUrl}
-                                maxRetries={3}
-                                retryDelay={1000}
-                              />
-                              {alertPolygon ? (
-                                <>
-                                  <FitBounds positions={allPositions} />
-                                  <Polygon
-                                    positions={alertPolygon}
-                                    pathOptions={{
-                                      color: severityConfig.color,
-                                      fillColor: severityConfig.color,
-                                      fillOpacity: 0.25,
-                                      weight: 2,
-                                      opacity: 0.8,
-                                    }}
-                                  />
-                                </>
-                              ) : polylineSegments.length > 0 ? (
-                                <>
-                                  <FitBounds positions={allPositions} />
-                                  {polylineSegments.map((segment, i) => (
-                                    <Polyline
-                                      key={i}
-                                      positions={segment}
-                                      pathOptions={{
-                                        color: severityConfig.color,
-                                        weight: 5,
-                                        opacity: 0.9,
-                                      }}
-                                    />
-                                  ))}
-                                </>
-                              ) : hasMultipleMarkers ? (
-                                <>
-                                  <FitBounds positions={allPositions} />
-                                  {segmentCoords.map((coord, i) => (
-                                    <Marker
-                                      key={i}
-                                      position={[coord.lat, coord.lng]}
-                                      icon={markerIcon}
-                                    />
-                                  ))}
-                                </>
-                              ) : (
-                                <Marker position={[center.lat, center.lng]} icon={markerIcon} />
-                              )}
-                            </LeafletMapContainer>
-                          </AlertMapContainer>
-                        </AlertModalSection>
-                      );
-                    })()}
-
-                    {selectedAlert.url && (
-                      <AlertModalSection>
-                        <AlertModalLabel>
-                          {/x\.com|twitter\.com/.test(selectedAlert.url) ? 'Tweet' : 'Link'}
-                        </AlertModalLabel>
-                        <AlertModalText>
-                          <a href={selectedAlert.url} target="_blank" rel="noopener noreferrer">
-                            {/x\.com|twitter\.com/.test(selectedAlert.url)
-                              ? 'View on X'
-                              : 'View external map'}
-                          </a>
-                        </AlertModalText>
-                      </AlertModalSection>
-                    )}
-
-                    <AlertModalSection>
-                      <AlertModalLabel>Summary</AlertModalLabel>
-                      <AlertModalText>{selectedAlert.summary}</AlertModalText>
-                    </AlertModalSection>
-
-                    {selectedAlert.description && (
-                      <AlertModalSection>
-                        <AlertModalLabel>Description</AlertModalLabel>
-                        <AlertModalText>{selectedAlert.description}</AlertModalText>
-                      </AlertModalSection>
-                    )}
-
-                    {selectedAlert.instruction && (
-                      <AlertModalSection>
-                        <AlertModalLabel>Instructions</AlertModalLabel>
-                        <AlertModalText>{selectedAlert.instruction}</AlertModalText>
-                      </AlertModalSection>
-                    )}
-
-                    {(selectedAlert.startTime || selectedAlert.endTime) && (
-                      <AlertModalSection>
-                        <AlertModalLabel>Timing</AlertModalLabel>
-                        <AlertModalText>
-                          {selectedAlert.startTime && (
-                            <>Effective: {formatTimestamp(selectedAlert.startTime)}</>
-                          )}
-                          {selectedAlert.startTime && selectedAlert.endTime && '\n'}
-                          {selectedAlert.endTime && (
-                            <>Expires: {formatTimestamp(selectedAlert.endTime)}</>
-                          )}
-                        </AlertModalText>
-                      </AlertModalSection>
-                    )}
-
-                    <AlertModalSection>
-                      <AlertModalLabel>Last Updated</AlertModalLabel>
-                      <AlertModalText>{formatTimestamp(selectedAlert.updatedAt)}</AlertModalText>
-                    </AlertModalSection>
-                  </AlertModalBody>
-                </>
-              )}
-            </AnimatedDialogContent>
-          </AnimatedDialogOverlay>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <AlertDetailModal
+        alert={selectedAlert}
+        onClose={() => setSelectedAlert(null)}
+        alertSeverityConfig={ALERT_SEVERITY_CONFIG}
+      />
     </>
   );
 }

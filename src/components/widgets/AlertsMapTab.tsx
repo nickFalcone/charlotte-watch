@@ -13,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import type { GenericAlert } from '../../types/alerts';
 import { RetryTileLayer } from './RetryTileLayer';
 import { MapRecenterButton } from '../common';
+import { getMapTileUrl } from '../../utils/mapTileUrl';
 import {
   getAlertCoordinateList,
   getAlertPolylineSegments,
@@ -144,10 +145,7 @@ export function AlertsMapTab({
   const theme = useTheme();
   const mapRef = useRef<L.Map | null>(null);
 
-  const mapTileUrl =
-    theme.name === 'dark'
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+  const mapTileUrl = getMapTileUrl(theme.name);
 
   // Filter alerts to those with coordinates
   const geoAlerts: AlertWithGeo[] = useMemo(() => {
@@ -199,7 +197,7 @@ export function AlertsMapTab({
         zoomControl={true}
         scrollWheelZoom={false}
         dragging={true}
-        maxZoom={10}
+        maxZoom={18}
         style={{ height: '100%', width: '100%' }}
         ref={mapRef}
         aria-label="Alert locations map for Charlotte area"
