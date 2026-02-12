@@ -60,29 +60,37 @@ async function fetchRouteFlow(route: HereRoute, signal?: AbortSignal): Promise<H
   return response.json();
 }
 
-const MAX_SHAPE_POINTS = 200; // Cap for map polyline to avoid huge payloads
+const MAX_SHAPE_POINTS_PER_SEGMENT = 200;
 
-/** All shape points in order (for polyline). Capped at MAX_SHAPE_POINTS. */
-function getGroupShapePoints(group: HereFlowResult[]): [number, number][] {
+/** Shape points from a single result (one road segment). Avoids straight lines between non-contiguous segments. */
+function getResultShapePoints(result: HereFlowResult): [number, number][] {
   const points: [number, number][] = [];
-  for (const r of group) {
-    const shape = r.location?.shape;
-    if (!shape?.links) continue;
-    for (const link of shape.links) {
-      for (const p of link.points ?? []) {
-        if (points.length >= MAX_SHAPE_POINTS) return points;
-        if (
-          typeof p.lat !== 'number' ||
-          typeof p.lng !== 'number' ||
-          !Number.isFinite(p.lat) ||
-          !Number.isFinite(p.lng)
-        )
-          continue;
+  const shape = result.location?.shape;
+  if (!shape?.links) return points;
+  for (const link of shape.links) {
+    for (const p of link.points ?? []) {
+      if (points.length >= MAX_SHAPE_POINTS_PER_SEGMENT) return points;
+      if (
+        typeof p.lat === 'number' &&
+        typeof p.lng === 'number' &&
+        Number.isFinite(p.lat) &&
+        Number.isFinite(p.lng)
+      ) {
         points.push([p.lat, p.lng]);
       }
     }
   }
   return points;
+}
+
+/** Per-segment shape points. Each segment is a separate polyline to avoid straight lines between non-contiguous road sections. */
+function getGroupShapeSegments(group: HereFlowResult[]): { shapePoints: [number, number][] }[] {
+  const segments: { shapePoints: [number, number][] }[] = [];
+  for (const r of group) {
+    const pts = getResultShapePoints(r);
+    if (pts.length >= 2) segments.push({ shapePoints: pts });
+  }
+  return segments;
 }
 
 /** Centroid of all points in a group's location.shape. For map link. */
@@ -376,7 +384,7 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
     const freeFlowMph = Number.isFinite(avgFree) ? Math.round(metersPerSecToMph(avgFree)) : 0;
 
     const centroid = getGroupCentroid(group);
-    const shapePoints = getGroupShapePoints(group);
+    const segments = getGroupShapeSegments(group);
 
     out.push({
       routeId: slug(routeName),
@@ -390,7 +398,7 @@ function processFlowResultsByRoad(results: HereFlowResult[], timestamp: string):
       segmentCount: n,
       timestamp,
       ...(centroid ? { centerLat: centroid.lat, centerLng: centroid.lng } : {}),
-      ...(shapePoints.length > 0 ? { shapePoints } : {}),
+      ...(segments.length > 0 ? { segments } : {}),
     });
   }
   return out;

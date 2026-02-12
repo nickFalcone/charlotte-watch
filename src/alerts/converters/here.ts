@@ -79,7 +79,7 @@ export function convertHereFlowToGeneric(flow: HereRouteFlow): GenericAlert | nu
         flow.centerLat != null && Number.isFinite(flow.centerLat) ? flow.centerLat : undefined,
       longitude:
         flow.centerLng != null && Number.isFinite(flow.centerLng) ? flow.centerLng : undefined,
-      ...(flow.shapePoints && flow.shapePoints.length > 0 ? { shapePoints: flow.shapePoints } : {}),
+      ...(flow.segments && flow.segments.length > 0 ? { segments: flow.segments } : {}),
     },
   };
 }
