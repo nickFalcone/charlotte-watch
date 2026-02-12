@@ -33,8 +33,8 @@ function reorderPolygonVertices(points: [number, number][]): [number, number][] 
 
   const bottom = points.reduce((min, p) => (p[0] < min[0] ? p : min));
   const byAngle = [...points].sort((a, b) => {
-    const angleA = Math.atan2(a[0] - bottom[0], a[1] - bottom[1]);
-    const angleB = Math.atan2(b[0] - bottom[0], b[1] - bottom[1]);
+    const angleA = Math.atan2(a[1] - bottom[1], a[0] - bottom[0]);
+    const angleB = Math.atan2(b[1] - bottom[1], b[0] - bottom[0]);
     if (angleA !== angleB) return angleA - angleB;
     const da = (a[0] - bottom[0]) ** 2 + (a[1] - bottom[1]) ** 2;
     const db = (b[0] - bottom[0]) ** 2 + (b[1] - bottom[1]) ** 2;
