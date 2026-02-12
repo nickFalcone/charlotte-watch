@@ -5,6 +5,7 @@ export * from './CardList.styles';
 export * from './DetailModal.styles';
 export * from './formatTimestamp';
 export * from './InfoPopover.styles';
+export * from './leafletTheme';
 export * from './MapRecenterButton';
 export * from './WidgetStates.styles';
 export * from './WidgetTabs';

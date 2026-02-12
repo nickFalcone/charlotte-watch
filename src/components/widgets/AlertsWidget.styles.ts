@@ -1,6 +1,6 @@
 import styled, { css, keyframes } from 'styled-components';
 import { getAlertSeverityConfig } from '../../types/alerts';
-import { leafletControlTheme } from '../common/leafletTheme';
+import { leafletControlTheme } from '../common';
 
 // Re-export shared card list components with Alert-prefixed aliases
 export {

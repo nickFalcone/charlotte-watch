@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { leafletControlTheme } from '../common/leafletTheme';
+import { leafletControlTheme } from '../common';
 
 export const AlertsFullMapContainer = styled.div`
   height: 100%;
