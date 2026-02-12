@@ -101,6 +101,7 @@ function LocationMapSection({
           scrollWheelZoom={false}
           dragging={true}
           style={{ height: '100%', width: '100%' }}
+          aria-label="Alert location map"
         >
           <RetryTileLayer
             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
