@@ -76,7 +76,8 @@ export function NewsWidget(_props: WidgetProps) {
     staleTime: TWELVE_HOURS_MS,
   });
 
-  const events = (data?.data ?? []).filter(event => event.sources.length >= 1);
+  // Filter to only show events with 2+ corroborating sources
+  const events = (data?.data ?? []).filter(event => event.sources.length >= 2);
 
   // Sync React Query's dataUpdatedAt timestamp to widget metadata context.
   // MUST use useEffect to avoid infinite render loops.
@@ -118,8 +119,8 @@ export function NewsWidget(_props: WidgetProps) {
           </Popover.Trigger>
           <Popover.Portal>
             <AnimatedPopoverContent side="top" sideOffset={6}>
-              Headlines are read by AI and linked to source references. When multiple sources cover
-              the same story, we show it as one event. Always confirm details with the sources.
+              Headlines are read by AI and verified against at least 2 corroborating sources. Always
+              confirm details with source references.
             </AnimatedPopoverContent>
           </Popover.Portal>
         </Popover.Root>

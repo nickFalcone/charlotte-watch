@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTheme } from 'styled-components';
 import {
   MapContainer as LeafletMapContainer,
@@ -17,6 +17,7 @@ import {
   getAlertCoordinateList,
   getAlertPolylineSegments,
   getAlertPolygon,
+  getAlertSegmentCoordinates,
   createAlertMarkerIcon,
   FitBounds,
 } from './alertsMapUtils';
@@ -276,6 +277,28 @@ export function AlertsMapTab({
               >
                 <AlertTooltip alert={alert} />
               </Polyline>
+            );
+          }
+
+          // Multiple markers (e.g., NCDOT consolidated when shapePoints fail validation)
+          const segmentCoords = getAlertSegmentCoordinates(alert);
+          if (segmentCoords.length > 1) {
+            const markerIcon = createAlertMarkerIcon(severityConfig.color);
+            return (
+              <React.Fragment key={alert.id}>
+                {segmentCoords.map((coord, i) => (
+                  <Marker
+                    key={`${alert.id}-seg-${i}`}
+                    position={[coord.lat, coord.lng]}
+                    icon={markerIcon}
+                    eventHandlers={{
+                      click: () => onAlertSelect(alert),
+                    }}
+                  >
+                    <AlertTooltip alert={alert} />
+                  </Marker>
+                ))}
+              </React.Fragment>
             );
           }
 

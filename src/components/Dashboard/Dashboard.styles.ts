@@ -7,7 +7,7 @@ export const DashboardContainer = styled.div`
   flex-direction: column;
   min-height: 100vh;
   background: ${props => props.theme.colors.background};
-  padding: 20px;
+  padding: 10px;
   transition: background-color 0.3s ease;
 `;
 

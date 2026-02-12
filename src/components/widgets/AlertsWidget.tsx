@@ -27,6 +27,7 @@ import {
   getAlertCoordinateList,
   getAlertPolylineSegments,
   getAlertPolygon,
+  getAlertSegmentCoordinates,
   getDisplaySeverity,
   createAlertMarkerIcon,
   FitBounds,
@@ -284,10 +285,16 @@ export function AlertsWidget(_props: WidgetProps) {
                       const center = coordinateList[0];
                       const polylineSegments = getAlertPolylineSegments(selectedAlert);
                       const alertPolygon = getAlertPolygon(selectedAlert);
+                      const segmentCoords = getAlertSegmentCoordinates(selectedAlert);
                       const allPositions = coordinateList.map(
                         c => [c.lat, c.lng] as [number, number]
                       );
-                      const hasShape = alertPolygon !== null || polylineSegments.length > 0;
+                      const hasShape =
+                        alertPolygon !== null ||
+                        polylineSegments.length > 0 ||
+                        segmentCoords.length > 1;
+                      const hasMultipleMarkers =
+                        segmentCoords.length > 1 && polylineSegments.length === 0 && !alertPolygon;
 
                       return (
                         <AlertModalSection>
@@ -333,6 +340,17 @@ export function AlertsWidget(_props: WidgetProps) {
                                         weight: 5,
                                         opacity: 0.9,
                                       }}
+                                    />
+                                  ))}
+                                </>
+                              ) : hasMultipleMarkers ? (
+                                <>
+                                  <FitBounds positions={allPositions} />
+                                  {segmentCoords.map((coord, i) => (
+                                    <Marker
+                                      key={i}
+                                      position={[coord.lat, coord.lng]}
+                                      icon={markerIcon}
                                     />
                                   ))}
                                 </>

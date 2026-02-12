@@ -76,7 +76,28 @@ export function getAlertPolygon(alert: GenericAlert): [number, number][] | null 
   return null;
 }
 
-/** Get all coordinates for an alert (polygon, polylines, or single point) */
+/**
+ * Get coordinates from metadata.segments (NCDOT consolidated alerts).
+ * Used when polyline shapePoints fail validation (e.g., I-485 mile marker mismatch).
+ */
+export function getAlertSegmentCoordinates(alert: GenericAlert): { lat: number; lng: number }[] {
+  if (!alert.metadata || !('segments' in alert.metadata) || !Array.isArray(alert.metadata.segments))
+    return [];
+  const coords: { lat: number; lng: number }[] = [];
+  for (const seg of alert.metadata.segments as { latitude?: number; longitude?: number }[]) {
+    if (
+      typeof seg.latitude === 'number' &&
+      typeof seg.longitude === 'number' &&
+      Number.isFinite(seg.latitude) &&
+      Number.isFinite(seg.longitude)
+    ) {
+      coords.push({ lat: seg.latitude, lng: seg.longitude });
+    }
+  }
+  return coords;
+}
+
+/** Get all coordinates for an alert (polygon, polylines, segment points, or single point) */
 export function getAlertCoordinateList(alert: GenericAlert): { lat: number; lng: number }[] {
   // Check polygon vertices (Duke outage areas)
   const polygon = getAlertPolygon(alert);
@@ -85,10 +106,14 @@ export function getAlertCoordinateList(alert: GenericAlert): { lat: number; lng:
   }
 
   // Try polyline segments (handles both top-level and per-segment shapePoints)
-  const segments = getAlertPolylineSegments(alert);
-  if (segments.length > 0) {
-    return segments.flatMap(seg => seg.map(([lat, lng]) => ({ lat, lng })));
+  const polylineSegments = getAlertPolylineSegments(alert);
+  if (polylineSegments.length > 0) {
+    return polylineSegments.flatMap(seg => seg.map(([lat, lng]) => ({ lat, lng })));
   }
+
+  // Fallback: segment lat/lng (e.g., NCDOT consolidated when shapePoints fail validation)
+  const segmentCoords = getAlertSegmentCoordinates(alert);
+  if (segmentCoords.length > 0) return segmentCoords;
 
   const single = getAlertCoordinates(alert);
   return single ? [single] : [];
