@@ -5,17 +5,95 @@ import { mapDukeOutageSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
 import { formatTimeDisplay } from '../../utils/dateFormatting';
 
+/** Parse a point from Duke API: supports { lat, lng } or { x, y } (x=lng, y=lat) */
+function parsePoint(p: {
+  lat?: number;
+  lng?: number;
+  x?: number;
+  y?: number;
+}): [number, number] | null {
+  if (Number.isFinite(p.lat) && Number.isFinite(p.lng)) {
+    return [p.lat as number, p.lng as number];
+  }
+  if (Number.isFinite(p.y) && Number.isFinite(p.x)) {
+    return [p.y as number, p.x as number];
+  }
+  return null;
+}
+
+/**
+ * Reorder polygon vertices into proper perimeter order using convex hull.
+ * Duke API may return vertices in arbitrary order, causing self-intersecting shapes.
+ */
+function reorderPolygonVertices(points: [number, number][]): [number, number][] {
+  if (points.length < 3) return points;
+
+  const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+
+  const bottom = points.reduce((min, p) => (p[0] < min[0] ? p : min));
+  const byAngle = [...points].sort((a, b) => {
+    const angleA = Math.atan2(a[0] - bottom[0], a[1] - bottom[1]);
+    const angleB = Math.atan2(b[0] - bottom[0], b[1] - bottom[1]);
+    if (angleA !== angleB) return angleA - angleB;
+    const da = (a[0] - bottom[0]) ** 2 + (a[1] - bottom[1]) ** 2;
+    const db = (b[0] - bottom[0]) ** 2 + (b[1] - bottom[1]) ** 2;
+    return da - db;
+  });
+
+  const hull: [number, number][] = [];
+  for (const p of byAngle) {
+    while (hull.length >= 2 && cross(hull[hull.length - 2], hull[hull.length - 1], p) <= 0) {
+      hull.pop();
+    }
+    hull.push(p);
+  }
+  return hull;
+}
+
+/** Create a circular polygon around a point; ~0.5 km radius by default */
+function createCirclePolygon(
+  centerLat: number,
+  centerLng: number,
+  radiusDegrees = 0.0045
+): [number, number][] {
+  const points: [number, number][] = [];
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * 2 * Math.PI;
+    points.push([
+      centerLat + radiusDegrees * Math.cos(angle),
+      centerLng + radiusDegrees * Math.sin(angle),
+    ]);
+  }
+  return points;
+}
+
 /**
  * Extract outage area polygon from trfPolygonXyLoc or convexHull.
- * Returns polygon as [lat, lng][] only when there are 3+ vertices (a real area).
+ * When no polygon data exists, creates a circular buffer around the device location.
  */
 function extractOutagePolygon(outage: DukeOutage): { polygon: [number, number][] } | object {
   const points = outage.trfPolygonXyLoc ?? outage.convexHull;
-  if (!Array.isArray(points) || points.length < 3) return {};
-  const polygon: [number, number][] = points
-    .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng))
-    .map(p => [p.lat, p.lng]);
-  return polygon.length >= 3 ? { polygon } : {};
+  if (Array.isArray(points) && points.length >= 3) {
+    const raw: [number, number][] = [];
+    for (const p of points) {
+      const pt = parsePoint(p as { lat?: number; lng?: number; x?: number; y?: number });
+      if (pt) raw.push(pt);
+    }
+    if (raw.length >= 3) {
+      const polygon = reorderPolygonVertices(raw);
+      if (polygon.length >= 3) return { polygon };
+    }
+  }
+
+  const lat = outage.deviceLatitudeLocation;
+  const lng = outage.deviceLongitudeLocation;
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    const customers = getDukeCustomersAffected(outage);
+    const radius = customers >= 1000 ? 0.008 : customers >= 100 ? 0.006 : 0.0045;
+    return { polygon: createCirclePolygon(lat, lng, radius) };
+  }
+  return {};
 }
 
 // Convert Duke Energy outage to generic alert format
