@@ -36,7 +36,7 @@ describe('formatEndTimeDisplay', () => {
 
   it('formats a same-day end time with "today"', () => {
     const laterToday = new Date();
-    laterToday.setHours(laterToday.getHours() + 3);
+    laterToday.setHours(20, 0, 0, 0); // 8 PM today — always same calendar day
     const result = formatEndTimeDisplay(laterToday.toISOString());
     expect(result).toContain('Until');
     expect(result).toContain('today');
