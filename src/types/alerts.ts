@@ -15,6 +15,36 @@ export type AlertSource =
   | 'system'
   | 'custom';
 export type AlertSeverity = 'critical' | 'high' | 'moderate' | 'minor';
+
+/** Short labels for UI badges and filter toggles */
+export const ALERT_SOURCE_LABELS: Record<AlertSource, string> = {
+  nws: 'NWS',
+  faa: 'FAA',
+  duke: 'Duke',
+  ncdot: 'NCDOT',
+  cats: 'CATS',
+  cmpd: 'CMPD',
+  cms: 'CMS',
+  'here-flow': 'Traffic',
+  traffic: 'Traffic',
+  system: 'System',
+  custom: 'Custom',
+};
+
+/** Full organization names for tooltips */
+export const ALERT_SOURCE_FULL_NAMES: Record<AlertSource, string> = {
+  nws: 'National Weather Service',
+  faa: 'Federal Aviation Administration',
+  duke: 'Duke Energy',
+  ncdot: 'NC Dept. of Transportation',
+  cats: 'Charlotte Area Transit System',
+  cmpd: 'Charlotte-Mecklenburg Police',
+  cms: 'Charlotte-Mecklenburg Schools',
+  'here-flow': 'HERE Traffic Flow',
+  traffic: 'Traffic',
+  system: 'System',
+  custom: 'Custom',
+};
 export type AlertCategory =
   | 'weather'
   | 'aviation'
@@ -167,13 +197,17 @@ export interface AlertSourceConfig {
   icon: string;
 }
 
+// Dark-mode WCAG AAA status colors (>=7:1 contrast on #2c2c2e)
+export const DARK_STATUS_SUCCESS = '#4ade80'; // green-400, 7.12:1
+export const DARK_STATUS_ERROR = '#ffb0b0'; // 8.02:1
+
 // Severity styling - theme-aware for WCAG AAA compliance
 export const getAlertSeverityConfig = (
   theme: Theme
 ): Record<AlertSeverity, { color: string; bgColor: string; label: string }> => {
   if (theme.name === 'dark') {
     return {
-      critical: { color: '#ffb0b0', bgColor: 'rgba(220, 38, 38, 0.2)', label: 'Critical' }, // 8.02:1 on #2c2c2e
+      critical: { color: DARK_STATUS_ERROR, bgColor: 'rgba(220, 38, 38, 0.2)', label: 'Critical' }, // 8.02:1 on #2c2c2e
       high: { color: '#fecaca', bgColor: 'rgba(239, 68, 68, 0.2)', label: 'High' }, // ≥7:1 on badge tint over #2c2c2e
       moderate: { color: '#fed7aa', bgColor: 'rgba(234, 88, 12, 0.2)', label: 'Moderate' }, // ≥7:1 on badge tint over #2c2c2e
       minor: { color: '#93c5fd', bgColor: 'rgba(59, 130, 246, 0.2)', label: 'Minor' }, // 7.73:1 on #2c2c2e

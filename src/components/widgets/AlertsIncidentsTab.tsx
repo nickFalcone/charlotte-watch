@@ -1,21 +1,14 @@
 import { useMemo } from 'react';
-import { useTheme } from 'styled-components';
 import type { GenericAlert, AlertSource } from '../../types/alerts';
+import { useAlertSeverityConfig } from '../../hooks';
 import type { SummarizeResponse } from '../../utils/alertSummaryApi';
 import { AlertIcon } from '../AlertIcon';
 import infoIcon from '../../assets/icons/info.svg';
-import noResultsIcon from '../../assets/icons/no-results.svg';
 import * as Popover from '@radix-ui/react-popover';
-import * as ToggleGroup from '@radix-ui/react-toggle-group';
-import * as Tooltip from '@radix-ui/react-tooltip';
-import {
-  AnimatedPopoverContent,
-  AnimatedTooltipContent,
-  formatGeneratedAt,
-  InfoIcon,
-  InfoTrigger,
-} from '../common';
+import { AnimatedPopoverContent, formatGeneratedAt, InfoIcon, InfoTrigger } from '../common';
 import { getDisplaySeverity } from './alertsMapUtils';
+import { SourceFilterBar } from './SourceFilterBar';
+import { AlertEmptyState } from './AlertEmptyState';
 import {
   AlertsContainer,
   AlertsHeader,
@@ -31,16 +24,6 @@ import {
   AlertSummary,
   AlertMeta,
   AlertMetaItem,
-  NoAlertsContainer,
-  NoAlertsIcon,
-  NoAlertsText,
-  NoAlertsSubtext,
-  SelectAllLink,
-  SourceToggleGroup,
-  SourceToggleItem,
-  TooltipContent,
-  TooltipRow,
-  TooltipArrow,
   AISummaryContainer,
   AISummaryRow,
   AISummaryText,
@@ -51,35 +34,7 @@ import {
   AISummarySkeleton,
   AISummarySkeletonLine,
   AISummaryError,
-} from './AlertsWidget.styles';
-
-const SOURCE_LABELS: Record<AlertSource, string> = {
-  nws: 'NWS',
-  faa: 'FAA',
-  duke: 'Duke',
-  ncdot: 'NCDOT',
-  cats: 'CATS',
-  cmpd: 'CMPD',
-  cms: 'CMS',
-  'here-flow': 'Traffic',
-  traffic: 'Traffic',
-  system: 'System',
-  custom: 'Custom',
-};
-
-const SOURCE_FULL_NAMES: Record<AlertSource, string> = {
-  nws: 'National Weather Service',
-  faa: 'Federal Aviation Administration',
-  duke: 'Duke Energy',
-  ncdot: 'NC Dept. of Transportation',
-  cats: 'Charlotte Area Transit System',
-  cmpd: 'Charlotte-Mecklenburg Police',
-  cms: 'Charlotte-Mecklenburg Schools',
-  'here-flow': 'HERE Traffic Flow',
-  traffic: 'Traffic',
-  system: 'System',
-  custom: 'Custom',
-};
+} from './AlertsIncidentsTab.styles';
 
 function AISummaryContent({ summary }: { summary: string }) {
   const raw = summary.trim();
@@ -110,7 +65,6 @@ export interface AlertsIncidentsTabProps {
   summaryData: SummarizeResponse | undefined;
   isSummaryLoading: boolean;
   isSummaryError: boolean;
-  alertSeverityConfig: Record<string, { color: string; bgColor: string; label: string }>;
   onAlertSelect: (alert: GenericAlert) => void;
 }
 
@@ -124,10 +78,9 @@ export function AlertsIncidentsTab({
   summaryData,
   isSummaryLoading,
   isSummaryError,
-  alertSeverityConfig,
   onAlertSelect,
 }: AlertsIncidentsTabProps) {
-  const theme = useTheme();
+  const alertSeverityConfig = useAlertSeverityConfig();
 
   // Stable random skeleton line widths (30-100%)
   const aiSummarySkeletonWidths = useMemo(
@@ -148,59 +101,11 @@ export function AlertsIncidentsTab({
               : `${sortedAlerts.length} ALERTS`}
           </AlertCount>
           {sources && visibleSources.size > 0 && (
-            <Tooltip.Provider delayDuration={300}>
-              <ToggleGroup.Root
-                type="multiple"
-                value={Array.from(visibleSources)}
-                onValueChange={handleVisibleSourcesChange}
-                asChild
-              >
-                <SourceToggleGroup>
-                  {(
-                    Object.entries(sources) as [AlertSource, { success: boolean; error?: string }][]
-                  ).map(([sourceKey, status]) => {
-                    const isVisible = visibleSources.has(sourceKey);
-                    return (
-                      <Tooltip.Root key={sourceKey}>
-                        <Tooltip.Trigger asChild>
-                          <ToggleGroup.Item value={sourceKey} asChild>
-                            <SourceToggleItem $success={status.success} $visible={isVisible}>
-                              {SOURCE_LABELS[sourceKey]}
-                            </SourceToggleItem>
-                          </ToggleGroup.Item>
-                        </Tooltip.Trigger>
-                        <Tooltip.Portal>
-                          <AnimatedTooltipContent side="top" sideOffset={5} asChild>
-                            <TooltipContent>
-                              <TooltipRow>{SOURCE_FULL_NAMES[sourceKey]}</TooltipRow>
-                              <TooltipRow
-                                $color={
-                                  theme.name === 'dark'
-                                    ? status.success
-                                      ? '#4ade80'
-                                      : '#ffb0b0'
-                                    : status.success
-                                      ? theme.colors.success
-                                      : theme.colors.error
-                                }
-                              >
-                                {status.success
-                                  ? 'Connected'
-                                  : `Error: ${status.error || 'Failed'}`}
-                              </TooltipRow>
-                              <TooltipRow>{isVisible ? 'Visible' : 'Hidden'}</TooltipRow>
-                              <Tooltip.Arrow asChild>
-                                <TooltipArrow />
-                              </Tooltip.Arrow>
-                            </TooltipContent>
-                          </AnimatedTooltipContent>
-                        </Tooltip.Portal>
-                      </Tooltip.Root>
-                    );
-                  })}
-                </SourceToggleGroup>
-              </ToggleGroup.Root>
-            </Tooltip.Provider>
+            <SourceFilterBar
+              sources={sources}
+              visibleSources={visibleSources}
+              onVisibleSourcesChange={handleVisibleSourcesChange}
+            />
           )}
         </AlertsHeaderRow>
       </AlertsHeader>
@@ -246,62 +151,13 @@ export function AlertsIncidentsTab({
       )}
 
       {sortedAlerts.length === 0 ? (
-        sources && Object.values(sources).some(status => !status.success) ? (
-          <NoAlertsContainer>
-            <NoAlertsText>Alert Sources Unavailable</NoAlertsText>
-            <NoAlertsSubtext>
-              {(() => {
-                const unavailable = (
-                  Object.entries(sources) as [AlertSource, { success: boolean }][]
-                )
-                  .filter(([_, status]) => !status.success)
-                  .map(([key]) => SOURCE_LABELS[key]);
-                return `${unavailable.join(', ')} ${unavailable.length === 1 ? 'is' : 'are'} currently unavailable`;
-              })()}
-            </NoAlertsSubtext>
-          </NoAlertsContainer>
-        ) : (
-          (() => {
-            const allAlertsHidden = sortedAllAlerts.length > 0 && sortedAlerts.length === 0;
-            return (
-              <NoAlertsContainer>
-                <NoAlertsIcon src={noResultsIcon} alt="" />
-                <NoAlertsText $variant={allAlertsHidden ? 'warning' : undefined}>
-                  {allAlertsHidden ? 'No Visible Alerts' : 'No Active Alerts'}
-                </NoAlertsText>
-                <NoAlertsSubtext>
-                  {allAlertsHidden ? (
-                    <>
-                      {sortedAllAlerts.length}{' '}
-                      {sortedAllAlerts.length === 1 ? 'alert is' : 'alerts are'} in hidden sources.{' '}
-                      <SelectAllLink onClick={showAllAlertSources}>View all sources</SelectAllLink>.
-                    </>
-                  ) : !sources ? (
-                    'All systems normal'
-                  ) : (
-                    (() => {
-                      const totalSources = Object.keys(sources).length;
-                      const hiddenCount = totalSources - visibleSources.size;
-                      if (hiddenCount > 0) {
-                        return (
-                          <>
-                            {hiddenCount} {hiddenCount === 1 ? 'source is' : 'sources are'} hidden
-                            (summary considers all sources).{' '}
-                            <SelectAllLink onClick={showAllAlertSources}>
-                              View all sources
-                            </SelectAllLink>
-                            .
-                          </>
-                        );
-                      }
-                      return 'All systems normal';
-                    })()
-                  )}
-                </NoAlertsSubtext>
-              </NoAlertsContainer>
-            );
-          })()
-        )
+        <AlertEmptyState
+          sources={sources}
+          sortedAllAlerts={sortedAllAlerts}
+          sortedAlerts={sortedAlerts}
+          visibleSources={visibleSources}
+          showAllAlertSources={showAllAlertSources}
+        />
       ) : (
         <AlertsList tabIndex={0} role="region" aria-label="Alerts list">
           {sortedAlerts.map(alert => {

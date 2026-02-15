@@ -9,3 +9,6 @@ export * from './leafletTheme';
 export * from './MapRecenterButton';
 export * from './WidgetStates.styles';
 export * from './WidgetTabs';
+export * from './TileAccessibilityHandler';
+export * from './MapSizeInvalidator';
+export * from './FitBounds';

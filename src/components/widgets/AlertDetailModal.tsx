@@ -1,11 +1,17 @@
 import { useTheme } from 'styled-components';
 import * as Dialog from '@radix-ui/react-dialog';
 import { MapContainer as LeafletMapContainer, Marker, Polygon, Polyline } from 'react-leaflet';
-import type { GenericAlert, AlertSeverity } from '../../types/alerts';
+import type { GenericAlert } from '../../types/alerts';
+import { useAlertSeverityConfig } from '../../hooks';
 import { AlertIcon } from '../AlertIcon';
 import { RetryTileLayer } from './RetryTileLayer';
 import { getMapTileUrl } from '../../utils/mapTileUrl';
-import { AnimatedDialogContent, AnimatedDialogOverlay, formatTimestamp } from '../common';
+import {
+  AnimatedDialogContent,
+  AnimatedDialogOverlay,
+  FitBounds,
+  formatTimestamp,
+} from '../common';
 import {
   getAlertCoordinateList,
   getAlertPolylineSegments,
@@ -13,7 +19,6 @@ import {
   getAlertSegmentCoordinates,
   getDisplaySeverity,
   createAlertMarkerIcon,
-  FitBounds,
 } from './alertsMapUtils';
 import closeIcon from '../../assets/icons/close.svg';
 import {
@@ -37,7 +42,6 @@ import {
 interface AlertDetailModalProps {
   alert: GenericAlert | null;
   onClose: () => void;
-  alertSeverityConfig: Record<AlertSeverity, { color: string; bgColor: string; label: string }>;
 }
 
 function SegmentsSection({ alert }: { alert: GenericAlert }) {
@@ -154,7 +158,8 @@ function LocationMapSection({
   );
 }
 
-export function AlertDetailModal({ alert, onClose, alertSeverityConfig }: AlertDetailModalProps) {
+export function AlertDetailModal({ alert, onClose }: AlertDetailModalProps) {
+  const alertSeverityConfig = useAlertSeverityConfig();
   return (
     <Dialog.Root
       open={alert !== null}
