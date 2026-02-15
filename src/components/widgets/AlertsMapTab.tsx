@@ -1,18 +1,23 @@
-import React, { useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useMemo, useRef, useCallback } from 'react';
 import { useTheme } from 'styled-components';
+import { useAlertSeverityConfig } from '../../hooks';
 import {
   MapContainer as LeafletMapContainer,
   Marker,
   Polygon,
   Polyline,
   Tooltip as LeafletTooltipPrimitive,
-  useMap,
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { GenericAlert } from '../../types/alerts';
 import { RetryTileLayer } from './RetryTileLayer';
-import { MapRecenterButton } from '../common';
+import {
+  MapRecenterButton,
+  TileAccessibilityHandler,
+  MapSizeInvalidator,
+  FitBounds,
+} from '../common';
 import { getMapTileUrl } from '../../utils/mapTileUrl';
 import {
   getAlertCoordinateList,
@@ -20,7 +25,6 @@ import {
   getAlertPolygon,
   getAlertSegmentCoordinates,
   createAlertMarkerIcon,
-  FitBounds,
 } from './alertsMapUtils';
 import {
   AlertsFullMapContainer,
@@ -31,97 +35,6 @@ import {
 const CHARLOTTE_CENTER: [number, number] = [35.2271, -80.8431];
 const DEFAULT_ZOOM = 11;
 
-// Mark base map tiles as decorative for accessibility
-function TileAccessibilityHandler() {
-  const map = useMap();
-
-  useEffect(() => {
-    const mapContainer = map.getContainer();
-
-    const markTileAsDecorative = (tile: Element) => {
-      if (!tile.hasAttribute('alt') || tile.getAttribute('alt') !== '') {
-        tile.setAttribute('alt', '');
-      }
-      if (!tile.hasAttribute('role')) {
-        tile.setAttribute('role', 'presentation');
-      }
-      if (!tile.hasAttribute('aria-hidden')) {
-        tile.setAttribute('aria-hidden', 'true');
-      }
-    };
-
-    const processExistingTiles = () => {
-      const tileImages = mapContainer.querySelectorAll('.leaflet-tile-pane img');
-      tileImages.forEach(markTileAsDecorative);
-    };
-
-    processExistingTiles();
-
-    const observer = new MutationObserver(mutations => {
-      mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(node => {
-          if (node instanceof HTMLImageElement && node.classList.contains('leaflet-tile')) {
-            markTileAsDecorative(node);
-          }
-        });
-      });
-    });
-
-    const tilePane = mapContainer.querySelector('.leaflet-tile-pane');
-    if (tilePane) {
-      observer.observe(tilePane, { childList: true, subtree: true });
-    }
-
-    const handleTileLoad = (e: L.TileEvent) => {
-      const tile = e.tile as HTMLImageElement;
-      if (tile) markTileAsDecorative(tile);
-    };
-
-    map.eachLayer(layer => {
-      if (layer instanceof L.TileLayer) {
-        layer.on('tileload', handleTileLoad);
-      }
-    });
-
-    const reprocessTiles = () => {
-      setTimeout(processExistingTiles, 100);
-    };
-
-    map.on('moveend', reprocessTiles);
-    map.on('zoomend', reprocessTiles);
-
-    return () => {
-      observer.disconnect();
-      map.eachLayer(layer => {
-        if (layer instanceof L.TileLayer) {
-          layer.off('tileload', handleTileLoad);
-        }
-      });
-      map.off('moveend', reprocessTiles);
-      map.off('zoomend', reprocessTiles);
-    };
-  }, [map]);
-
-  return null;
-}
-
-// Invalidate map size when it becomes visible (fixes hidden tab sizing)
-function MapSizeInvalidator({ active }: { active: boolean }) {
-  const map = useMap();
-
-  useEffect(() => {
-    if (active) {
-      // Delay to allow CSS display change to propagate
-      const timer = setTimeout(() => {
-        map.invalidateSize();
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [active, map]);
-
-  return null;
-}
-
 interface AlertWithGeo {
   alert: GenericAlert;
   coordinates: { lat: number; lng: number }[];
@@ -131,17 +44,12 @@ interface AlertWithGeo {
 
 export interface AlertsMapTabProps {
   alerts: GenericAlert[];
-  alertSeverityConfig: Record<string, { color: string; bgColor: string; label: string }>;
   onAlertSelect: (alert: GenericAlert) => void;
   active: boolean;
 }
 
-export function AlertsMapTab({
-  alerts,
-  alertSeverityConfig,
-  onAlertSelect,
-  active,
-}: AlertsMapTabProps) {
+export function AlertsMapTab({ alerts, onAlertSelect, active }: AlertsMapTabProps) {
+  const alertSeverityConfig = useAlertSeverityConfig();
   const theme = useTheme();
   const mapRef = useRef<L.Map | null>(null);
 

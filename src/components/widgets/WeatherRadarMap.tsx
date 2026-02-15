@@ -5,7 +5,7 @@ import { MapContainer as LeafletMapContainer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
 import { RetryTileLayer } from './RetryTileLayer';
-import { MapRecenterButton } from '../common';
+import { MapRecenterButton, TileAccessibilityHandler } from '../common';
 import { getMapTileUrl } from '../../utils/mapTileUrl';
 import playIcon from '../../assets/icons/play.svg';
 import pauseIcon from '../../assets/icons/pause.svg';
@@ -219,94 +219,6 @@ function PreloadedRadarLayer({
 function MapController({ mapRef }: { mapRef: React.MutableRefObject<LeafletMap | null> }) {
   const map = useMap();
   mapRef.current = map;
-  return null;
-}
-
-// Component to mark base map tiles as decorative for accessibility
-// Base map tiles are decorative because geographic context is provided via aria-label
-// and the informative content (radar overlay) has its own accessible description
-function TileAccessibilityHandler() {
-  const map = useMap();
-
-  useEffect(() => {
-    const mapContainer = map.getContainer();
-
-    // Function to mark a tile as decorative
-    const markTileAsDecorative = (tile: Element) => {
-      if (!tile.hasAttribute('alt') || tile.getAttribute('alt') !== '') {
-        tile.setAttribute('alt', '');
-      }
-      if (!tile.hasAttribute('role')) {
-        tile.setAttribute('role', 'presentation');
-      }
-      if (!tile.hasAttribute('aria-hidden')) {
-        tile.setAttribute('aria-hidden', 'true');
-      }
-    };
-
-    // Process all existing tiles immediately
-    const processExistingTiles = () => {
-      const tileImages = mapContainer.querySelectorAll('.leaflet-tile-pane img');
-      tileImages.forEach(markTileAsDecorative);
-    };
-
-    // Initial processing
-    processExistingTiles();
-
-    // Use MutationObserver to catch tiles added dynamically
-    const observer = new MutationObserver(mutations => {
-      mutations.forEach(mutation => {
-        mutation.addedNodes.forEach(node => {
-          if (node instanceof HTMLImageElement && node.classList.contains('leaflet-tile')) {
-            markTileAsDecorative(node);
-          }
-        });
-      });
-    });
-
-    // Observe the tile pane for new tiles
-    const tilePane = mapContainer.querySelector('.leaflet-tile-pane');
-    if (tilePane) {
-      observer.observe(tilePane, {
-        childList: true,
-        subtree: true,
-      });
-    }
-
-    // Also listen for tile load events as a backup
-    const handleTileLoad = (e: L.TileEvent) => {
-      const tile = e.tile as HTMLImageElement;
-      if (tile) {
-        markTileAsDecorative(tile);
-      }
-    };
-
-    map.eachLayer(layer => {
-      if (layer instanceof L.TileLayer) {
-        layer.on('tileload', handleTileLoad);
-      }
-    });
-
-    // Re-process tiles after map events that might load new tiles
-    const reprocessTiles = () => {
-      setTimeout(processExistingTiles, 100);
-    };
-
-    map.on('moveend', reprocessTiles);
-    map.on('zoomend', reprocessTiles);
-
-    return () => {
-      observer.disconnect();
-      map.eachLayer(layer => {
-        if (layer instanceof L.TileLayer) {
-          layer.off('tileload', handleTileLoad);
-        }
-      });
-      map.off('moveend', reprocessTiles);
-      map.off('zoomend', reprocessTiles);
-    };
-  }, [map]);
-
   return null;
 }
 

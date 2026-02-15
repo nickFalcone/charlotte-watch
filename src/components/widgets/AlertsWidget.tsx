@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTheme } from 'styled-components';
 import type { WidgetProps } from '../../types';
 import type { GenericAlert, AlertSource } from '../../types/alerts';
 import { useDashboardStore } from '../../stores/dashboardStore';
 import { useWidgetMetadata } from '../Widget/useWidgetMetadata';
 import { useAlertSummary } from '../../hooks/useAlertSummary';
-import { getAlertSeverityConfig, sortAlertsBySeverity } from '../../types/alerts';
+import { sortAlertsBySeverity } from '../../types/alerts';
 import { fetchAllAlertsWithStatus } from '../../alerts';
 import { queryKeys } from '../../utils/queryKeys';
 import alertsIcon from '../../assets/icons/alerts.svg';
@@ -25,8 +24,6 @@ import {
 } from './AlertsWidget.styles';
 
 export function AlertsWidget(_props: WidgetProps) {
-  const theme = useTheme();
-  const ALERT_SEVERITY_CONFIG = getAlertSeverityConfig(theme);
   const [selectedAlert, setSelectedAlert] = useState<GenericAlert | null>(null);
   const [activeTab, setActiveTab] = useState('incidents');
   const { setLastUpdated } = useWidgetMetadata();
@@ -145,25 +142,19 @@ export function AlertsWidget(_props: WidgetProps) {
             summaryData={summaryData}
             isSummaryLoading={isSummaryLoading}
             isSummaryError={isSummaryError}
-            alertSeverityConfig={ALERT_SEVERITY_CONFIG}
             onAlertSelect={setSelectedAlert}
           />
         </TabPanel>
         <TabPanel value="map" label="Map" forceMount>
           <AlertsMapTab
             alerts={sortedAlerts}
-            alertSeverityConfig={ALERT_SEVERITY_CONFIG}
             onAlertSelect={setSelectedAlert}
             active={activeTab === 'map'}
           />
         </TabPanel>
       </WidgetTabs>
 
-      <AlertDetailModal
-        alert={selectedAlert}
-        onClose={() => setSelectedAlert(null)}
-        alertSeverityConfig={ALERT_SEVERITY_CONFIG}
-      />
+      <AlertDetailModal alert={selectedAlert} onClose={() => setSelectedAlert(null)} />
     </>
   );
 }
