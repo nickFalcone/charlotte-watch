@@ -10,7 +10,7 @@ import {
   useMap,
 } from 'react-leaflet';
 import { RetryTileLayer } from './RetryTileLayer';
-import { TileAccessibilityHandler } from '../common';
+import { TileAccessibilityHandler, MapRecenterButton } from '../common';
 import L from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
 import type { WidgetProps, Aircraft } from '../../types';
@@ -32,7 +32,6 @@ import {
 import { queryKeys } from '../../utils/queryKeys';
 import { getMapTileUrl } from '../../utils/mapTileUrl';
 import { useWidgetMetadata } from '../Widget';
-import { MapRecenterButton } from '../common';
 import planeIcon from '../../assets/icons/plane.svg';
 import 'leaflet/dist/leaflet.css';
 import {
