@@ -14,20 +14,17 @@ export const FooterBar = styled.footer`
   flex-shrink: 0;
 `;
 
-const footerLinkColor = (theme: { name: string; colors: { link: string } }) =>
-  theme.name === 'dark' ? theme.colors.link : '#003366';
-
 export const FooterReportLink = styled.a`
-  color: ${props => footerLinkColor(props.theme)};
+  color: ${props => props.theme.colors.link};
   text-decoration: underline;
   transition: color 0.15s ease;
 
   &:hover {
-    color: ${props => (props.theme.name === 'dark' ? props.theme.colors.primaryHover : '#002244')};
+    color: ${props => props.theme.colors.primaryHover};
   }
 
   &:visited {
-    color: ${props => footerLinkColor(props.theme)};
+    color: ${props => props.theme.colors.link};
   }
 
   &:focus-visible {
@@ -42,13 +39,13 @@ export const FooterLinkButton = styled.button`
   padding: 0;
   font: inherit;
   font-size: 12px;
-  color: ${props => footerLinkColor(props.theme)};
+  color: ${props => props.theme.colors.link};
   text-decoration: underline;
   cursor: pointer;
   transition: color 0.15s ease;
 
   &:hover {
-    color: ${props => (props.theme.name === 'dark' ? props.theme.colors.primaryHover : '#002244')};
+    color: ${props => props.theme.colors.primaryHover};
   }
 
   &:focus-visible {
@@ -134,7 +131,7 @@ export const FooterDialogCloseIcon = styled.img`
   width: 18px;
   height: 18px;
   object-fit: contain;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 export const FooterDialogBody = styled.div`

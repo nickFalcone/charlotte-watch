@@ -1,8 +1,11 @@
+import { Suspense } from 'react';
 import type { ReactNode } from 'react';
 import type { WidgetConfig } from '../../types';
 import { WidgetMetadataProvider } from './WidgetMetadataContext';
 import { useWidgetMetadataValue } from './useWidgetMetadata';
+import { WidgetErrorBoundary } from './WidgetErrorBoundary';
 import { TimeUpdated } from './TimeUpdated';
+import { LoadingContainer, LoadingText } from '../common';
 import dragIcon from '../../assets/icons/drag.svg';
 import lockedIcon from '../../assets/icons/locked.svg';
 import unlockedIcon from '../../assets/icons/unlocked.svg';
@@ -111,7 +114,19 @@ function WidgetWrapperInner({
           )}
         </WidgetControls>
       </WidgetHeader>
-      <WidgetContent>{children}</WidgetContent>
+      <WidgetContent>
+        <WidgetErrorBoundary>
+          <Suspense
+            fallback={
+              <LoadingContainer>
+                <LoadingText>Loading...</LoadingText>
+              </LoadingContainer>
+            }
+          >
+            {children}
+          </Suspense>
+        </WidgetErrorBoundary>
+      </WidgetContent>
     </WidgetContainer>
   );
 }

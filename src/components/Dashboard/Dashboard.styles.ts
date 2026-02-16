@@ -199,7 +199,7 @@ const overlayHide = keyframes`
 export const DrawerOverlay = styled(Dialog.Overlay)`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: ${props => props.theme.overlay};
   z-index: 999;
 
   &[data-state='open'] {
@@ -257,14 +257,14 @@ export const CloseButtonIcon = styled.img`
   width: 18px;
   height: 18px;
   object-fit: contain;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 export const ResetIcon = styled.img`
   width: 16px;
   height: 16px;
   object-fit: contain;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 export const CloseButton = styled.button`
@@ -337,7 +337,7 @@ export const WidgetListIcon = styled.img`
   flex-shrink: 0;
   object-fit: contain;
   /* Invert in dark mode so black SVGs stay visible */
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 export const WidgetListInfo = styled.div`

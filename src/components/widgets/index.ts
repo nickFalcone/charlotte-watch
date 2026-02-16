@@ -1,10 +1,16 @@
+import { lazy } from 'react';
 import type { WidgetDefinition, WidgetType } from '../../types';
-import { WeatherWidget } from './WeatherWidget';
-import { FlightTrackerWidget } from './FlightTrackerWidget';
-import { AlertsWidget } from './AlertsWidget';
-import { StockWidget } from './StockWidget';
 import { NewsWidget } from './NewsWidget';
 import { WIDGET_COLORS, WIDGET_ICONS } from './constants';
+
+const WeatherWidget = lazy(() =>
+  import('./WeatherWidget').then(m => ({ default: m.WeatherWidget }))
+);
+const FlightTrackerWidget = lazy(() =>
+  import('./FlightTrackerWidget').then(m => ({ default: m.FlightTrackerWidget }))
+);
+const AlertsWidget = lazy(() => import('./AlertsWidget').then(m => ({ default: m.AlertsWidget })));
+const StockWidget = lazy(() => import('./StockWidget').then(m => ({ default: m.StockWidget })));
 
 export const widgetRegistry: Record<WidgetType, WidgetDefinition> = {
   weather: {
@@ -57,9 +63,3 @@ export const widgetRegistry: Record<WidgetType, WidgetDefinition> = {
 export function getWidgetDefinition(type: WidgetType): WidgetDefinition {
   return widgetRegistry[type];
 }
-
-export { WeatherWidget } from './WeatherWidget';
-export { FlightTrackerWidget } from './FlightTrackerWidget';
-export { AlertsWidget } from './AlertsWidget';
-export { StockWidget } from './StockWidget';
-export { NewsWidget } from './NewsWidget';

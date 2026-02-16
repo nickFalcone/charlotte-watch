@@ -17,7 +17,7 @@ export const LoadingContainer = styled.div`
 export const LoadingIcon = styled.img`
   width: 32px;
   height: 32px;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 export const LoadingText = styled.span`
@@ -40,7 +40,7 @@ export const ErrorIcon = styled.img`
   width: 32px;
   height: 32px;
   opacity: 0.5;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 export const ErrorText = styled.span`
