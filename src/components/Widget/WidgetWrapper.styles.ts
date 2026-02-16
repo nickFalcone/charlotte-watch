@@ -47,7 +47,7 @@ export const WidgetIcon = styled.img`
   flex-shrink: 0;
   object-fit: contain;
   /* Invert in dark mode so black SVGs stay visible */
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 export const WidgetTitle = styled.h2`
@@ -71,7 +71,7 @@ export const ControlButtonIcon = styled.img`
   width: 18px;
   height: 18px;
   object-fit: contain;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 export const ControlTooltipContent = styled.div`
@@ -79,7 +79,7 @@ export const ControlTooltipContent = styled.div`
   background: ${props => props.theme.colors.backgroundSecondary};
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: ${props => props.theme.shadows.md};
   font-size: 12px;
   line-height: 1.4;
   color: ${props => props.theme.colors.text};
@@ -131,6 +131,6 @@ export const DragHandle = styled.img<{ $locked?: boolean }>`
   height: 18px;
   flex-shrink: 0;
   object-fit: contain;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
   opacity: ${props => (props.$locked ? 0.4 : 1)};
 `;

@@ -65,7 +65,7 @@ export const AnimatedTooltipContent = styled(Tooltip.Content)`
   background: ${props => props.theme.colors.backgroundSecondary};
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: ${props => props.theme.shadows.sm};
   font-size: 12px;
   line-height: 1.4;
   color: ${props => props.theme.colors.text};

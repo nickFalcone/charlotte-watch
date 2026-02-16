@@ -43,7 +43,74 @@ export interface Theme {
     badgeBackground: string;
     badgeText: string;
   };
+  spacing: {
+    xs: string;
+    sm: string;
+    md: string;
+    lg: string;
+    xl: string;
+    xxl: string;
+  };
+  radii: {
+    sm: string;
+    md: string;
+    lg: string;
+    xl: string;
+    full: string;
+  };
+  typography: {
+    xs: string;
+    sm: string;
+    base: string;
+    md: string;
+    lg: string;
+    xl: string;
+    xxl: string;
+  };
+  transitions: {
+    fast: string;
+    base: string;
+  };
+  shadows: {
+    sm: string;
+    md: string;
+    lg: string;
+  };
+  overlay: string;
+  iconFilter: string;
 }
+
+const spacing = {
+  xs: '4px',
+  sm: '8px',
+  md: '12px',
+  lg: '16px',
+  xl: '20px',
+  xxl: '24px',
+};
+
+const radii = {
+  sm: '4px',
+  md: '6px',
+  lg: '8px',
+  xl: '12px',
+  full: '50%',
+};
+
+const typography = {
+  xs: '9px',
+  sm: '11px',
+  base: '13px',
+  md: '14px',
+  lg: '16px',
+  xl: '18px',
+  xxl: '24px',
+};
+
+const transitions = {
+  fast: 'all 0.15s ease',
+  base: 'all 0.2s ease',
+};
 
 export const lightTheme: Theme = {
   name: 'light',
@@ -88,6 +155,17 @@ export const lightTheme: Theme = {
     badgeBackground: '#eff6ff',
     badgeText: '#1e3a8a',
   },
+  spacing,
+  radii,
+  typography,
+  transitions,
+  shadows: {
+    sm: '0 2px 8px rgba(0, 0, 0, 0.15)',
+    md: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    lg: '0 8px 15px -3px rgba(0, 0, 0, 0.1)',
+  },
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  iconFilter: 'none',
 };
 
 export const darkTheme: Theme = {
@@ -133,4 +211,15 @@ export const darkTheme: Theme = {
     badgeBackground: '#0d2137',
     badgeText: '#7dc8ff',
   },
+  spacing,
+  radii,
+  typography,
+  transitions,
+  shadows: {
+    sm: '0 2px 8px rgba(0, 0, 0, 0.3)',
+    md: '0 4px 12px rgba(0, 0, 0, 0.3)',
+    lg: '0 8px 15px -3px rgba(0, 0, 0, 0.3)',
+  },
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  iconFilter: 'invert(1) brightness(0.9)',
 };

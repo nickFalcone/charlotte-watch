@@ -50,7 +50,7 @@ const contentHide = keyframes`
 export const AnimatedDialogOverlay = styled(Dialog.Overlay)`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: ${props => props.theme.overlay};
   z-index: 2000;
 
   &[data-state='open'] {
@@ -118,7 +118,7 @@ export const DialogCloseIcon = styled.img`
   width: 18px;
   height: 18px;
   object-fit: contain;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 export const DialogCloseButton = styled(Dialog.Close)`

@@ -9,7 +9,7 @@ export const InfoIcon = styled.img`
   width: 14px;
   height: 14px;
   object-fit: contain;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 export const InfoTrigger = styled.button`
@@ -46,7 +46,7 @@ export const PopoverContent = styled.div`
   background: ${props => props.theme.colors.backgroundSecondary};
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: ${props => props.theme.shadows.md};
   font-size: 12px;
   line-height: 1.45;
   color: ${props => props.theme.colors.text};

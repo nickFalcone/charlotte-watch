@@ -23,7 +23,7 @@ const IconImg = styled.img<{ size?: number }>`
   vertical-align: middle;
 
   /* Invert colors in dark mode to make black SVGs visible */
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 /**

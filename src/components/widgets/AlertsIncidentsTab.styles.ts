@@ -165,7 +165,7 @@ export const TooltipContent = styled.div`
   background: ${props => props.theme.colors.backgroundSecondary};
   border: 1px solid ${props => props.theme.colors.border};
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: ${props => props.theme.shadows.md};
   font-size: 11px;
   line-height: 1.4;
   color: ${props => props.theme.colors.text};

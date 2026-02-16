@@ -10,7 +10,7 @@ export const ModalOverlay = styled.div`
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(0, 0, 0, 0.7);
+  background: ${props => props.theme.overlay};
   z-index: 2000;
   overflow-y: auto;
 `;
@@ -53,7 +53,7 @@ export const ModalCloseIcon = styled.img`
   width: 18px;
   height: 18px;
   object-fit: contain;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
 
 export const ModalClose = styled.button`

@@ -33,5 +33,5 @@ export const MapRecenterButtonIcon = styled.img`
   width: 16px;
   height: 16px;
   object-fit: contain;
-  filter: ${props => (props.theme.name === 'dark' ? 'invert(1) brightness(0.9)' : 'none')};
+  filter: ${props => props.theme.iconFilter};
 `;
