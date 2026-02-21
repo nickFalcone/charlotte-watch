@@ -49,10 +49,9 @@ export const MECKLENBURG_BOUNDS = {
 } as const;
 
 // Severity thresholds for customer counts (aligned with mapDukeOutageSeverity in types/alerts.ts)
-// Card: show if >= MIN_CARD; Summary (BLUF): include bullet only if at least one outage >= MIN_SUMMARY
 export const DUKE_SEVERITY_THRESHOLDS = {
-  /** Minimum customers to show an alert card (under this: no card, not in summary) */
-  MIN_CARD: 50,
-  /** Minimum customers for a single outage to be included in the AI summary bullet (100+ = moderate+) */
-  MIN_SUMMARY: 100,
+  /** Minimum customers for an individual outage to enter the pipeline (before grouping). Keep low so small outages can combine. */
+  MIN_PIPELINE: 10,
+  /** Minimum combined customers for a group to show a card and appear in the summary. Applied after grouping by area. */
+  MIN_CARD: 100,
 } as const;

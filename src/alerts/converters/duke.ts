@@ -190,7 +190,7 @@ function getAreaKey(outage: DukeOutage): string {
 /**
  * Convert all Duke outages to generic format.
  * Outages in the same area (operationCenterName) are combined. Groups with combined
- * total under MIN_SUMMARY (100) are excluded entirely (no cards, no summary bullets).
+ * total under MIN_CARD (100) are excluded entirely (no cards, no summary bullets).
  */
 export function convertDukeOutagesToGeneric(outages: DukeOutage[]): GenericAlert[] {
   const groups = new Map<string, DukeOutage[]>();
@@ -204,7 +204,7 @@ export function convertDukeOutagesToGeneric(outages: DukeOutage[]): GenericAlert
   const result: GenericAlert[] = [];
   for (const group of groups.values()) {
     const totalCustomers = group.reduce((sum, o) => sum + getDukeCustomersAffected(o), 0);
-    if (totalCustomers < DUKE_SEVERITY_THRESHOLDS.MIN_SUMMARY) continue;
+    if (totalCustomers < DUKE_SEVERITY_THRESHOLDS.MIN_CARD) continue;
 
     if (group.length === 1) {
       result.push(convertDukeOutageToGeneric(group[0]));
