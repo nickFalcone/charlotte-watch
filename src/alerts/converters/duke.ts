@@ -1,5 +1,5 @@
 import type { DukeOutage } from '../../types/duke';
-import { getDukeCustomersAffected } from '../../types/duke';
+import { getDukeCustomersAffected, DUKE_SEVERITY_THRESHOLDS } from '../../types/duke';
 import type { GenericAlert } from '../../types/alerts';
 import { mapDukeOutageSeverity, ALERT_SEVERITY_CONFIG } from '../../types/alerts';
 import { buildMapUrlIfValid } from '../../utils/mapUrl';
@@ -173,7 +173,129 @@ export function convertDukeOutageToGeneric(outage: DukeOutage): GenericAlert {
   };
 }
 
-// Convert all Duke outages to generic format
+/**
+ * Grouping key for aggregating outages by area.
+ * Uses operationCenterName when present; otherwise a geographic bin for nameless outages.
+ */
+function getAreaKey(outage: DukeOutage): string {
+  const name = outage.operationCenterName?.trim();
+  if (name) return name;
+  const lat = outage.deviceLatitudeLocation;
+  const lng = outage.deviceLongitudeLocation;
+  return Number.isFinite(lat) && Number.isFinite(lng)
+    ? `_${(lat as number).toFixed(4)}_${(lng as number).toFixed(4)}`
+    : `_${outage.sourceEventNumber}`;
+}
+
+/**
+ * Convert all Duke outages to generic format.
+ * Outages in the same area (operationCenterName) are combined. Groups with combined
+ * total under MIN_CARD (100) are excluded entirely (no cards, no summary bullets).
+ */
 export function convertDukeOutagesToGeneric(outages: DukeOutage[]): GenericAlert[] {
-  return outages.map(convertDukeOutageToGeneric);
+  const groups = new Map<string, DukeOutage[]>();
+  for (const outage of outages) {
+    const key = getAreaKey(outage);
+    const group = groups.get(key) ?? [];
+    group.push(outage);
+    groups.set(key, group);
+  }
+
+  const result: GenericAlert[] = [];
+  for (const group of groups.values()) {
+    const totalCustomers = group.reduce((sum, o) => sum + getDukeCustomersAffected(o), 0);
+    if (totalCustomers < DUKE_SEVERITY_THRESHOLDS.MIN_CARD) continue;
+
+    if (group.length === 1) {
+      result.push(convertDukeOutageToGeneric(group[0]));
+      continue;
+    }
+
+    result.push(convertDukeOutageGroupToGeneric(group));
+  }
+  return result;
+}
+
+/** Convert a group of outages in the same area to a single combined alert */
+function convertDukeOutageGroupToGeneric(group: DukeOutage[]): GenericAlert {
+  const totalCustomers = group.reduce((sum, o) => sum + getDukeCustomersAffected(o), 0);
+  const severity = mapDukeOutageSeverity(totalCustomers);
+
+  const sortedByRestoration = [...group].sort((a, b) => {
+    const aTime = a.estimatedRestorationTime ? new Date(a.estimatedRestorationTime).getTime() : 0;
+    const bTime = b.estimatedRestorationTime ? new Date(b.estimatedRestorationTime).getTime() : 0;
+    return bTime - aTime;
+  });
+  const latestOutage = sortedByRestoration[0];
+  const estimatedRestoration = formatTimeDisplay(latestOutage.estimatedRestorationTime);
+  const isPlanned = group.every(o => o.outageCause === 'planned');
+
+  const areaName = latestOutage.operationCenterName || 'Mecklenburg County';
+  const eventIds = group.map(o => o.sourceEventNumber).sort();
+  const id = `duke-combined-${areaName.replace(/\s+/g, '-')}-${eventIds.join('_')}`;
+
+  const summaryParts: string[] = [
+    `${totalCustomers.toLocaleString()} customers affected`,
+    `Location: ${areaName}`,
+  ];
+  if (estimatedRestoration) {
+    summaryParts.push(`Est. restoration: ${estimatedRestoration}`);
+  }
+  summaryParts.push(isPlanned ? 'Planned outage' : 'Unplanned outage');
+
+  const descriptionParts: string[] = [];
+  descriptionParts.push(`Type: ${isPlanned ? 'Planned maintenance' : 'Unplanned outage'}`);
+  descriptionParts.push(
+    `Customers affected: ${totalCustomers.toLocaleString()} (${group.length} outage${group.length === 1 ? '' : 's'} combined)`
+  );
+  if (estimatedRestoration) {
+    descriptionParts.push(`Latest estimated restoration: ${estimatedRestoration}`);
+  }
+  descriptionParts.push(`Event IDs: ${eventIds.join(', ')}`);
+
+  const instruction = isPlanned
+    ? 'This is a planned outage for maintenance. Power should be restored by the estimated time.'
+    : 'Duke Energy is aware of these outages and working to restore power. For updates, visit duke-energy.com/outages or call 1-800-769-3766.';
+
+  const baseLat = latestOutage.deviceLatitudeLocation;
+  const baseLng = latestOutage.deviceLongitudeLocation;
+
+  const polygonResult = (() => {
+    const lat = baseLat;
+    const lng = baseLng;
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      const radius = totalCustomers >= 1000 ? 0.008 : totalCustomers >= 100 ? 0.006 : 0.0045;
+      return { polygon: createCirclePolygon(lat, lng, radius) };
+    }
+    return {};
+  })();
+
+  return {
+    id,
+    source: 'duke',
+    category: 'power',
+    severity,
+    title: isPlanned ? 'Planned Power Outage' : 'Power Outage',
+    summary: summaryParts.join(' • '),
+    description: descriptionParts.join('\n'),
+    instruction,
+    affectedArea: areaName,
+    endTime: latestOutage.estimatedRestorationTime
+      ? new Date(latestOutage.estimatedRestorationTime)
+      : undefined,
+    updatedAt: new Date(),
+    url: buildMapUrlIfValid(baseLat, baseLng),
+    metadata: {
+      source: 'duke',
+      customersAffected: totalCustomers,
+      cause: latestOutage.outageCause ?? 'unplanned',
+      planned: isPlanned,
+      eventId: eventIds.join(','),
+      displaySeverity: ALERT_SEVERITY_CONFIG[severity].label,
+      operationCenter: areaName,
+      latitude: Number.isFinite(baseLat) ? baseLat : undefined,
+      longitude: Number.isFinite(baseLng) ? baseLng : undefined,
+      ...polygonResult,
+    },
+  };
 }

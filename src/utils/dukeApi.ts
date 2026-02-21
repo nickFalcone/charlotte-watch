@@ -33,12 +33,12 @@ function filterMecklenburgOutages(outages: DukeOutage[]): DukeOutage[] {
 }
 
 /**
- * Filters outages to only include those meeting minimum customer threshold for alert cards.
- * Under MIN_CARD (10): no card, not in summary. 10+: show card (severity from mapDukeOutageSeverity).
+ * Filters outages to only include those meeting minimum pipeline threshold.
+ * Keeps small outages (10+) so they can combine with others in the same area.
  */
 function filterByMinimumCustomers(outages: DukeOutage[]): DukeOutage[] {
   return outages.filter(
-    outage => getDukeCustomersAffected(outage) >= DUKE_SEVERITY_THRESHOLDS.MIN_CARD
+    outage => getDukeCustomersAffected(outage) >= DUKE_SEVERITY_THRESHOLDS.MIN_PIPELINE
   );
 }
 

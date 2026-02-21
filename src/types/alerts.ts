@@ -261,16 +261,17 @@ export function mapNWSSeverity(nwsSeverity: string, event?: string): AlertSeveri
 
 // Helper to map FAA delay severity based on delay time
 export function mapFAADelaySeverity(delayMinutes: number): AlertSeverity {
-  if (delayMinutes >= 60) return 'critical';
+  if (delayMinutes >= 120) return 'critical';
+  if (delayMinutes >= 60) return 'high';
   if (delayMinutes >= 30) return 'moderate';
   return 'minor';
 }
 
 // Helper to map Duke Energy outage severity based on customers affected
 export function mapDukeOutageSeverity(customersAffected: number): AlertSeverity {
-  if (customersAffected >= 1000) return 'critical';
-  if (customersAffected >= 500) return 'high';
-  if (customersAffected >= 100) return 'moderate';
+  if (customersAffected >= 2000) return 'critical';
+  if (customersAffected >= 1000) return 'high';
+  if (customersAffected >= 250) return 'moderate';
   return 'minor';
 }
 
