@@ -13,7 +13,7 @@ import { callOpenAIResponses } from '../functions/_lib/openaiResponses';
 import newsParsingPrompt from '../src/prompts/newsParsing.json';
 
 const NEWS_PARSING_SYSTEM_PROMPT: string = newsParsingPrompt.systemPrompt;
-const OPENWEBNINJA_HOST = 'real-time-news-data.p.rapidapi.com';
+const NEWS_API_HOST = 'google-trend-news.p.rapidapi.com';
 const CACHE_KEY = 'news:parsed';
 const MAX_ARTICLES_TO_SEND = 100;
 
@@ -27,6 +27,19 @@ export interface Env {
   SITE_URL?: string;
 }
 
+/** Shape returned by google-trend-news API */
+interface GoogleTrendArticle {
+  title: string;
+  description: string;
+  date: string;
+  url: string;
+  source: { name: string; url: string; favicon?: string };
+  authors?: string[];
+  keywords?: string[];
+  thumbnail?: string;
+}
+
+/** Normalized shape for LLM prompt (matches existing prompt field names) */
 interface RawArticle {
   title: string;
   snippet: string;
@@ -34,6 +47,17 @@ interface RawArticle {
   source_name: string;
   link: string;
   article_id?: string;
+}
+
+function normalizeArticle(a: GoogleTrendArticle): RawArticle {
+  return {
+    title: a.title,
+    snippet: a.description,
+    published_datetime_utc: a.date,
+    source_name: a.source?.name ?? '',
+    link: a.url,
+    article_id: a.url,
+  };
 }
 
 interface ParsedNewsEvent {
@@ -87,37 +111,39 @@ async function warmNewsCache(
   if (!rapidApiKey) throw new Error('RAPIDAPI_KEY not configured');
   if (!apiKey) throw new Error(`${provider.toUpperCase()} API key not configured`);
 
-  // 1. Fetch articles from RapidAPI (single query, higher limit = 1 API call per warm)
+  // 1. Fetch articles from Google Trend News (RapidAPI)
   const params = new URLSearchParams({
-    query: 'charlotte north carolina',
-    time_published: '1d',
-    limit: '200',
+    q: 'Charlotte, NC',
+    country: 'us',
+    language: 'en',
   });
   const fetchOptions = {
     method: 'GET' as const,
     headers: {
       'x-rapidapi-key': rapidApiKey,
-      'x-rapidapi-host': OPENWEBNINJA_HOST,
+      'x-rapidapi-host': NEWS_API_HOST,
       Accept: 'application/json',
     },
   };
 
-  let newsResponse = await fetch(`https://${OPENWEBNINJA_HOST}/search?${params}`, fetchOptions);
+  let newsResponse = await fetch(`https://${NEWS_API_HOST}/news?${params}`, fetchOptions);
   if (newsResponse.status === 429) {
     await new Promise(r => setTimeout(r, 2000));
-    newsResponse = await fetch(`https://${OPENWEBNINJA_HOST}/search?${params}`, fetchOptions);
+    newsResponse = await fetch(`https://${NEWS_API_HOST}/news?${params}`, fetchOptions);
   }
   if (!newsResponse.ok) {
     const detail = await newsResponse.text();
     throw new Error(`RapidAPI error: ${newsResponse.status} - ${detail.slice(0, 200)}`);
   }
 
-  const newsJson = (await newsResponse.json()) as { data?: RawArticle[] };
-  const articles = newsJson.data ?? [];
+  const newsJson = (await newsResponse.json()) as {
+    data?: { articles?: GoogleTrendArticle[] };
+  };
+  const articles = (newsJson.data?.articles ?? []).map(normalizeArticle);
 
   if (articles.length === 0) {
     const body = JSON.stringify({ data: [], generatedAt: new Date().toISOString() });
-    await env.CACHE.put(CACHE_KEY, body, { expirationTtl: 43200 });
+    await env.CACHE.put(CACHE_KEY, body, { expirationTtl: 7200 });
     return { success: true, eventCount: 0, articlesFound: 0 };
   }
 
@@ -160,12 +186,12 @@ async function warmNewsCache(
   // 3. Parse response
   const data = parseJsonArray(rawOutput);
 
-  // 4. Write to KV (12h TTL)
+  // 4. Write to KV (2h TTL, cron runs hourly so overlap for resilience)
   const responseBody = JSON.stringify({
     data,
     generatedAt: new Date().toISOString(),
   });
-  await env.CACHE.put(CACHE_KEY, responseBody, { expirationTtl: 43200 });
+  await env.CACHE.put(CACHE_KEY, responseBody, { expirationTtl: 7200 });
 
   return { success: true, eventCount: data.length, articlesFound: articles.length };
 }

@@ -153,8 +153,19 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
   };
 }
 
-const OPENWEBNINJA_HOST = 'real-time-news-data.p.rapidapi.com';
+const NEWS_API_HOST = 'google-trend-news.p.rapidapi.com';
 const MAX_ARTICLES_TO_SEND = 100;
+
+interface GoogleTrendArticleForParse {
+  title: string;
+  description: string;
+  date: string;
+  url: string;
+  source: { name: string; url: string; favicon?: string };
+  authors?: string[];
+  keywords?: string[];
+  thumbnail?: string;
+}
 
 interface RawArticleForParse {
   title: string;
@@ -163,6 +174,17 @@ interface RawArticleForParse {
   source_name: string;
   link: string;
   article_id?: string;
+}
+
+function normalizeNewsArticle(a: GoogleTrendArticleForParse): RawArticleForParse {
+  return {
+    title: a.title,
+    snippet: a.description,
+    published_datetime_utc: a.date,
+    source_name: a.source?.name ?? '',
+    link: a.url,
+    article_id: a.url,
+  };
 }
 
 function buildNewsParseUserPrompt(articles: RawArticleForParse[]): string {
@@ -200,12 +222,12 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
           return;
         }
 
-        // In-memory cache (12h TTL, mirrors KV in production)
+        // In-memory cache (1h TTL, mirrors hourly cron in production)
         const cached = devCacheGet('news:parsed');
         if (cached) {
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Cache-Control', 'private, max-age=43200');
+          res.setHeader('Cache-Control', 'private, max-age=3600');
           res.end(cached);
           return;
         }
@@ -229,31 +251,25 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
 
         try {
           const params = new URLSearchParams({
-            query: 'charlotte north carolina',
-            time_published: '1d',
-            limit: '200',
+            q: 'Charlotte, NC',
+            country: 'us',
+            language: 'en',
           });
           const newsFetchOpts = {
             method: 'GET' as const,
             headers: {
               'x-rapidapi-key': rapidApiKey,
-              'x-rapidapi-host': OPENWEBNINJA_HOST,
+              'x-rapidapi-host': NEWS_API_HOST,
               Accept: 'application/json',
             },
           };
 
           let newsResponse: Response;
           try {
-            newsResponse = await fetch(
-              `https://${OPENWEBNINJA_HOST}/search?${params}`,
-              newsFetchOpts
-            );
+            newsResponse = await fetch(`https://${NEWS_API_HOST}/news?${params}`, newsFetchOpts);
             if (newsResponse.status === 429) {
               await new Promise(r => setTimeout(r, 2000));
-              newsResponse = await fetch(
-                `https://${OPENWEBNINJA_HOST}/search?${params}`,
-                newsFetchOpts
-              );
+              newsResponse = await fetch(`https://${NEWS_API_HOST}/news?${params}`, newsFetchOpts);
             }
           } catch (fetchErr) {
             const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
@@ -286,9 +302,11 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
             return;
           }
 
-          let newsJson: { data?: RawArticleForParse[] };
+          let newsJson: { data?: { articles?: GoogleTrendArticleForParse[] } };
           try {
-            newsJson = (await newsResponse.json()) as { data?: RawArticleForParse[] };
+            newsJson = (await newsResponse.json()) as {
+              data?: { articles?: GoogleTrendArticleForParse[] };
+            };
           } catch (parseErr) {
             console.error('[news-charlotte-parsed] RapidAPI response not JSON:', parseErr);
             res.statusCode = 502;
@@ -296,18 +314,18 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
             res.end(
               JSON.stringify({
                 error: 'Failed to fetch news',
-                message: 'News API returned invalid JSON. Try again or use a smaller limit.',
+                message: 'News API returned invalid JSON. Try again.',
               })
             );
             return;
           }
 
-          const articles = newsJson.data ?? [];
+          const articles = (newsJson.data?.articles ?? []).map(normalizeNewsArticle);
 
           if (articles.length === 0) {
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.setHeader('Cache-Control', 'private, max-age=43200');
+            res.setHeader('Cache-Control', 'private, max-age=3600');
             res.end(JSON.stringify({ data: [], generatedAt: new Date().toISOString() }));
             return;
           }
@@ -409,11 +427,11 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
           const data = parseJsonArrayFromNews(rawOutput);
           const responseBody = JSON.stringify({ data, generatedAt: new Date().toISOString() });
 
-          devCachePut('news:parsed', responseBody, 12 * 60 * 60 * 1000);
+          devCachePut('news:parsed', responseBody, 60 * 60 * 1000);
 
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Cache-Control', 'private, max-age=43200');
+          res.setHeader('Cache-Control', 'private, max-age=3600');
           res.end(responseBody);
         } catch (error) {
           console.error('[news-charlotte-parsed] Error:', error);

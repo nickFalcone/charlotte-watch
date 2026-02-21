@@ -12,12 +12,9 @@ name = "charlotte-monitor-cache-warmer"
 main = "cache-warmer.ts"
 compatibility_date = "2024-01-01"
 
-# Runs every 8 hours: 04:00, 12:00, and 20:00 UTC
-# - 04:00 UTC = 11 PM Eastern (prev day EST) / 12 AM Eastern (EDT)
-# - 12:00 UTC = 7 AM Eastern (EST) / 8 AM Eastern (EDT)
-# - 20:00 UTC = 3 PM Eastern (EST) / 4 PM Eastern (EDT)
+# Runs every hour (24 req/day, well within 30/day rate limit)
 [triggers]
-crons = ["0 4,12,20 * * *"]
+crons = ["0 * * * *"]
 
 # Environment variables
 [vars]
