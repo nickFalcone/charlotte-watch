@@ -260,18 +260,15 @@ function convertDukeOutageGroupToGeneric(group: DukeOutage[]): GenericAlert {
   const baseLat = latestOutage.deviceLatitudeLocation;
   const baseLng = latestOutage.deviceLongitudeLocation;
 
-  const polygonResult =
-    group.length === 1
-      ? extractOutagePolygon(latestOutage)
-      : (() => {
-          const lat = baseLat;
-          const lng = baseLng;
-          if (Number.isFinite(lat) && Number.isFinite(lng)) {
-            const radius = totalCustomers >= 1000 ? 0.008 : totalCustomers >= 100 ? 0.006 : 0.0045;
-            return { polygon: createCirclePolygon(lat, lng, radius) };
-          }
-          return {};
-        })();
+  const polygonResult = (() => {
+    const lat = baseLat;
+    const lng = baseLng;
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      const radius = totalCustomers >= 1000 ? 0.008 : totalCustomers >= 100 ? 0.006 : 0.0045;
+      return { polygon: createCirclePolygon(lat, lng, radius) };
+    }
+    return {};
+  })();
 
   return {
     id,
