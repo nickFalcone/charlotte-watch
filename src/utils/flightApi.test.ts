@@ -235,7 +235,7 @@ describe('convertFAAStatusToAlerts', () => {
     expect(alerts[0].title).toContain('Airport Closure');
   });
 
-  it('maps delay severity by minutes (critical >= 60)', () => {
+  it('maps delay severity by minutes (critical >= 120, high >= 60, moderate >= 30, minor < 30)', () => {
     const status: FAAStatusResponse = {
       airport_status_information: {
         update_time: '2024-01-15T12:00:00Z',
@@ -256,6 +256,6 @@ describe('convertFAAStatusToAlerts', () => {
     };
 
     const alerts = convertFAAStatusToAlerts(status, 'CLT');
-    expect(alerts[0].severity).toBe('critical'); // 75 min >= 60
+    expect(alerts[0].severity).toBe('high'); // 75 min >= 120
   });
 });

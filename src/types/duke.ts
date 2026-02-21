@@ -52,7 +52,7 @@ export const MECKLENBURG_BOUNDS = {
 // Card: show if >= MIN_CARD; Summary (BLUF): include bullet only if at least one outage >= MIN_SUMMARY
 export const DUKE_SEVERITY_THRESHOLDS = {
   /** Minimum customers to show an alert card (under this: no card, not in summary) */
-  MIN_CARD: 10,
+  MIN_CARD: 50,
   /** Minimum customers for a single outage to be included in the AI summary bullet (100+ = moderate+) */
   MIN_SUMMARY: 100,
 } as const;

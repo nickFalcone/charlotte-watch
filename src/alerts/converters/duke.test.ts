@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { convertDukeOutageToGeneric } from './duke';
+import { convertDukeOutageToGeneric, convertDukeOutagesToGeneric } from './duke';
 import type { DukeOutage } from '../../types/duke';
 
 function makeOutage(overrides: Partial<DukeOutage> = {}): DukeOutage {
@@ -17,14 +17,14 @@ function makeOutage(overrides: Partial<DukeOutage> = {}): DukeOutage {
 
 describe('convertDukeOutageToGeneric', () => {
   describe('severity by customer count', () => {
-    it('maps >= 1000 to critical, >= 500 to high, >= 100 to moderate, < 100 to minor', () => {
-      expect(convertDukeOutageToGeneric(makeOutage({ customersAffectedSum: 1500 })).severity).toBe(
+    it('maps >= 2000 to critical, >= 1000 to high, >= 250 to moderate, < 250 to minor', () => {
+      expect(convertDukeOutageToGeneric(makeOutage({ customersAffectedSum: 2000 })).severity).toBe(
         'critical'
       );
-      expect(convertDukeOutageToGeneric(makeOutage({ customersAffectedSum: 500 })).severity).toBe(
+      expect(convertDukeOutageToGeneric(makeOutage({ customersAffectedSum: 1000 })).severity).toBe(
         'high'
       );
-      expect(convertDukeOutageToGeneric(makeOutage({ customersAffectedSum: 150 })).severity).toBe(
+      expect(convertDukeOutageToGeneric(makeOutage({ customersAffectedSum: 250 })).severity).toBe(
         'moderate'
       );
       expect(convertDukeOutageToGeneric(makeOutage({ customersAffectedSum: 50 })).severity).toBe(
@@ -151,5 +151,72 @@ describe('convertDukeOutageToGeneric', () => {
         Math.max(...meta.polygon!.map(p => p[0])) - Math.min(...meta.polygon!.map(p => p[0]));
       expect(latSpread).toBeGreaterThan(0.01);
     });
+  });
+});
+
+describe('convertDukeOutagesToGeneric', () => {
+  it('combines outages in same area and excludes groups under 100 customers', () => {
+    const outages: DukeOutage[] = [
+      makeOutage({
+        sourceEventNumber: 'EVT-068',
+        customersAffectedSum: 68,
+        operationCenterName: 'Newell',
+        estimatedRestorationTime: '2026-02-21T21:00:00Z',
+      }),
+      makeOutage({
+        sourceEventNumber: 'EVT-019',
+        customersAffectedSum: 19,
+        operationCenterName: 'Newell',
+        estimatedRestorationTime: '2026-02-21T20:45:00Z',
+      }),
+    ];
+    const alerts = convertDukeOutagesToGeneric(outages);
+    expect(alerts).toHaveLength(0);
+  });
+
+  it('combines outages in same area when total >= 100', () => {
+    const outages: DukeOutage[] = [
+      makeOutage({
+        sourceEventNumber: 'EVT-068',
+        customersAffectedSum: 68,
+        operationCenterName: 'Newell',
+        estimatedRestorationTime: '2026-02-21T21:00:00Z',
+      }),
+      makeOutage({
+        sourceEventNumber: 'EVT-050',
+        customersAffectedSum: 50,
+        operationCenterName: 'Newell',
+        estimatedRestorationTime: '2026-02-21T20:45:00Z',
+      }),
+    ];
+    const alerts = convertDukeOutagesToGeneric(outages);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].summary).toContain('118 customers affected');
+    expect(alerts[0].summary).toContain('Location: Newell');
+    expect((alerts[0].metadata as { customersAffected?: number })?.customersAffected).toBe(118);
+  });
+
+  it('keeps single outage >= 100 as-is', () => {
+    const alerts = convertDukeOutagesToGeneric([
+      makeOutage({
+        sourceEventNumber: 'EVT-150',
+        customersAffectedSum: 150,
+        operationCenterName: 'Charlotte',
+      }),
+    ]);
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].id).toBe('duke-EVT-150');
+    expect((alerts[0].metadata as { customersAffected?: number })?.customersAffected).toBe(150);
+  });
+
+  it('excludes single outage under 100', () => {
+    const alerts = convertDukeOutagesToGeneric([
+      makeOutage({
+        sourceEventNumber: 'EVT-050',
+        customersAffectedSum: 50,
+        operationCenterName: 'Newell',
+      }),
+    ]);
+    expect(alerts).toHaveLength(0);
   });
 });
