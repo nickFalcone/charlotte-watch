@@ -1,24 +1,11 @@
 import type { Env } from '../_lib/env';
 import { isCMSAlertTweet, isWithinLast24Hours } from '../../src/utils/cmsFilters';
 import { jsonResponse, errorResponse, getCached, setCached } from '../_lib/responseHelpers';
+import { fetchTwitter241Tweets, TwitterApiError } from '../_lib/twitter241';
 
-const TWITTER_API_HOST = 'twitter-api47.p.rapidapi.com';
 const CMS_TWITTER_USER_ID = '199341683';
-// 16h TTL: at most ~1.5 requests/day to stay under 100 requests/month
-// https://rapidapi.com/restocked-gAGxip8a_/api/twitter-api47
-const CACHE_TTL_SECONDS = 57600;
-
-interface TwitterTweet {
-  id: string;
-  text: string;
-  createdAt: string;
-  author?: { id: string };
-  type?: string;
-}
-
-interface TwitterApiResponse {
-  data?: TwitterTweet[];
-}
+// 6h TTL: ~4 requests/day/endpoint, ~240/month total (quota: 500/month)
+const CACHE_TTL_SECONDS = 21600;
 
 export const onRequestGet: PagesFunction<Env> = async context => {
   const apiKey = context.env.RAPIDAPI_KEY;
@@ -33,25 +20,12 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     return jsonResponse(JSON.parse(cached), 200, CACHE_TTL_SECONDS);
   }
 
-  const url = `https://${TWITTER_API_HOST}/v3/user/tweets?userId=${CMS_TWITTER_USER_ID}`;
-
   try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'x-rapidapi-host': TWITTER_API_HOST,
-        'x-rapidapi-key': apiKey,
-      },
+    const allTweets = await fetchTwitter241Tweets({
+      userId: CMS_TWITTER_USER_ID,
+      apiKey,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('CMS Twitter API error:', response.status, errText);
-      return errorResponse(`Twitter API returned ${response.status}`, response.status);
-    }
-
-    const body: TwitterApiResponse = await response.json();
-    const allTweets = body.data ?? [];
     const cmsTweets = allTweets.filter(
       t =>
         t.author?.id === CMS_TWITTER_USER_ID &&
@@ -67,6 +41,9 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     return jsonResponse(responseData, 200, CACHE_TTL_SECONDS);
   } catch (error) {
     console.error('CMS Twitter fetch error:', error);
+    if (error instanceof TwitterApiError) {
+      return errorResponse(`Twitter API returned ${error.status}`, error.status);
+    }
     const message = error instanceof Error ? error.message : 'Unknown error';
     return errorResponse(`Failed to fetch CMS Twitter: ${message}`, 500);
   }

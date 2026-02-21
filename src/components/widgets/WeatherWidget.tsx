@@ -17,7 +17,6 @@ import { WeatherRadarMap } from './WeatherRadarMap';
 import {
   WeatherContainer,
   WeatherMain,
-  NowLabel,
   Temperature,
   FeelsLike,
   WeatherTopRow,
@@ -27,8 +26,6 @@ import {
   ErrorText,
   RetryButton,
   Next12Section,
-  SectionTitleRow,
-  SectionTitle,
   SummaryBox,
   SummaryInlineTrigger,
   WeatherSummaryText,
@@ -115,7 +112,6 @@ export function WeatherWidget(_props: WidgetProps) {
     <WeatherContainer>
       <WeatherTopRow>
         <WeatherMain>
-          <NowLabel>Now</NowLabel>
           <Temperature>{formatTemp(current.temperature_2m)}</Temperature>
           <FeelsLike>Feels like {formatTemp(current.apparent_temperature)}</FeelsLike>
         </WeatherMain>
@@ -145,9 +141,6 @@ export function WeatherWidget(_props: WidgetProps) {
       </WeatherTopRow>
 
       <Next12Section>
-        <SectionTitleRow>
-          <SectionTitle>NEXRAD Radar - Past 4 Hours</SectionTitle>
-        </SectionTitleRow>
         <WeatherRadarMap />
       </Next12Section>
     </WeatherContainer>

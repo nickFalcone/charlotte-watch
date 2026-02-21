@@ -33,15 +33,6 @@ export const WeatherMain = styled.div`
   min-width: 0;
 `;
 
-/** Label for current conditions (e.g. "Now"); matches SectionTitleSentenceCase for alignment. */
-export const NowLabel = styled.span`
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  color: ${props => props.theme.colors.textSecondary};
-`;
-
 export const Temperature = styled.div`
   font-size: 36px;
   font-weight: 700;
@@ -87,19 +78,6 @@ export const Next12Section = styled.div`
   gap: 8px;
   flex: 1 1 200px;
   min-width: 0;
-`;
-
-export const SectionTitleRow = styled.div`
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-`;
-
-export const SectionTitle = styled.div`
-  font-size: 12px;
-  color: ${props => props.theme.colors.textSecondary};
-  font-weight: 600;
-  letter-spacing: 0.5px;
 `;
 
 /** Section title in sentence case for softer hierarchy (e.g. "Next 12 hours"). */
