@@ -3,8 +3,7 @@ import type { ParsedNewsResponse } from '../types/news';
 const NEWS_PARSED_URL = '/api/news-charlotte-parsed';
 
 /**
- * Fetch parsed Charlotte news (fetch + AI parse pipeline).
- * Intended to be called at most twice per day (use staleTime/refetchInterval ~12h).
+ * Fetch parsed Charlotte news from KV cache (populated hourly by cache-warmer).
  */
 export async function fetchCharlotteNewsParsed(signal?: AbortSignal): Promise<ParsedNewsResponse> {
   const response = await fetch(NEWS_PARSED_URL, { signal });

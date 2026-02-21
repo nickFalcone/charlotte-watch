@@ -63,7 +63,7 @@ function mostRecentSourceDate(sources: ParsedNewsSource[]): string | null {
   return new Date(Math.max(...dates)).toISOString();
 }
 
-const TWELVE_HOURS_MS = 1000 * 60 * 60 * 12;
+const ONE_HOUR_MS = 1000 * 60 * 60;
 
 export function NewsWidget(_props: WidgetProps) {
   const { setLastUpdated } = useWidgetMetadata();
@@ -72,12 +72,11 @@ export function NewsWidget(_props: WidgetProps) {
   const { data, dataUpdatedAt, isLoading, isError, error, refetch } = useQuery({
     queryKey: queryKeys.news.charlotteParsed(),
     queryFn: ({ signal }) => fetchCharlotteNewsParsed(signal),
-    refetchInterval: TWELVE_HOURS_MS,
-    staleTime: TWELVE_HOURS_MS,
+    refetchInterval: ONE_HOUR_MS,
+    staleTime: ONE_HOUR_MS,
   });
 
-  // Filter to only show events with 2+ corroborating sources
-  const events = (data?.data ?? []).filter(event => event.sources.length >= 2);
+  const events = data?.data ?? [];
 
   // Sync React Query's dataUpdatedAt timestamp to widget metadata context.
   // MUST use useEffect to avoid infinite render loops.
@@ -119,8 +118,8 @@ export function NewsWidget(_props: WidgetProps) {
           </Popover.Trigger>
           <Popover.Portal>
             <AnimatedPopoverContent side="top" sideOffset={6}>
-              Headlines are read by AI and verified against at least 2 corroborating sources. Always
-              confirm details with source references.
+              Headlines are summarized by AI from local news sources. Always confirm details with
+              source references.
             </AnimatedPopoverContent>
           </Popover.Portal>
         </Popover.Root>
