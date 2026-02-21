@@ -496,7 +496,7 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
         if (cached) {
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.setHeader('Cache-Control', `private, max-age=${21600}`);
           res.end(cached);
           return;
         }
@@ -536,7 +536,7 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
           devCachePut('cats-twitter', responseBody, CATS_TWITTER_CACHE_TTL_MS);
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.setHeader('Cache-Control', `private, max-age=${21600}`);
           res.end(responseBody);
         } catch (error) {
           console.error('[cats-twitter] Error:', error);
@@ -568,7 +568,7 @@ function cmsTwitterPlugin(env: Record<string, string>): Plugin {
         if (cached) {
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.setHeader('Cache-Control', `private, max-age=${21600}`);
           res.end(cached);
           return;
         }
@@ -608,7 +608,7 @@ function cmsTwitterPlugin(env: Record<string, string>): Plugin {
           devCachePut('cms-twitter', responseBody, CMS_TWITTER_CACHE_TTL_MS);
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.setHeader('Cache-Control', `private, max-age=${21600}`);
           res.end(responseBody);
         } catch (error) {
           console.error('[cms-twitter] Error:', error);
