@@ -256,6 +256,6 @@ describe('convertFAAStatusToAlerts', () => {
     };
 
     const alerts = convertFAAStatusToAlerts(status, 'CLT');
-    expect(alerts[0].severity).toBe('high'); // 75 min >= 120
+    expect(alerts[0].severity).toBe('high'); // 75 min is high (>= 60, < 120)
   });
 });
