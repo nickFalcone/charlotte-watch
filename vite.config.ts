@@ -432,9 +432,53 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
 }
 
 // Dev-only plugin: GET /api/cats-twitter (RapidAPI) so Vite dev returns JSON instead of index.html
-const TWITTER_API_HOST = 'twitter-api47.p.rapidapi.com';
+const TWITTER241_HOST = 'twitter241.p.rapidapi.com';
 const CATS_TWITTER_USER_ID = '868028628';
-const CATS_TWITTER_CACHE_TTL_MS = 43200 * 1000; // 12h, match production
+const CATS_TWITTER_CACHE_TTL_MS = 21600 * 1000; // 6h, match production
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function parseTwitter241Tweets(
+  body: any
+): Array<{ id: string; text: string; createdAt: string; author?: { id: string }; type?: string }> {
+  const instructions: any[] = body?.result?.timeline?.instructions ?? [];
+  const tweets: Array<{
+    id: string;
+    text: string;
+    createdAt: string;
+    author?: { id: string };
+    type?: string;
+  }> = [];
+
+  for (const instruction of instructions) {
+    for (const entry of instruction.entries ?? []) {
+      const content = entry?.content;
+      if (!content || content.__typename !== 'TimelineTimelineItem') continue;
+      const itemContent = content.itemContent;
+      if (!itemContent || itemContent.__typename !== 'TimelineTweet') continue;
+      if (itemContent.promotedMetadata) continue;
+      const tweetResult = itemContent.tweet_results?.result;
+      if (!tweetResult) continue;
+      const result =
+        tweetResult.__typename === 'TweetWithVisibilityResults' ? tweetResult.tweet : tweetResult;
+      const legacy = result?.legacy;
+      if (!legacy) continue;
+      const id = result.rest_id ?? legacy.id_str;
+      const text = legacy.full_text;
+      const createdAt = legacy.created_at;
+      const authorId = legacy.user_id_str ?? result.core?.user_results?.result?.rest_id;
+      if (!id || !text || !createdAt) continue;
+      tweets.push({
+        id,
+        text,
+        createdAt,
+        author: authorId ? { id: authorId } : undefined,
+        type: legacy.is_quote_status ? 'quote' : 'tweet',
+      });
+    }
+  }
+  return tweets;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 function catsTwitterPlugin(env: Record<string, string>): Plugin {
   return {
@@ -452,7 +496,7 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
         if (cached) {
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.setHeader('Cache-Control', `private, max-age=${21600}`);
           res.end(cached);
           return;
         }
@@ -466,10 +510,10 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
         }
 
         try {
-          const url = `https://${TWITTER_API_HOST}/v3/user/tweets?userId=${CATS_TWITTER_USER_ID}`;
+          const url = `https://${TWITTER241_HOST}/user-tweets?user=${CATS_TWITTER_USER_ID}&count=20`;
           const response = await fetch(url, {
             headers: {
-              'x-rapidapi-host': TWITTER_API_HOST,
+              'x-rapidapi-host': TWITTER241_HOST,
               'x-rapidapi-key': apiKey,
             },
           });
@@ -479,15 +523,8 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
             res.end(JSON.stringify({ error: `Twitter API ${response.status}`, data: [] }));
             return;
           }
-          const body = (await response.json()) as {
-            data?: Array<{
-              author?: { id: string };
-              type?: string;
-              text: string;
-              createdAt: string;
-            }>;
-          };
-          const allTweets = body.data ?? [];
+          const body = await response.json();
+          const allTweets = parseTwitter241Tweets(body);
           const catsTweets = allTweets.filter(
             t =>
               t.author?.id === CATS_TWITTER_USER_ID &&
@@ -499,7 +536,7 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
           devCachePut('cats-twitter', responseBody, CATS_TWITTER_CACHE_TTL_MS);
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.setHeader('Cache-Control', `private, max-age=${21600}`);
           res.end(responseBody);
         } catch (error) {
           console.error('[cats-twitter] Error:', error);
@@ -513,7 +550,7 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
 }
 
 const CMS_TWITTER_USER_ID = '199341683';
-const CMS_TWITTER_CACHE_TTL_MS = 43200000; // 12 hours
+const CMS_TWITTER_CACHE_TTL_MS = 21600000; // 6h, match production
 
 function cmsTwitterPlugin(env: Record<string, string>): Plugin {
   return {
@@ -531,7 +568,7 @@ function cmsTwitterPlugin(env: Record<string, string>): Plugin {
         if (cached) {
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.setHeader('Cache-Control', `private, max-age=${21600}`);
           res.end(cached);
           return;
         }
@@ -545,10 +582,10 @@ function cmsTwitterPlugin(env: Record<string, string>): Plugin {
         }
 
         try {
-          const url = `https://${TWITTER_API_HOST}/v3/user/tweets?userId=${CMS_TWITTER_USER_ID}`;
+          const url = `https://${TWITTER241_HOST}/user-tweets?user=${CMS_TWITTER_USER_ID}&count=20`;
           const response = await fetch(url, {
             headers: {
-              'x-rapidapi-host': TWITTER_API_HOST,
+              'x-rapidapi-host': TWITTER241_HOST,
               'x-rapidapi-key': apiKey,
             },
           });
@@ -558,15 +595,8 @@ function cmsTwitterPlugin(env: Record<string, string>): Plugin {
             res.end(JSON.stringify({ error: `Twitter API ${response.status}`, data: [] }));
             return;
           }
-          const body = (await response.json()) as {
-            data?: Array<{
-              author?: { id: string };
-              type?: string;
-              text: string;
-              createdAt: string;
-            }>;
-          };
-          const allTweets = body.data ?? [];
+          const body = await response.json();
+          const allTweets = parseTwitter241Tweets(body);
           const cmsTweets = allTweets.filter(
             t =>
               t.author?.id === CMS_TWITTER_USER_ID &&
@@ -578,7 +608,7 @@ function cmsTwitterPlugin(env: Record<string, string>): Plugin {
           devCachePut('cms-twitter', responseBody, CMS_TWITTER_CACHE_TTL_MS);
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
-          res.setHeader('Cache-Control', `private, max-age=${43200}`);
+          res.setHeader('Cache-Control', `private, max-age=${21600}`);
           res.end(responseBody);
         } catch (error) {
           console.error('[cms-twitter] Error:', error);
