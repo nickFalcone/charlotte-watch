@@ -9,6 +9,7 @@ import powerIconUrl from '../assets/icons/power.svg';
 import hurricaneIconUrl from '../assets/icons/hurricane.svg';
 import planeIconUrl from '../assets/icons/plane.svg';
 import catsIconUrl from '../assets/icons/cats.svg';
+import fireIconUrl from '../assets/icons/fire.svg';
 import schoolIconUrl from '../assets/icons/school.svg';
 
 /**
@@ -31,7 +32,7 @@ const IconImg = styled.img<{ size?: number }>`
  */
 const SOURCE_ICON_MAP: Partial<Record<AlertSource, string>> = {
   cmpd: policeIconUrl,
-  cfd: trafficIconUrl,
+  cfd: fireIconUrl,
   'here-flow': trafficIconUrl,
   traffic: trafficIconUrl,
   ncdot: constructionIconUrl,
