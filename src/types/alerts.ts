@@ -10,6 +10,7 @@ export type AlertSource =
   | 'cats'
   | 'cmpd'
   | 'cms'
+  | 'cfd'
   | 'here-flow'
   | 'traffic'
   | 'system'
@@ -25,6 +26,7 @@ export const ALERT_SOURCE_LABELS: Record<AlertSource, string> = {
   cats: 'CATS',
   cmpd: 'CMPD',
   cms: 'CMS',
+  cfd: 'CFD',
   'here-flow': 'Traffic',
   traffic: 'Traffic',
   system: 'System',
@@ -40,6 +42,7 @@ export const ALERT_SOURCE_FULL_NAMES: Record<AlertSource, string> = {
   cats: 'Charlotte Area Transit System',
   cmpd: 'Charlotte-Mecklenburg Police',
   cms: 'Charlotte-Mecklenburg Schools',
+  cfd: 'Charlotte Fire Department',
   'here-flow': 'HERE Traffic Flow',
   traffic: 'Traffic',
   system: 'System',
@@ -147,6 +150,15 @@ export type AlertMetadata =
   | {
       source: 'cms';
       tweetId: string;
+      displaySeverity?: string;
+    }
+  | {
+      source: 'cfd';
+      tweetId: string;
+      /** Parsed address or intersection from tweet (e.g. "1500 block Dean St") */
+      location?: string;
+      latitude?: number;
+      longitude?: number;
       displaySeverity?: string;
     }
   | {

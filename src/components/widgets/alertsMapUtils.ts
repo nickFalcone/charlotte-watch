@@ -18,6 +18,7 @@ export function getAlertCoordinates(alert: GenericAlert): { lat: number; lng: nu
     (alert.metadata.source === 'ncdot' ||
       alert.metadata.source === 'cmpd' ||
       alert.metadata.source === 'duke' ||
+      alert.metadata.source === 'cfd' ||
       alert.metadata.source === 'here-flow') &&
     'latitude' in alert.metadata &&
     'longitude' in alert.metadata &&

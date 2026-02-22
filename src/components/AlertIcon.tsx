@@ -31,6 +31,7 @@ const IconImg = styled.img<{ size?: number }>`
  */
 const SOURCE_ICON_MAP: Partial<Record<AlertSource, string>> = {
   cmpd: policeIconUrl,
+  cfd: trafficIconUrl,
   'here-flow': trafficIconUrl,
   traffic: trafficIconUrl,
   ncdot: constructionIconUrl,

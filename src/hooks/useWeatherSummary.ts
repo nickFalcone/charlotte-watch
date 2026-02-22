@@ -1,29 +1,28 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { OpenMeteoResponse, OpenMeteoAirQualityResponse } from '../types/weather';
+import type { OpenMeteoResponse } from '../types';
 import { queryKeys } from '../utils/queryKeys';
-import { computeWeatherSummaryHash, fetchWeatherSummary } from '../utils/weatherSummaryApi';
-
-interface UseWeatherSummaryOptions {
-  enabled?: boolean;
-  airQuality?: OpenMeteoAirQualityResponse;
-}
+import { buildWeatherSummaryPayload, fetchWeatherSummary } from '../utils/weatherSummaryApi';
 
 /**
- * Hook to fetch AI-generated weather summary for the next 12 hours.
- * Uses hash-based caching keyed by current + hourly data; optionally includes air quality forecast.
+ * Hook to fetch an AI-generated 12-hour weather briefing.
+ *
+ * Uses hash-based caching: the query key includes a hash of the hourly
+ * forecast window. The summary is only regenerated when the forecast data
+ * changes or the hour rolls over (shifting the 12-hour window).
+ *
+ * @param weather - Open-Meteo response; pass undefined while loading
  */
-export function useWeatherSummary(
-  weather: OpenMeteoResponse | undefined,
-  options: UseWeatherSummaryOptions = {}
-) {
-  const { enabled = true, airQuality } = options;
-  const hash = weather ? computeWeatherSummaryHash(weather, airQuality) : '';
+export function useWeatherSummary(weather: OpenMeteoResponse | undefined) {
+  const payload = useMemo(() => (weather ? buildWeatherSummaryPayload(weather) : null), [weather]);
 
   return useQuery({
-    queryKey: queryKeys.weather.summary(hash),
-    queryFn: ({ signal }) => fetchWeatherSummary(weather!, hash, signal, airQuality),
-    enabled: enabled && !!weather && hash.length > 0,
-    staleTime: 1000 * 60 * 15, // 15 minutes
+    queryKey: queryKeys.weather.summary(payload?.hash ?? ''),
+    queryFn: ({ signal }) => fetchWeatherSummary(payload!, signal),
+    enabled: !!payload,
+    // Cache forever - hash-based invalidation handles freshness
+    staleTime: Infinity,
+    // Keep cached summary while fetching a new one
     placeholderData: previousData => previousData,
   });
 }

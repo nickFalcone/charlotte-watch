@@ -8,6 +8,8 @@ import {
 } from './src/utils/aiPrompts';
 import { isServiceAlertTweet, isWithinLast24Hours } from './src/utils/catsFilters';
 import { isCMSAlertTweet } from './src/utils/cmsFilters';
+import { isCFDIncidentTweet } from './src/utils/cfdFilters';
+import { extractLocationFromTweet } from './src/utils/cfdAddressParser';
 
 // In-memory TTL cache for dev plugins (mirrors KV caching in production)
 interface DevCacheEntry {
@@ -570,6 +572,9 @@ function catsTwitterPlugin(env: Record<string, string>): Plugin {
 const CMS_TWITTER_USER_ID = '199341683';
 const CMS_TWITTER_CACHE_TTL_MS = 21600000; // 6h, match production
 
+const CFD_TWITTER_USER_ID = '23398654';
+const CFD_TWITTER_CACHE_TTL_MS = 21600000; // 6h, match production
+
 function cmsTwitterPlugin(env: Record<string, string>): Plugin {
   return {
     name: 'cms-twitter',
@@ -630,6 +635,79 @@ function cmsTwitterPlugin(env: Record<string, string>): Plugin {
           res.end(responseBody);
         } catch (error) {
           console.error('[cms-twitter] Error:', error);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ data: [] }));
+        }
+      });
+    },
+  };
+}
+
+function cfdTwitterPlugin(env: Record<string, string>): Plugin {
+  return {
+    name: 'cfd-twitter',
+    configureServer(server) {
+      server.middlewares.use('/api/cfd-twitter', async (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        const cached = devCacheGet('cfd-twitter');
+        if (cached) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', `private, max-age=${21600}`);
+          res.end(cached);
+          return;
+        }
+
+        const apiKey = env.RAPIDAPI_KEY;
+        if (!apiKey) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ data: [] }));
+          return;
+        }
+
+        try {
+          const url = `https://${TWITTER241_HOST}/user-tweets?user=${CFD_TWITTER_USER_ID}&count=20`;
+          const response = await fetch(url, {
+            headers: {
+              'x-rapidapi-host': TWITTER241_HOST,
+              'x-rapidapi-key': apiKey,
+            },
+          });
+          if (!response.ok) {
+            res.statusCode = response.status;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: `Twitter API ${response.status}`, data: [] }));
+            return;
+          }
+          const body = await response.json();
+          const allTweets = parseTwitter241Tweets(body);
+          const filtered = allTweets.filter(
+            t =>
+              t.author?.id === CFD_TWITTER_USER_ID &&
+              (t.type === 'tweet' || t.type === 'quote') &&
+              isCFDIncidentTweet(t.text) &&
+              isWithinLast24Hours(t.createdAt)
+          );
+          const cfdTweets = filtered.map(t => ({
+            ...t,
+            location: extractLocationFromTweet(t.text),
+          }));
+          const responseBody = JSON.stringify({ data: cfdTweets });
+          devCachePut('cfd-twitter', responseBody, CFD_TWITTER_CACHE_TTL_MS);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Cache-Control', `private, max-age=${21600}`);
+          res.end(responseBody);
+        } catch (error) {
+          console.error('[cfd-twitter] Error:', error);
           res.statusCode = 200;
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({ data: [] }));
@@ -785,27 +863,21 @@ function aiWeatherSummaryPlugin(env: Record<string, string>): Plugin {
         }
 
         type HourSlot = {
-          time: string;
+          timeLabel: string;
           temperature_2m: number;
           precipitation_probability: number;
           wind_speed_10m: number;
         };
-        type AirQualitySlot = { time: string; european_aqi: number };
         let requestData: {
+          currentTime: string;
           current: {
-            time?: string;
             temperature_2m: number;
             apparent_temperature: number;
             relative_humidity_2m: number;
             wind_speed_10m: number;
-            wind_direction_10m: number;
-            weather_code: number;
           };
           hourly: HourSlot[];
-          past_12h?: HourSlot[];
           hash: string;
-          air_quality_next_12h?: AirQualitySlot[];
-          air_quality_past_12h?: AirQualitySlot[];
         };
         try {
           requestData = JSON.parse(body);
@@ -827,52 +899,23 @@ function aiWeatherSummaryPlugin(env: Record<string, string>): Plugin {
           }
         }
 
-        const { current, hourly, past_12h } = requestData;
+        const { currentTime, current, hourly } = requestData;
         const hourlySlice = (hourly || []).slice(0, 12);
-        const pastSlice = (past_12h || []).slice(0, 12);
-        const firstTemp = current.temperature_2m;
-        const lastTemp =
-          hourlySlice.length > 0
-            ? hourlySlice[hourlySlice.length - 1].temperature_2m
-            : current.temperature_2m;
-        const first = Math.round(firstTemp);
-        const last = Math.round(lastTemp);
-        const temperaturePhrase =
-          last > first
-            ? `Temperatures rising from ${first} to ${last} F`
-            : last < first
-              ? `Temperatures falling from ${first} to ${last} F`
-              : `Temperatures steady around ${first} F`;
+        const rows = hourlySlice
+          .map(
+            h =>
+              `${h.timeLabel}: ${Math.round(h.temperature_2m)}°F, ${h.precipitation_probability}% precip, ${Math.round(h.wind_speed_10m)} mph wind`
+          )
+          .join('\n');
 
-        const summarizeBlock = (slots: HourSlot[]) => {
-          if (slots.length === 0) return 'no data';
-          const temps = slots.map(s => s.temperature_2m);
-          const precip = slots.map(s => s.precipitation_probability);
-          const wind = slots.map(s => s.wind_speed_10m);
-          const tempMin = Math.round(Math.min(...temps));
-          const tempMax = Math.round(Math.max(...temps));
-          const precipMax = Math.round(Math.max(...precip));
-          const windAvg = Math.round(wind.reduce((a, b) => a + b, 0) / wind.length);
-          return `temp ${tempMin}-${tempMax} F, precip up to ${precipMax}%, wind ~${windAvg} mph`;
-        };
-
-        const currentBlock = `Current conditions (now): ${Math.round(current.temperature_2m)} F (feels ${Math.round(current.apparent_temperature)} F), humidity ${current.relative_humidity_2m}%, wind ${Math.round(current.wind_speed_10m)} mph.`;
-        const next12Summary = summarizeBlock(hourlySlice);
-        const past12Summary = summarizeBlock(pastSlice);
-        let userPrompt = `Temperature trend (for context): ${temperaturePhrase}\n\n${currentBlock}\n\nNext 12 hours (forecast): ${next12Summary}\n\nPrior 12 hours (for comparison): ${past12Summary}`;
-
-        const aqNext = requestData.air_quality_next_12h ?? [];
-        const aqPast = requestData.air_quality_past_12h ?? [];
-        if (aqNext.length > 0 || aqPast.length > 0) {
-          const summarizeAqi = (slots: AirQualitySlot[]) => {
-            if (slots.length === 0) return 'no data';
-            const values = slots.map(s => s.european_aqi);
-            const min = Math.round(Math.min(...values));
-            const max = Math.round(Math.max(...values));
-            return `European AQI ${min}-${max}`;
-          };
-          userPrompt += `\n\nAir quality (European AQI): Next 12h: ${summarizeAqi(aqNext)}. Prior 12h: ${summarizeAqi(aqPast)}. Mention air quality ONLY when AQI exceeds 100 (see system prompt).`;
-        }
+        const userPrompt = [
+          `Current time: ${currentTime}`,
+          ``,
+          `Current: ${Math.round(current.temperature_2m)}°F (feels ${Math.round(current.apparent_temperature)}°F), humidity ${current.relative_humidity_2m}%, wind ${Math.round(current.wind_speed_10m)} mph`,
+          ``,
+          `Next 12 hours:`,
+          rows,
+        ].join('\n');
 
         try {
           const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -938,6 +981,128 @@ function aiWeatherSummaryPlugin(env: Record<string, string>): Plugin {
   };
 }
 
+const GOOGLE_AIR_QUALITY_CACHE_TTL_MS = 15 * 60 * 1000; // 15 min
+const GOOGLE_POLLEN_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+// Dev-only plugin for Google Air Quality (mirrors functions/api/google-air-quality.ts)
+function googleAirQualityPlugin(env: Record<string, string>): Plugin {
+  return {
+    name: 'google-air-quality',
+    configureServer(server) {
+      server.middlewares.use('/api/google-air-quality', async (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        const cached = devCacheGet('google-air-quality');
+        if (cached) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(cached);
+          return;
+        }
+
+        const apiKey = env.GOOGLE_API_KEY;
+        if (!apiKey) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ indexes: [], pollutants: [] }));
+          return;
+        }
+
+        try {
+          const upstream = await fetch(
+            `https://airquality.googleapis.com/v1/currentConditions:lookup?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                universalAqi: true,
+                location: { latitude: 35.2271, longitude: -80.8431 },
+                extraComputations: ['POLLUTANT_CONCENTRATION', 'LOCAL_AQI'],
+              }),
+            }
+          );
+          if (!upstream.ok) {
+            throw new Error(`Google Air Quality API error: ${upstream.status}`);
+          }
+          const data = await upstream.text();
+          devCachePut('google-air-quality', data, GOOGLE_AIR_QUALITY_CACHE_TTL_MS);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(data);
+        } catch (error) {
+          console.error('[google-air-quality] Error:', error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Failed to fetch air quality' }));
+        }
+      });
+    },
+  };
+}
+
+// Dev-only plugin for Google Pollen (mirrors functions/api/google-pollen.ts)
+function googlePollenPlugin(env: Record<string, string>): Plugin {
+  return {
+    name: 'google-pollen',
+    configureServer(server) {
+      server.middlewares.use('/api/google-pollen', async (req, res) => {
+        if (req.method !== 'GET') {
+          res.statusCode = 405;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Method not allowed' }));
+          return;
+        }
+
+        const cached = devCacheGet('google-pollen');
+        if (cached) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(cached);
+          return;
+        }
+
+        const apiKey = env.GOOGLE_API_KEY;
+        if (!apiKey) {
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ dailyInfo: [] }));
+          return;
+        }
+
+        try {
+          const params = new URLSearchParams({
+            key: apiKey,
+            'location.longitude': '-80.8431',
+            'location.latitude': '35.2271',
+            days: '1',
+          });
+          const upstream = await fetch(
+            `https://pollen.googleapis.com/v1/forecast:lookup?${params}`
+          );
+          if (!upstream.ok) {
+            throw new Error(`Google Pollen API error: ${upstream.status}`);
+          }
+          const data = await upstream.text();
+          devCachePut('google-pollen', data, GOOGLE_POLLEN_CACHE_TTL_MS);
+          res.statusCode = 200;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(data);
+        } catch (error) {
+          console.error('[google-pollen] Error:', error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Failed to fetch pollen data' }));
+        }
+      });
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   // Load env vars (including non-VITE_ prefixed ones for proxy config)
   const env = loadEnv(mode, process.cwd(), '');
@@ -948,8 +1113,11 @@ export default defineConfig(({ mode }) => {
       newsCharlotteParsedPlugin(env),
       catsTwitterPlugin(env),
       cmsTwitterPlugin(env),
+      cfdTwitterPlugin(env),
       aiSummarizationPlugin(env),
       aiWeatherSummaryPlugin(env),
+      googleAirQualityPlugin(env),
+      googlePollenPlugin(env),
       dukeOutagePlugin(env),
     ],
     test: {

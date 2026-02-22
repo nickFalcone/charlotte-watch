@@ -19,6 +19,17 @@ export interface OpenMeteoHourlyWeather {
   wind_direction_10m: number[];
 }
 
+export interface OpenMeteoDailyWeather {
+  time: string[];
+  weather_code: number[];
+  temperature_2m_max: number[];
+  temperature_2m_min: number[];
+  precipitation_probability_max: number[];
+  wind_speed_10m_max: number[];
+  wind_direction_10m_dominant: number[];
+  uv_index_max: number[];
+}
+
 export interface OpenMeteoResponse {
   latitude: number;
   longitude: number;
@@ -31,41 +42,8 @@ export interface OpenMeteoResponse {
   current: OpenMeteoCurrentWeather;
   hourly_units?: Record<string, string>;
   hourly?: OpenMeteoHourlyWeather;
-}
-
-export interface OpenMeteoAirQualityCurrent {
-  time: string;
-  interval: number;
-  european_aqi: number;
-  pm10: number;
-  pm2_5: number;
-  carbon_monoxide: number;
-  nitrogen_dioxide: number;
-  sulphur_dioxide: number;
-  ozone: number;
-  dust: number;
-  uv_index: number;
-  uv_index_clear_sky: number;
-}
-
-export interface OpenMeteoAirQualityHourly {
-  time: string[];
-  european_aqi: number[];
-  uv_index?: number[];
-}
-
-export interface OpenMeteoAirQualityResponse {
-  latitude: number;
-  longitude: number;
-  generationtime_ms: number;
-  utc_offset_seconds: number;
-  timezone: string;
-  timezone_abbreviation: string;
-  elevation: number;
-  current_units: Record<string, string>;
-  current: OpenMeteoAirQualityCurrent;
-  hourly?: OpenMeteoAirQualityHourly;
-  hourly_units?: Record<string, string>;
+  daily_units?: Record<string, string>;
+  daily?: OpenMeteoDailyWeather;
 }
 
 // NWS API Types
@@ -123,3 +101,57 @@ export const ALERT_SEVERITY_COLORS: Record<string, string> = {
   Minor: '#eab308',
   Unknown: '#6b7280',
 };
+
+// Google Air Quality API
+export interface GoogleAirQualityIndex {
+  code: string; // 'usa_epa', 'uaqi'
+  displayName: string;
+  aqi: number;
+  aqiDisplay: string;
+  color: { red?: number; green?: number; blue?: number };
+  category: string; // 'Good', 'Moderate', 'Unhealthy for Sensitive Groups', etc.
+  dominantPollutant?: string;
+}
+
+export interface GoogleAirQualityPollutant {
+  code: string; // 'pm25', 'pm10', 'no2', 'o3', 'so2', 'co'
+  displayName: string;
+  fullName: string;
+  concentration: {
+    value: number;
+    units: string; // 'MICROGRAMS_PER_CUBIC_METER', 'PARTS_PER_BILLION'
+  };
+}
+
+export interface GoogleAirQualityResponse {
+  dateTime: string;
+  regionCode: string;
+  indexes: GoogleAirQualityIndex[];
+  pollutants: GoogleAirQualityPollutant[];
+}
+
+// Google Pollen API
+export interface GooglePollenIndexInfo {
+  code: string; // 'UPI'
+  displayName: string;
+  value: number; // 0–5
+  category: string; // 'None', 'Very Low', 'Low', 'Moderate', 'High', 'Very High'
+  indexDescription: string;
+}
+
+export interface GooglePollenTypeInfo {
+  code: string; // 'GRASS', 'TREE', 'WEED'
+  displayName: string;
+  inSeason: boolean;
+  indexInfo?: GooglePollenIndexInfo;
+}
+
+export interface GooglePollenDailyInfo {
+  date: { year: number; month: number; day: number };
+  pollenTypeInfo: GooglePollenTypeInfo[];
+}
+
+export interface GooglePollenResponse {
+  regionCode: string;
+  dailyInfo: GooglePollenDailyInfo[];
+}

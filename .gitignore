@@ -5,3 +5,4 @@ build
 .env*
 .dev.vars
 .wrangler
+brainstorm.md

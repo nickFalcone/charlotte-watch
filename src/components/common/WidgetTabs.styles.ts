@@ -49,7 +49,7 @@ export const TabTrigger = styled(Tabs.Trigger)`
 export const TabContent = styled(Tabs.Content)`
   flex: 1;
   overflow: auto;
-  padding-top: 16px;
+  padding: 16px 12px 0 0;
 
   &[data-state='inactive'] {
     display: none;
@@ -59,7 +59,7 @@ export const TabContent = styled(Tabs.Content)`
 export const TabContentForceMount = styled.div<{ $active: boolean }>`
   flex: 1;
   overflow: auto;
-  padding-top: 16px;
+  padding: 16px 12px 0 0;
   display: ${props => (props.$active ? 'flex' : 'none')};
   flex-direction: column;
 `;
