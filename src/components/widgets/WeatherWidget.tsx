@@ -114,15 +114,16 @@ function windDirectionLabel(degrees: number): string {
   return dirs[Math.round(degrees / 45) % 8];
 }
 
-function formatDayName(isoDate: string): string {
-  const date = new Date(`${isoDate}T12:00:00`);
-  const today = new Date();
-  const isToday =
-    date.getFullYear() === today.getFullYear() &&
-    date.getMonth() === today.getMonth() &&
-    date.getDate() === today.getDate();
-  if (isToday) return 'Today';
-  return date.toLocaleDateString('en-US', { weekday: 'short' });
+/**
+ * Format forecast date as "Today" or short weekday (e.g. "Wed").
+ * Uses Charlotte's current date for "Today" detection and UTC for weekday
+ * to avoid timezone-dependent behavior for users in different timezones.
+ */
+function formatDayName(isoDate: string, charlotteDateStr: string): string {
+  if (isoDate === charlotteDateStr) return 'Today';
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return days[new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay()];
 }
 
 // EPA AQI breakpoints (upper bound per category) by pollutant code and native unit
@@ -242,6 +243,11 @@ export function WeatherWidget(_props: WidgetProps) {
   const daily = weather.daily;
   const todayUvMax = daily?.uv_index_max[0];
 
+  // Charlotte's current date (YYYY-MM-DD) for timezone-correct "Today" labels
+  const charlotteDateStr = new Date(Date.now() + weather.utc_offset_seconds * 1000)
+    .toISOString()
+    .slice(0, 10);
+
   // Build ordered pollutants map for consistent display
   const pollutantMap = new Map((airQuality?.pollutants ?? []).map(p => [p.code, p]));
 
@@ -314,7 +320,7 @@ export function WeatherWidget(_props: WidgetProps) {
               </ForecastDayHeaderRow>
               {daily.time.map((date, i) => (
                 <ForecastDayRow key={date} role="listitem">
-                  <ForecastDayName>{formatDayName(date)}</ForecastDayName>
+                  <ForecastDayName>{formatDayName(date, charlotteDateStr)}</ForecastDayName>
                   <ForecastCondition>{wmoDescription(daily.weather_code[i])}</ForecastCondition>
                   <ForecastHighLow>
                     {formatTemp(daily.temperature_2m_max[i])} /{' '}
