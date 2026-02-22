@@ -65,13 +65,18 @@ import {
 function wmoDescription(code: number): string {
   if (code === 0) return 'Clear';
   if (code <= 3) return 'Partly cloudy';
-  if (code <= 48) return 'Fog';
-  if (code <= 67) return 'Rain';
-  if (code <= 77) return 'Snow';
-  if (code <= 82) return 'Showers';
-  if (code <= 86) return 'Snow showers';
-  if (code >= 95) return 'Thunderstorm';
-  return 'Cloudy';
+  if (code === 45 || code === 48) return 'Fog';
+  if (code >= 51 && code <= 55) return 'Drizzle';
+  if (code === 56 || code === 57) return 'Freezing drizzle';
+  if (code >= 61 && code <= 65) return 'Rain';
+  if (code === 66 || code === 67) return 'Freezing rain';
+  if (code >= 71 && code <= 75) return 'Snow';
+  if (code === 77) return 'Snow grains';
+  if (code >= 80 && code <= 82) return 'Showers';
+  if (code === 85 || code === 86) return 'Snow showers';
+  if (code === 95) return 'Thunderstorm';
+  if (code === 96 || code === 99) return 'Thunderstorm with hail';
+  return 'Unknown conditions';
 }
 
 function epaAqiColor(category: string): string {
