@@ -62,13 +62,14 @@ function formatCurrentTime(): string {
 /**
  * Compute a stable hash from the hourly forecast window.
  * Uses djb2 — same pattern as computeAlertsHash.
- * Changing the window (hour rolls over) or new forecast data changes the hash.
+ *
+ * Hashes raw ISO timestamp strings (e.g. "2024-02-20T15:00") rather than
+ * formatted labels so the hash is stable across midnight when a slot's day
+ * suffix changes ("2 AM (Tue)" → "2 AM") without the underlying data changing.
  */
-export function computeWeatherHash(hourly: WeatherHourInput[]): string {
-  if (hourly.length === 0) return 'empty';
-  const key = hourly
-    .map(h => `${h.timeLabel}:${h.temperature_2m}:${h.precipitation_probability}`)
-    .join('|');
+export function computeWeatherHash(times: string[], temps: number[], precips: number[]): string {
+  if (times.length === 0) return 'empty';
+  const key = times.map((t, i) => `${t}:${temps[i]}:${precips[i]}`).join('|');
   let hash = 5381;
   for (let i = 0; i < key.length; i++) {
     hash = (hash * 33) ^ key.charCodeAt(i);
@@ -99,14 +100,18 @@ export function buildWeatherSummaryPayload(
   const nowIndex = hourly.time.findIndex(t => t >= charlotteNowStr);
   if (nowIndex === -1) return null; // hourly data has expired
 
-  const slots = hourly.time.slice(nowIndex, nowIndex + 12).map((t, i) => ({
+  const rawTimes = hourly.time.slice(nowIndex, nowIndex + 12);
+  const rawTemps = hourly.temperature_2m.slice(nowIndex, nowIndex + 12);
+  const rawPrecips = hourly.precipitation_probability.slice(nowIndex, nowIndex + 12);
+
+  const hash = computeWeatherHash(rawTimes, rawTemps, rawPrecips);
+
+  const slots = rawTimes.map((t, i) => ({
     timeLabel: formatHourLabel(t, charlotteDateStr),
-    temperature_2m: hourly.temperature_2m[nowIndex + i],
-    precipitation_probability: hourly.precipitation_probability[nowIndex + i],
+    temperature_2m: rawTemps[i],
+    precipitation_probability: rawPrecips[i],
     wind_speed_10m: hourly.wind_speed_10m[nowIndex + i],
   }));
-
-  const hash = computeWeatherHash(slots);
 
   return {
     currentTime: formatCurrentTime(),

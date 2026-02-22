@@ -45,44 +45,49 @@ function makeHourly(startHour: number, count: number, dateStr = '2024-02-20') {
 
 describe('computeWeatherHash', () => {
   it('returns "empty" for zero-length array', () => {
-    expect(computeWeatherHash([])).toBe('empty');
+    expect(computeWeatherHash([], [], [])).toBe('empty');
   });
 
   it('returns the same hash for identical inputs', () => {
-    const slots = [
-      { timeLabel: '3 PM', temperature_2m: 52, precipitation_probability: 10, wind_speed_10m: 8 },
-    ];
-    expect(computeWeatherHash(slots)).toBe(computeWeatherHash(slots));
+    const times = ['2024-02-20T15:00'];
+    const temps = [52];
+    const precips = [10];
+    expect(computeWeatherHash(times, temps, precips)).toBe(
+      computeWeatherHash(times, temps, precips)
+    );
   });
 
   it('returns different hashes when temperature changes', () => {
-    const a = [
-      { timeLabel: '3 PM', temperature_2m: 52, precipitation_probability: 10, wind_speed_10m: 8 },
-    ];
-    const b = [
-      { timeLabel: '3 PM', temperature_2m: 60, precipitation_probability: 10, wind_speed_10m: 8 },
-    ];
-    expect(computeWeatherHash(a)).not.toBe(computeWeatherHash(b));
+    const times = ['2024-02-20T15:00'];
+    const precips = [10];
+    expect(computeWeatherHash(times, [52], precips)).not.toBe(
+      computeWeatherHash(times, [60], precips)
+    );
   });
 
-  it('returns different hashes when timeLabel changes (window shifted)', () => {
-    const a = [
-      { timeLabel: '3 PM', temperature_2m: 52, precipitation_probability: 10, wind_speed_10m: 8 },
-    ];
-    const b = [
-      { timeLabel: '4 PM', temperature_2m: 52, precipitation_probability: 10, wind_speed_10m: 8 },
-    ];
-    expect(computeWeatherHash(a)).not.toBe(computeWeatherHash(b));
+  it('returns different hashes when the window shifts (different ISO time)', () => {
+    const temps = [52];
+    const precips = [10];
+    expect(computeWeatherHash(['2024-02-20T15:00'], temps, precips)).not.toBe(
+      computeWeatherHash(['2024-02-20T16:00'], temps, precips)
+    );
   });
 
   it('returns different hashes when precipitation changes', () => {
-    const a = [
-      { timeLabel: '3 PM', temperature_2m: 52, precipitation_probability: 0, wind_speed_10m: 8 },
-    ];
-    const b = [
-      { timeLabel: '3 PM', temperature_2m: 52, precipitation_probability: 60, wind_speed_10m: 8 },
-    ];
-    expect(computeWeatherHash(a)).not.toBe(computeWeatherHash(b));
+    const times = ['2024-02-20T15:00'];
+    const temps = [52];
+    expect(computeWeatherHash(times, temps, [0])).not.toBe(computeWeatherHash(times, temps, [60]));
+  });
+
+  it('returns the same hash regardless of day-label formatting (midnight stability)', () => {
+    // The same ISO slot "2024-02-21T02:00" would produce "2 AM (Tue)" before midnight
+    // and "2 AM" after — but the hash must be identical since raw times/data are unchanged.
+    const times = ['2024-02-21T02:00'];
+    const temps = [48];
+    const precips = [5];
+    expect(computeWeatherHash(times, temps, precips)).toBe(
+      computeWeatherHash(times, temps, precips)
+    );
   });
 });
 
