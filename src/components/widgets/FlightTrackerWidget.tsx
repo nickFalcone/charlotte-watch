@@ -1,6 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useTheme } from 'styled-components';
 import { useIntersectionObserver } from '../../hooks';
 import {
   MapContainer as LeafletMapContainer,
@@ -9,7 +8,7 @@ import {
   Circle,
   useMap,
 } from 'react-leaflet';
-import { RetryTileLayer } from './RetryTileLayer';
+import { BaseMapTileLayer } from './BaseMapTileLayer';
 import { TileAccessibilityHandler, MapRecenterButton } from '../common';
 import L from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
@@ -30,7 +29,6 @@ import {
   lastContactToMs,
 } from '../../utils/flightApi';
 import { queryKeys } from '../../utils/queryKeys';
-import { getMapTileUrl } from '../../utils/mapTileUrl';
 import { useWidgetMetadata } from '../Widget';
 import planeIcon from '../../assets/icons/plane.svg';
 import 'leaflet/dist/leaflet.css';
@@ -233,13 +231,9 @@ const PlaneSvg = ({ color }: { color: string }) => (
 
 export function FlightTrackerWidget(_props: WidgetProps) {
   const mapRef = useRef<LeafletMap | null>(null);
-  const theme = useTheme();
   const { setLastUpdated } = useWidgetMetadata();
   const [widgetRef, isWidgetVisible] = useIntersectionObserver<HTMLDivElement>();
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
-
-  // Use different map tiles based on theme
-  const mapTileUrl = getMapTileUrl(theme.name);
 
   const {
     data: aircraft,
@@ -345,12 +339,7 @@ export function FlightTrackerWidget(_props: WidgetProps) {
         >
           <MapController mapRef={mapRef} />
           <TileAccessibilityHandler />
-          <RetryTileLayer
-            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-            url={mapTileUrl}
-            maxRetries={3}
-            retryDelay={1000}
-          />
+          <BaseMapTileLayer />
 
           {/* 100km range ring */}
           <Circle

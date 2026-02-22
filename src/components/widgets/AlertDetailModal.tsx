@@ -1,15 +1,14 @@
-import { useTheme } from 'styled-components';
 import * as Dialog from '@radix-ui/react-dialog';
 import { MapContainer as LeafletMapContainer, Marker, Polygon, Polyline } from 'react-leaflet';
 import type { GenericAlert } from '../../types/alerts';
 import { useAlertSeverityConfig } from '../../hooks';
 import { AlertIcon } from '../AlertIcon';
-import { RetryTileLayer } from './RetryTileLayer';
-import { getMapTileUrl } from '../../utils/mapTileUrl';
+import { BaseMapTileLayer } from './BaseMapTileLayer';
 import {
   AnimatedDialogContent,
   AnimatedDialogOverlay,
   FitBounds,
+  TileAccessibilityHandler,
   formatTimestamp,
 } from '../common';
 import {
@@ -79,12 +78,10 @@ function LocationMapSection({
   alert: GenericAlert;
   severityConfig: { color: string; bgColor: string; label: string };
 }) {
-  const theme = useTheme();
   const coordinateList = getAlertCoordinateList(alert);
   if (coordinateList.length === 0) return null;
 
   const markerIcon = createAlertMarkerIcon(severityConfig.color);
-  const mapTileUrl = getMapTileUrl(theme.name);
   const center = coordinateList[0];
   const polylineSegments = getAlertPolylineSegments(alert);
   const alertPolygon = getAlertPolygon(alert);
@@ -107,12 +104,8 @@ function LocationMapSection({
           style={{ height: '100%', width: '100%' }}
           aria-label="Alert location map"
         >
-          <RetryTileLayer
-            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-            url={mapTileUrl}
-            maxRetries={3}
-            retryDelay={1000}
-          />
+          <TileAccessibilityHandler />
+          <BaseMapTileLayer />
           {alertPolygon ? (
             <>
               <FitBounds positions={allPositions} />
@@ -146,11 +139,16 @@ function LocationMapSection({
             <>
               <FitBounds positions={allPositions} />
               {segmentCoords.map((coord, i) => (
-                <Marker key={i} position={[coord.lat, coord.lng]} icon={markerIcon} />
+                <Marker
+                  key={i}
+                  position={[coord.lat, coord.lng]}
+                  icon={markerIcon}
+                  title={alert.title}
+                />
               ))}
             </>
           ) : (
-            <Marker position={[center.lat, center.lng]} icon={markerIcon} />
+            <Marker position={[center.lat, center.lng]} icon={markerIcon} title={alert.title} />
           )}
         </LeafletMapContainer>
       </AlertMapContainer>

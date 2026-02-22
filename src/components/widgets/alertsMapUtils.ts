@@ -127,7 +127,7 @@ export const createAlertMarkerIcon = (color: string): L.DivIcon => {
 
   const icon = L.divIcon({
     html: `
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" aria-hidden="true" focusable="false">
         <path
           fill="${color}"
           stroke="#fff"
