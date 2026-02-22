@@ -79,15 +79,17 @@ function wmoDescription(code: number): string {
   return 'Unknown conditions';
 }
 
+const EPA_AQI_COLORS: Record<string, string> = {
+  good: '#16a34a',
+  moderate: '#ca8a04',
+  'unhealthy for sensitive groups': '#ea580c',
+  unhealthy: '#dc2626',
+  'very unhealthy': '#9333ea',
+  hazardous: '#7f1d1d',
+};
+
 function epaAqiColor(category: string): string {
-  const lower = category.toLowerCase();
-  if (lower.includes('good')) return '#16a34a';
-  if (lower.includes('sensitive')) return '#ea580c';
-  if (lower.includes('very unhealthy')) return '#9333ea';
-  if (lower.includes('unhealthy')) return '#dc2626';
-  if (lower.includes('moderate')) return '#ca8a04';
-  if (lower.includes('hazardous')) return '#7f1d1d';
-  return '#6b7280';
+  return EPA_AQI_COLORS[category.toLowerCase()] ?? '#6b7280';
 }
 
 function pollenColor(category: string): string {
