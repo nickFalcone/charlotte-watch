@@ -92,6 +92,20 @@ describe('getAlertCoordinates', () => {
     expect(getAlertCoordinates(alert)).toEqual({ lat: 35.2, lng: -80.8 });
   });
 
+  it('returns coordinates from CFD metadata', () => {
+    const alert = makeAlert({
+      source: 'cfd',
+      metadata: {
+        source: 'cfd',
+        tweetId: '123',
+        location: '1500 block Dean St, Charlotte, NC',
+        latitude: 35.25,
+        longitude: -80.85,
+      },
+    });
+    expect(getAlertCoordinates(alert)).toEqual({ lat: 35.25, lng: -80.85 });
+  });
+
   it('returns null for NWS (no lat/lng)', () => {
     const alert = makeAlert({
       metadata: { source: 'nws', certainty: '', urgency: '', nwsSeverity: '' },

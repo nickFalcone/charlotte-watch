@@ -88,66 +88,251 @@ export const SectionTitleSentenceCase = styled.div`
   letter-spacing: 0.3px;
 `;
 
-export const WeatherSummaryText = styled.p`
+// --- Forecast tab ---
+
+export const ForecastCurrentRow = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+`;
+
+export const ForecastCurrentTemp = styled.div`
+  font-size: 36px;
+  font-weight: 700;
+  color: ${props => props.theme.colors.text};
+  line-height: 1;
+`;
+
+export const ForecastCurrentMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   font-size: 13px;
   color: ${props => props.theme.colors.textSecondary};
-  line-height: 1.55;
-  margin: 0;
-  padding: 10px 12px;
-  background: ${props => props.theme.colors.backgroundSecondary};
-  border-radius: 6px;
-  border: 1px solid ${props => props.theme.colors.borderLight};
 `;
 
-/** Summary box (div) so it can contain inline info button at end of text. Same look as WeatherSummaryText. */
-export const SummaryBox = styled.div`
-  font-size: 13px;
-  color: ${props => props.theme.colors.textSecondary};
-  line-height: 1.55;
-  margin: 0;
-  padding: 10px 12px;
-  background: ${props => props.theme.colors.backgroundSecondary};
-  border-radius: 6px;
-  border: 1px solid ${props => props.theme.colors.borderLight};
+export const ForecastDivider = styled.hr`
+  border: none;
+  border-top: 1px solid ${props => props.theme.colors.borderLight};
+  margin: 8px 0;
 `;
 
-/** Inline wrapper so info button sits at end of final sentence. */
-export const SummaryInlineTrigger = styled.span`
-  display: inline-block;
-  margin-left: 0.2em;
-  vertical-align: middle;
+export const ForecastDayList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 `;
 
-export const WeatherSummaryList = styled.ul`
-  margin: 0;
-  padding: 10px 12px 10px 28px;
-  background: ${props => props.theme.colors.backgroundSecondary};
-  border-radius: 6px;
-  border: 1px solid ${props => props.theme.colors.borderLight};
-  list-style: disc;
+export const ForecastDayHeaderRow = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 0 4px;
+  font-size: 11px;
+  color: ${props => props.theme.colors.textMuted};
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid ${props => props.theme.colors.borderLight};
 `;
 
-export const WeatherSummaryListItem = styled.li`
-  font-size: 13px;
-  color: ${props => props.theme.colors.textSecondary};
-  line-height: 1.5;
-  margin-bottom: 4px;
+export const ForecastDayHeaderDay = styled.span`
+  min-width: 36px;
+`;
+
+export const ForecastDayHeaderForecast = styled.span`
+  flex: 1;
+  min-width: 0;
+  margin-left: 12px;
+`;
+
+export const ForecastDayHeaderHighLow = styled.span`
+  white-space: nowrap;
+`;
+
+export const ForecastDayHeaderPrecip = styled.span`
+  min-width: 40px;
+  text-align: right;
+  margin-left: 12px;
+`;
+
+export const ForecastDayRow = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid ${props => props.theme.colors.borderLight};
 
   &:last-child {
-    margin-bottom: 0;
+    border-bottom: none;
   }
 `;
 
-export const WeatherSummaryLabel = styled.span`
-  font-weight: 700;
+export const ForecastDayName = styled.span`
+  font-size: 13px;
   color: ${props => props.theme.colors.text};
+  font-weight: 500;
+  min-width: 36px;
+`;
+
+export const ForecastCondition = styled.span`
+  font-size: 13px;
+  color: ${props => props.theme.colors.textSecondary};
+  flex: 1;
+  min-width: 0;
+  margin-left: 12px;
+`;
+
+export const ForecastHighLow = styled.span`
+  font-size: 13px;
+  font-weight: 500;
+  color: ${props => props.theme.colors.text};
+  white-space: nowrap;
+`;
+
+export const ForecastPrecip = styled.span`
+  font-size: 12px;
+  color: ${props => props.theme.colors.textMuted};
+  min-width: 40px;
+  text-align: right;
+  margin-left: 12px;
+`;
+
+// --- Summary tab ---
+
+export const SummaryText = styled.p`
+  font-size: 16px;
+  line-height: 1.6;
+  color: ${props => props.theme.colors.textSecondary};
+  margin: 0;
+`;
+
+export const SummaryMetaRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+`;
+
+export const SummaryGeneratedAt = styled.div`
+  font-size: 10px;
+  color: ${props => props.theme.colors.textMuted};
+`;
+
+// --- Air Quality tab ---
+
+export const AqiScoreRow = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+`;
+
+export const AqiScore = styled.div`
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+  color: ${props => props.theme.colors.text};
+`;
+
+export const AqiCategory = styled.div<{ $color: string }>`
+  font-size: 14px;
+  font-weight: 600;
+  color: ${({ $color }) => $color};
+`;
+
+export const PollutantGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+`;
+
+export const PollutantItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  border-radius: 6px;
+  border: 1px solid ${props => props.theme.colors.borderLight};
+`;
+
+export const PollutantLabel = styled.span`
+  font-size: 11px;
+  color: ${props => props.theme.colors.textMuted};
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+`;
+
+export const PollutantValue = styled.span`
+  font-size: 14px;
+  font-weight: 500;
+  color: ${props => props.theme.colors.text};
+`;
+
+export const PollutantCategory = styled.span<{ $color: string }>`
+  font-size: 11px;
+  font-weight: 500;
+  color: ${({ $color }) => $color};
+`;
+
+export const PollenSection = styled.div`
+  margin-top: 16px;
+`;
+
+export const PollenSectionTitle = styled.div`
+  font-size: 12px;
+  font-weight: 600;
+  color: ${props => props.theme.colors.textSecondary};
+  letter-spacing: 0.3px;
+  margin-bottom: 8px;
+`;
+
+export const PollenGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+`;
+
+export const PollenItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: ${props => props.theme.colors.backgroundSecondary};
+  border-radius: 6px;
+  border: 1px solid ${props => props.theme.colors.borderLight};
+`;
+
+export const PollenLabel = styled.span`
+  font-size: 11px;
+  color: ${props => props.theme.colors.textMuted};
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+`;
+
+export const PollenValue = styled.span`
+  font-size: 14px;
+  font-weight: 500;
+  color: ${props => props.theme.colors.text};
+`;
+
+export const PollenUnavailable = styled.p`
+  font-size: 13px;
+  color: ${props => props.theme.colors.textMuted};
+  margin: 0;
 `;
 
 export const RadarMapContainer = styled.div`
   position: relative;
   width: 100%;
-  aspect-ratio: 17 / 10;
-  min-height: 200px;
+  flex: 1;
+  min-height: 0;
   border-radius: 8px;
   overflow: hidden;
   background: ${props => props.theme.colors.backgroundSecondary};

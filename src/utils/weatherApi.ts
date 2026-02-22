@@ -1,17 +1,16 @@
 import type {
   OpenMeteoResponse,
-  OpenMeteoAirQualityResponse,
+  GoogleAirQualityResponse,
+  GooglePollenResponse,
   NWSPointResponse,
   NWSAlertsResponse,
   WeatherLocation,
 } from '../types';
 
 const OPEN_METEO_BASE = 'https://api.open-meteo.com/v1';
-const AIR_QUALITY_BASE = 'https://air-quality-api.open-meteo.com/v1';
 const NWS_BASE = 'https://api.weather.gov';
 
 // Default location: Charlotte, NC
-// Temporary test location with winter alerts
 export const DEFAULT_LOCATION: WeatherLocation = {
   name: 'Charlotte',
   latitude: 35.2271,
@@ -47,8 +46,16 @@ export async function fetchCurrentWeather(
       'wind_speed_10m',
       'wind_direction_10m',
     ].join(','),
-    past_days: '1',
-    forecast_days: '2',
+    daily: [
+      'weather_code',
+      'temperature_2m_max',
+      'temperature_2m_min',
+      'precipitation_probability_max',
+      'wind_speed_10m_max',
+      'wind_direction_10m_dominant',
+      'uv_index_max',
+    ].join(','),
+    forecast_days: '7',
     temperature_unit: 'fahrenheit',
     wind_speed_unit: 'mph',
     timezone: 'auto',
@@ -63,37 +70,17 @@ export async function fetchCurrentWeather(
   return response.json();
 }
 
-export async function fetchAirQuality(
-  location: WeatherLocation,
+export async function fetchGoogleAirQuality(
   signal?: AbortSignal
-): Promise<OpenMeteoAirQualityResponse> {
-  const params = new URLSearchParams({
-    latitude: location.latitude.toString(),
-    longitude: location.longitude.toString(),
-    current: [
-      'european_aqi',
-      'pm10',
-      'pm2_5',
-      'carbon_monoxide',
-      'nitrogen_dioxide',
-      'sulphur_dioxide',
-      'ozone',
-      'dust',
-      'uv_index',
-      'uv_index_clear_sky',
-    ].join(','),
-    hourly: ['european_aqi', 'uv_index'].join(','),
-    past_days: '1',
-    forecast_days: '2',
-    timezone: 'auto',
-  });
+): Promise<GoogleAirQualityResponse> {
+  const response = await fetch('/api/google-air-quality', { signal });
+  if (!response.ok) throw new Error(`Air quality API error: ${response.status}`);
+  return response.json();
+}
 
-  const response = await fetch(`${AIR_QUALITY_BASE}/air-quality?${params}`, { signal });
-
-  if (!response.ok) {
-    throw new Error(`Air Quality API error: ${response.status}`);
-  }
-
+export async function fetchGooglePollen(signal?: AbortSignal): Promise<GooglePollenResponse> {
+  const response = await fetch('/api/google-pollen', { signal });
+  if (!response.ok) throw new Error(`Pollen API error: ${response.status}`);
   return response.json();
 }
 

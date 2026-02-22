@@ -12,12 +12,17 @@ export const TabList = styled(Tabs.List)`
   display: flex;
   gap: 0;
   flex-shrink: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
   padding: 0;
   border-bottom: 1px solid ${props => props.theme.colors.border};
   background: ${props => props.theme.colors.backgroundTertiary};
 `;
 
 export const TabTrigger = styled(Tabs.Trigger)`
+  flex-shrink: 0;
   padding: 4px 12px;
   font-size: 14px;
   font-weight: 500;
@@ -49,7 +54,7 @@ export const TabTrigger = styled(Tabs.Trigger)`
 export const TabContent = styled(Tabs.Content)`
   flex: 1;
   overflow: auto;
-  padding-top: 16px;
+  padding: 16px 12px 0 0;
 
   &[data-state='inactive'] {
     display: none;
@@ -59,7 +64,7 @@ export const TabContent = styled(Tabs.Content)`
 export const TabContentForceMount = styled.div<{ $active: boolean }>`
   flex: 1;
   overflow: auto;
-  padding-top: 16px;
+  padding: 16px 12px 0 0;
   display: ${props => (props.$active ? 'flex' : 'none')};
   flex-direction: column;
 `;

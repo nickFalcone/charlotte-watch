@@ -222,7 +222,7 @@ function MapController({ mapRef }: { mapRef: React.MutableRefObject<LeafletMap |
   return null;
 }
 
-export function WeatherRadarMap() {
+export function WeatherRadarMap({ active }: { active?: boolean }) {
   const mapRef = useRef<LeafletMap | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const theme = useTheme();
@@ -231,6 +231,14 @@ export function WeatherRadarMap() {
   const [isPlaying, setIsPlaying] = useState(false);
   const animationRef = useRef<number>();
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
+
+  // When this tab becomes active, tell Leaflet to recalculate its container size.
+  // (The map was hidden via display:none while forceMount kept it in the DOM.)
+  useEffect(() => {
+    if (active) {
+      mapRef.current?.invalidateSize();
+    }
+  }, [active]);
 
   // When the widget is resized, tell Leaflet to recalculate size after resize settles (debounce to avoid loop)
   useEffect(() => {
