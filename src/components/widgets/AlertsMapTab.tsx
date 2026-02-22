@@ -1,5 +1,4 @@
-import React, { useMemo, useRef, useCallback } from 'react';
-import { useTheme } from 'styled-components';
+import React, { useMemo, useRef, useCallback, useEffect } from 'react';
 import { useAlertSeverityConfig } from '../../hooks';
 import {
   MapContainer as LeafletMapContainer,
@@ -11,14 +10,9 @@ import {
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { GenericAlert } from '../../types/alerts';
-import { RetryTileLayer } from './RetryTileLayer';
-import {
-  MapRecenterButton,
-  TileAccessibilityHandler,
-  MapSizeInvalidator,
-  FitBounds,
-} from '../common';
-import { getMapTileUrl } from '../../utils/mapTileUrl';
+import { BaseMapTileLayer } from './BaseMapTileLayer';
+import { MapRecenterButton, TileAccessibilityHandler } from '../common';
+import { CHARLOTTE_CENTER } from '../../utils/mapConstants';
 import {
   getAlertCoordinateList,
   getAlertPolylineSegments,
@@ -32,7 +26,6 @@ import {
   MapControlsOverlay,
 } from './AlertsMapTab.styles';
 
-const CHARLOTTE_CENTER: [number, number] = [35.2271, -80.8431];
 const DEFAULT_ZOOM = 11;
 
 interface AlertWithGeo {
@@ -50,10 +43,7 @@ export interface AlertsMapTabProps {
 
 export function AlertsMapTab({ alerts, onAlertSelect, active }: AlertsMapTabProps) {
   const alertSeverityConfig = useAlertSeverityConfig();
-  const theme = useTheme();
   const mapRef = useRef<L.Map | null>(null);
-
-  const mapTileUrl = getMapTileUrl(theme.name);
 
   // Filter alerts to those with coordinates
   const geoAlerts: AlertWithGeo[] = useMemo(() => {
@@ -80,18 +70,33 @@ export function AlertsMapTab({ alerts, onAlertSelect, active }: AlertsMapTabProp
     return positions;
   }, [geoAlerts]);
 
-  const handleRecenter = useCallback(() => {
-    if (mapRef.current) {
-      if (allPositions.length > 1) {
-        const bounds = L.latLngBounds(allPositions);
-        mapRef.current.fitBounds(bounds, { padding: [24, 24], maxZoom: 14 });
-      } else if (allPositions.length === 1) {
-        mapRef.current.setView(allPositions[0], 14);
-      } else {
-        mapRef.current.setView(CHARLOTTE_CENTER, DEFAULT_ZOOM);
-      }
+  const fitMapToBounds = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (allPositions.length > 1) {
+      const bounds = L.latLngBounds(allPositions);
+      map.fitBounds(bounds, { padding: [24, 24], maxZoom: 14 });
+    } else if (allPositions.length === 1) {
+      map.setView(allPositions[0], DEFAULT_ZOOM);
+    } else {
+      map.setView(CHARLOTTE_CENTER, DEFAULT_ZOOM);
     }
   }, [allPositions]);
+
+  // When the tab becomes visible, invalidate Leaflet's cached size first (the
+  // container was display:none), then fit bounds with the correct dimensions.
+  useEffect(() => {
+    if (!active) return;
+    const timer = setTimeout(() => {
+      mapRef.current?.invalidateSize();
+      fitMapToBounds();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [active, fitMapToBounds]);
+
+  const handleRecenter = useCallback(() => {
+    fitMapToBounds();
+  }, [fitMapToBounds]);
 
   if (geoAlerts.length === 0) {
     return <NoGeoAlertsContainer>No geo-located alerts</NoGeoAlertsContainer>;
@@ -111,15 +116,7 @@ export function AlertsMapTab({ alerts, onAlertSelect, active }: AlertsMapTabProp
         aria-label="Alert locations map for Charlotte area"
       >
         <TileAccessibilityHandler />
-        <MapSizeInvalidator active={active} />
-        <RetryTileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url={mapTileUrl}
-          maxRetries={3}
-          retryDelay={1000}
-        />
-
-        {allPositions.length > 1 && <FitBounds positions={allPositions} />}
+        <BaseMapTileLayer />
 
         {geoAlerts.map(({ alert, coordinates, polylineSegments, polygon }) => {
           const severityConfig = alertSeverityConfig[alert.severity];
@@ -197,6 +194,7 @@ export function AlertsMapTab({ alerts, onAlertSelect, active }: AlertsMapTabProp
                     key={`${alert.id}-seg-${i}`}
                     position={[coord.lat, coord.lng]}
                     icon={markerIcon}
+                    title={alert.title}
                     eventHandlers={{
                       click: () => onAlertSelect(alert),
                     }}
@@ -216,6 +214,7 @@ export function AlertsMapTab({ alerts, onAlertSelect, active }: AlertsMapTabProp
               key={alert.id}
               position={position}
               icon={markerIcon}
+              title={alert.title}
               eventHandlers={{
                 click: () => onAlertSelect(alert),
               }}

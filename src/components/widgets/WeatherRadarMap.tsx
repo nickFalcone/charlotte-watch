@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useTheme } from 'styled-components';
 import * as Slider from '@radix-ui/react-slider';
 import { MapContainer as LeafletMapContainer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
-import { RetryTileLayer } from './RetryTileLayer';
+import { BaseMapTileLayer } from './BaseMapTileLayer';
 import { MapRecenterButton, TileAccessibilityHandler } from '../common';
-import { getMapTileUrl } from '../../utils/mapTileUrl';
+import { CHARLOTTE_CENTER } from '../../utils/mapConstants';
 import playIcon from '../../assets/icons/play.svg';
 import pauseIcon from '../../assets/icons/pause.svg';
 import {
@@ -25,7 +24,6 @@ import {
 } from './WeatherWidget.styles';
 import 'leaflet/dist/leaflet.css';
 
-const RADAR_CENTER: [number, number] = [35.2271, -80.8431]; // Charlotte, NC
 const RADAR_ZOOM = 7;
 const IEM_RADAR_WMS_URL = 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0q-t.cgi';
 
@@ -225,7 +223,6 @@ function MapController({ mapRef }: { mapRef: React.MutableRefObject<LeafletMap |
 export function WeatherRadarMap({ active }: { active?: boolean }) {
   const mapRef = useRef<LeafletMap | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const theme = useTheme();
   const timeSteps = useMemo(() => generateTimeSteps(), []);
   const [currentIndex, setCurrentIndex] = useState(timeSteps.length - 1); // Start at most recent
   const [isPlaying, setIsPlaying] = useState(false);
@@ -263,11 +260,9 @@ export function WeatherRadarMap({ active }: { active?: boolean }) {
   const handleRecenter = useCallback(() => {
     if (mapRef.current) {
       mapRef.current.invalidateSize();
-      mapRef.current.setView(RADAR_CENTER, RADAR_ZOOM, { animate: true });
+      mapRef.current.setView(CHARLOTTE_CENTER, RADAR_ZOOM, { animate: true });
     }
   }, []);
-
-  const mapTileUrl = getMapTileUrl(theme.name);
 
   const currentTime = timeSteps[currentIndex] || new Date();
   const isCurrentTime = currentIndex === timeSteps.length - 1;
@@ -323,7 +318,7 @@ export function WeatherRadarMap({ active }: { active?: boolean }) {
         {liveAnnouncement}
       </VisuallyHidden>
       <LeafletMapContainer
-        center={RADAR_CENTER}
+        center={CHARLOTTE_CENTER}
         zoom={RADAR_ZOOM}
         zoomControl={true}
         scrollWheelZoom={false}
@@ -336,12 +331,7 @@ export function WeatherRadarMap({ active }: { active?: boolean }) {
       >
         <MapController mapRef={mapRef} />
         <TileAccessibilityHandler />
-        <RetryTileLayer
-          attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-          url={mapTileUrl}
-          maxRetries={3}
-          retryDelay={1000}
-        />
+        <BaseMapTileLayer />
         <PreloadedRadarLayer timeSteps={timeSteps} currentIndex={currentIndex} />
       </LeafletMapContainer>
 
