@@ -55,7 +55,7 @@ export async function fetchCurrentWeather(
       'wind_direction_10m_dominant',
       'uv_index_max',
     ].join(','),
-    forecast_days: '8',
+    forecast_days: '7',
     temperature_unit: 'fahrenheit',
     wind_speed_unit: 'mph',
     timezone: 'auto',

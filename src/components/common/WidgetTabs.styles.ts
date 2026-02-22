@@ -12,12 +12,17 @@ export const TabList = styled(Tabs.List)`
   display: flex;
   gap: 0;
   flex-shrink: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
   padding: 0;
   border-bottom: 1px solid ${props => props.theme.colors.border};
   background: ${props => props.theme.colors.backgroundTertiary};
 `;
 
 export const TabTrigger = styled(Tabs.Trigger)`
+  flex-shrink: 0;
   padding: 4px 12px;
   font-size: 14px;
   font-weight: 500;

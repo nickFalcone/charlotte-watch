@@ -48,7 +48,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     );
 
     const hereKey = context.env.HERE_API_KEY;
-    const enriched: CFDTweetEnriched[] = await Promise.all(
+    const results = await Promise.allSettled(
       cfdTweets.map(async t => {
         const location = extractLocationFromTweet(t.text);
         const result: CFDTweetEnriched = {
@@ -69,6 +69,22 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         return result;
       })
     );
+
+    const enriched: CFDTweetEnriched[] = results.map((outcome, i) => {
+      if (outcome.status === 'fulfilled') {
+        return outcome.value;
+      }
+      const t = cfdTweets[i];
+      console.error('CFD geocoding failed for tweet', t.id, outcome.reason);
+      return {
+        id: t.id,
+        text: t.text,
+        createdAt: t.createdAt,
+        author: t.author,
+        type: t.type,
+        location: extractLocationFromTweet(t.text),
+      };
+    });
 
     const responseData = { data: enriched };
     const responseBody = JSON.stringify(responseData);

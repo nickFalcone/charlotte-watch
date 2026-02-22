@@ -45,7 +45,7 @@ export function extractLocationFromTweet(text: string): string | undefined {
 
   // Pattern 3: "N block of STREET" or "N block STREET" (with optional "of" and possible typo "of.")
   const blockMatch = trimmed.match(
-    /\b(\d{3,5})\s+block\s+(?:of\.?\s+)?([A-Za-z\s]+(?:St|Street|Dr|Drive|Ave|Avenue|Wy|Way|Rd|Road|Blvd|Ln|Lane|Ct|Court|Pl|Place)\.?)(?:\s|$|\.|,|30 |E39|BC07)/i
+    /\b(\d{3,5})\s+block\s+(?:of\.?\s+)?([A-Za-z\s]{1,50}(?:St|Street|Dr|Drive|Ave|Avenue|Wy|Way|Rd|Road|Blvd|Ln|Lane|Ct|Court|Pl|Place)\.?)(?:\s|$|\.|,|30 |E39|BC07)/i
   );
   if (blockMatch) {
     const street = blockMatch[2].trim().replace(/\.$/, '');
@@ -56,7 +56,7 @@ export function extractLocationFromTweet(text: string): string | undefined {
 
   // Pattern 4: "in the N block of STREET" (from longer narratives)
   const blockOfMatch = trimmed.match(
-    /\b(?:in the |in )(\d{3,5})\s+block\s+of\s+([A-Za-z\s]+(?:Drive|St|Street|Avenue|Rd|Road|Way)\.?)(?:\s|$|\.|,)/i
+    /\b(?:in the |in )(\d{3,5})\s+block\s+of\s+([A-Za-z\s]{1,50}(?:Drive|St|Street|Avenue|Rd|Road|Way)\.?)(?:\s|$|\.|,)/i
   );
   if (blockOfMatch) {
     const street = blockOfMatch[2].trim().replace(/\.$/, '');

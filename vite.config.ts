@@ -10,6 +10,7 @@ import { isServiceAlertTweet, isWithinLast24Hours } from './src/utils/catsFilter
 import { isCMSAlertTweet } from './src/utils/cmsFilters';
 import { isCFDIncidentTweet } from './src/utils/cfdFilters';
 import { extractLocationFromTweet } from './src/utils/cfdAddressParser';
+import { geocodeAddress } from './functions/_lib/hereGeocode';
 
 // In-memory TTL cache for dev plugins (mirrors KV caching in production)
 interface DevCacheEntry {
@@ -696,10 +697,42 @@ function cfdTwitterPlugin(env: Record<string, string>): Plugin {
               isCFDIncidentTweet(t.text) &&
               isWithinLast24Hours(t.createdAt)
           );
-          const cfdTweets = filtered.map(t => ({
-            ...t,
-            location: extractLocationFromTweet(t.text),
-          }));
+          const hereKey = env.HERE_API_KEY;
+          const results = await Promise.allSettled(
+            filtered.map(async t => {
+              const location = extractLocationFromTweet(t.text);
+              const result = {
+                ...t,
+                location,
+              } as {
+                id: string;
+                text: string;
+                createdAt: string;
+                author?: { id: string };
+                type?: string;
+                location?: string;
+                latitude?: number;
+                longitude?: number;
+              };
+              if (location && hereKey) {
+                const coords = await geocodeAddress(location, hereKey);
+                if (coords) {
+                  result.latitude = coords.latitude;
+                  result.longitude = coords.longitude;
+                }
+              }
+              return result;
+            })
+          );
+          const cfdTweets = results.map((outcome, i) => {
+            if (outcome.status === 'fulfilled') return outcome.value;
+            const t = filtered[i];
+            console.error('[cfd-twitter] Geocoding failed for tweet', t.id, outcome.reason);
+            return {
+              ...t,
+              location: extractLocationFromTweet(t.text),
+            };
+          });
           const responseBody = JSON.stringify({ data: cfdTweets });
           devCachePut('cfd-twitter', responseBody, CFD_TWITTER_CACHE_TTL_MS);
           res.statusCode = 200;

@@ -36,7 +36,7 @@ function formatHourLabel(isoStr: string, nowDateStr: string): string {
   if (datePart > nowDateStr) {
     const [y, m, d] = datePart.split('-').map(Number);
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const dayName = days[new Date(y, m - 1, d, 12).getDay()];
+    const dayName = days[new Date(Date.UTC(y, m - 1, d, 12)).getUTCDay()];
     return `${h} ${ampm} (${dayName})`;
   }
 
