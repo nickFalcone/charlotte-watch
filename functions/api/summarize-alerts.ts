@@ -47,7 +47,8 @@ function buildUserPrompt(alerts: AlertInput[]): string {
     return `${i + 1}. [${alert.severity.toUpperCase()}] ${alert.source.toUpperCase()}: ${alert.title} - ${alert.summary}${timePart}`;
   });
 
-  return `Current alerts (${alerts.length} total). Each alert may include [updated <ISO timestamp>]; when the same service has conflicting status (e.g. suspended vs resumed), prefer the alert with the later updated timestamp as the current state.\n\n${alertLines.join('\n')}`;
+  return `Current alerts (${alerts.length} total), ordered by most recent first. Each alert may include [updated <ISO timestamp>].
+When the same service has conflicting status (e.g. "police activity, expect delays" vs "resumed normal service" or "Final Update"), the CURRENT state is the one with the later timestamp. State only the current status—e.g. "Blue Line has resumed normal service" not "police activity affecting Blue Line; expect delays" when a later alert says it resumed.\n\n${alertLines.join('\n')}`;
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -85,8 +86,17 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   // Limit alerts to prevent abuse
   const alerts = request.alerts.slice(0, MAX_ALERTS);
 
+  // Sort by updatedAt descending so the most recent updates appear first.
+  // When the same service has conflicting status (e.g. suspended vs resumed),
+  // the model sees the resolution before the initial alert.
+  const sortedAlerts = [...alerts].sort((a, b) => {
+    const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return bTime - aTime;
+  });
+
   try {
-    const userPrompt = buildUserPrompt(alerts);
+    const userPrompt = buildUserPrompt(sortedAlerts);
     let summary: string;
 
     if (provider === 'anthropic') {
