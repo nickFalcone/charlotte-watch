@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useIntersectionObserver } from '../../hooks';
 import {
@@ -288,6 +288,8 @@ export function FlightTrackerWidget(_props: WidgetProps) {
     setLastUpdated(scheduleUpdatedAt || null);
   }, [scheduleUpdatedAt, activeTab, setLastUpdated]);
 
+  const handleAircraftClick = useCallback((ac: Aircraft) => setSelectedAircraft(ac), []);
+
   const handleResetView = () => {
     if (mapRef.current) {
       mapRef.current.setView(DEFAULT_CENTER, DEFAULT_ZOOM, { animate: true });
@@ -326,9 +328,6 @@ export function FlightTrackerWidget(_props: WidgetProps) {
   }
 
   const flights = aircraft || [];
-
-  // Stable callback ref to avoid re-creating Leaflet markers on every render
-  const handleAircraftClick = (ac: Aircraft) => setSelectedAircraft(ac);
 
   return (
     <FlightContainer ref={widgetRef}>

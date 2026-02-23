@@ -1,5 +1,6 @@
 import { useTheme } from 'styled-components';
 import type { AeroDataBoxSchedule, AeroDataBoxFlight } from '../../types';
+import { formatLocalTime, scheduleStatusInfo } from '../../utils/flightScheduleFormat';
 import { WidgetTabs, TabPanel } from '../common';
 import {
   FlightTable,
@@ -26,55 +27,6 @@ interface FlightsBoardTabProps {
   schedule: AeroDataBoxSchedule | undefined;
   isLoading: boolean;
   isError: boolean;
-}
-
-// Format a local time string from the API (e.g. "2026-02-22 14:30+00:00") to "2:30 PM"
-function formatLocalTime(localStr: string): string {
-  // The local string format is "YYYY-MM-DD HH:mm±HH:mm"
-  const timePart = localStr.slice(11, 16); // "HH:mm"
-  if (!timePart) return localStr;
-  const [hourStr, minuteStr] = timePart.split(':');
-  const hour = parseInt(hourStr, 10);
-  const minute = minuteStr;
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${displayHour}:${minute} ${period}`;
-}
-
-// Compute delay in minutes between scheduled and revised times (both UTC ISO strings)
-function delayMinutes(scheduledUtc: string, revisedUtc: string): number {
-  const scheduled = new Date(scheduledUtc).getTime();
-  const revised = new Date(revisedUtc).getTime();
-  return Math.round((revised - scheduled) / 60000);
-}
-
-// Map AeroDataBox status string to a display label and color token
-function statusInfo(
-  status: string,
-  revisedTime: { utc: string } | undefined,
-  scheduledTime: { utc: string },
-  colors: Record<string, string>
-): { label: string; color: string } {
-  const lc = status.toLowerCase();
-
-  if (lc.includes('cancel')) {
-    return { label: 'Cancelled', color: colors.error };
-  }
-  if (lc === 'arrived' || lc === 'landed') {
-    return { label: 'Arrived', color: colors.success };
-  }
-  if (lc === 'departed' || lc === 'airborne') {
-    return { label: 'Departed', color: colors.success };
-  }
-  if (revisedTime && revisedTime.utc !== scheduledTime.utc) {
-    const delay = delayMinutes(scheduledTime.utc, revisedTime.utc);
-    if (delay > 0) return { label: `+${delay} min`, color: colors.warning };
-    if (delay < 0) return { label: `${delay} min`, color: colors.secondary };
-  }
-  if (lc.includes('delay')) {
-    return { label: 'Delayed', color: colors.warning };
-  }
-  return { label: 'On Time', color: colors.textMuted };
 }
 
 // Sort flights ascending by the relevant leg's scheduledTime.
@@ -126,11 +78,10 @@ function FlightSection({ title, flights, direction, emptyLabel }: FlightSectionP
               const leg = direction === 'arrivals' ? flight.departure : flight.arrival;
               const otherAirport = leg.airport;
               const myLeg = direction === 'arrivals' ? flight.arrival : flight.departure;
-              const { label, color } = statusInfo(
+              const { label, color } = scheduleStatusInfo(
                 flight.status,
-                myLeg.revisedTime,
-                myLeg.scheduledTime,
-                theme.colors as Record<string, string>
+                theme.colors as Record<string, string>,
+                { revisedTime: myLeg.revisedTime, scheduledTime: myLeg.scheduledTime }
               );
               const showRevised =
                 myLeg.revisedTime && myLeg.revisedTime.utc !== myLeg.scheduledTime.utc;

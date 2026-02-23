@@ -9,6 +9,7 @@ import {
   formatVerticalRate,
   formatPositionAge,
 } from '../../utils/flightApi';
+import { formatLocalTime, scheduleStatusInfo } from '../../utils/flightScheduleFormat';
 import {
   AnimatedDialogOverlay,
   AnimatedDialogContent,
@@ -131,29 +132,6 @@ const TimeRow = styled.div`
 `;
 
 const TimeItem = styled.div``;
-
-// Map status string to display label + color, same logic as FlightsBoardTab
-function scheduleStatusInfo(
-  status: string,
-  colors: Record<string, string>
-): { label: string; color: string } {
-  const lc = status.toLowerCase();
-  if (lc.includes('cancel')) return { label: 'Cancelled', color: colors.error };
-  if (lc === 'arrived' || lc === 'landed') return { label: 'Arrived', color: colors.success };
-  if (lc === 'departed' || lc === 'airborne') return { label: 'Departed', color: colors.success };
-  if (lc.includes('delay')) return { label: 'Delayed', color: colors.warning };
-  return { label: 'On Time', color: colors.textMuted };
-}
-
-function formatLocalTime(localStr: string): string {
-  const timePart = localStr.slice(11, 16);
-  if (!timePart) return localStr;
-  const [hourStr, minuteStr] = timePart.split(':');
-  const hour = parseInt(hourStr, 10);
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${displayHour}:${minuteStr} ${period}`;
-}
 
 function findScheduleMatch(
   icao24: string,
