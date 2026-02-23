@@ -37,6 +37,13 @@ interface SummarizeResponse {
 
 const MAX_ALERTS = 50;
 
+/** Returns ms since epoch, or 0 if missing/invalid (sorts as oldest). */
+function getSortTimestamp(updatedAt?: string): number {
+  if (!updatedAt) return 0;
+  const ts = Date.parse(updatedAt);
+  return isNaN(ts) ? 0 : ts;
+}
+
 function buildUserPrompt(alerts: AlertInput[]): string {
   if (alerts.length === 0) {
     return 'No active alerts.';
@@ -45,11 +52,9 @@ function buildUserPrompt(alerts: AlertInput[]): string {
   // Sort by updatedAt descending so the most recent updates appear first.
   // When the same service has conflicting status (e.g. suspended vs resumed),
   // the model sees the resolution before the initial alert.
-  const sorted = [...alerts].sort((a, b) => {
-    const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-    const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-    return bTime - aTime;
-  });
+  const sorted = [...alerts].sort(
+    (a, b) => getSortTimestamp(b.updatedAt) - getSortTimestamp(a.updatedAt)
+  );
 
   const alertLines = sorted.map((alert, i) => {
     const timePart = alert.updatedAt ? ` [updated ${alert.updatedAt}]` : '';
@@ -94,11 +99,9 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
   // Sort by updatedAt descending, then cap to prevent abuse.
   // Must sort before slicing so we keep the most recent alerts when > MAX_ALERTS.
-  const sorted = [...request.alerts].sort((a, b) => {
-    const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-    const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-    return bTime - aTime;
-  });
+  const sorted = [...request.alerts].sort(
+    (a, b) => getSortTimestamp(b.updatedAt) - getSortTimestamp(a.updatedAt)
+  );
   const alerts = sorted.slice(0, MAX_ALERTS);
 
   try {
