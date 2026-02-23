@@ -37,17 +37,32 @@ interface SummarizeResponse {
 
 const MAX_ALERTS = 50;
 
+/** Returns ms since epoch, or 0 if missing/invalid (sorts as oldest). */
+function getSortTimestamp(updatedAt?: string): number {
+  if (!updatedAt) return 0;
+  const ts = Date.parse(updatedAt);
+  return isNaN(ts) ? 0 : ts;
+}
+
 function buildUserPrompt(alerts: AlertInput[]): string {
   if (alerts.length === 0) {
     return 'No active alerts.';
   }
 
-  const alertLines = alerts.map((alert, i) => {
+  // Sort by updatedAt descending so the most recent updates appear first.
+  // When the same service has conflicting status (e.g. suspended vs resumed),
+  // the model sees the resolution before the initial alert.
+  const sorted = [...alerts].sort(
+    (a, b) => getSortTimestamp(b.updatedAt) - getSortTimestamp(a.updatedAt)
+  );
+
+  const alertLines = sorted.map((alert, i) => {
     const timePart = alert.updatedAt ? ` [updated ${alert.updatedAt}]` : '';
     return `${i + 1}. [${alert.severity.toUpperCase()}] ${alert.source.toUpperCase()}: ${alert.title} - ${alert.summary}${timePart}`;
   });
 
-  return `Current alerts (${alerts.length} total). Each alert may include [updated <ISO timestamp>]; when the same service has conflicting status (e.g. suspended vs resumed), prefer the alert with the later updated timestamp as the current state.\n\n${alertLines.join('\n')}`;
+  return `Current alerts (${sorted.length} total), ordered by most recent first. Each alert may include [updated <ISO timestamp>].
+When the same service has conflicting status (e.g. "police activity, expect delays" vs "resumed normal service" or "Final Update"), the CURRENT state is the one with the later timestamp. State only the current status—e.g. "Blue Line has resumed normal service" not "police activity affecting Blue Line; expect delays" when a later alert says it resumed.\n\n${alertLines.join('\n')}`;
 }
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -82,8 +97,12 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const cachedResponse = await checkCache(context.env.CACHE, cacheKey);
   if (cachedResponse) return cachedResponse;
 
-  // Limit alerts to prevent abuse
-  const alerts = request.alerts.slice(0, MAX_ALERTS);
+  // Sort by updatedAt descending, then cap to prevent abuse.
+  // Must sort before slicing so we keep the most recent alerts when > MAX_ALERTS.
+  const sorted = [...request.alerts].sort(
+    (a, b) => getSortTimestamp(b.updatedAt) - getSortTimestamp(a.updatedAt)
+  );
+  const alerts = sorted.slice(0, MAX_ALERTS);
 
   try {
     const userPrompt = buildUserPrompt(alerts);
