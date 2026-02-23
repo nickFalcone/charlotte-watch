@@ -19,7 +19,7 @@ import {
   AnimatedPopoverContent,
   InfoIcon,
   InfoTrigger,
-  formatGeneratedAt,
+  GeneratedAt,
 } from '../common';
 import { WeatherRadarMap } from './WeatherRadarMap';
 import {
@@ -30,7 +30,6 @@ import {
   RetryButton,
   SummaryText,
   SummaryMetaRow,
-  SummaryGeneratedAt,
   ForecastCurrentRow,
   ForecastCurrentTemp,
   ForecastCurrentMeta,
@@ -268,11 +267,7 @@ export function WeatherWidget(_props: WidgetProps) {
           <>
             <SummaryText>{summaryData.summary}</SummaryText>
             <SummaryMetaRow>
-              {summaryData.generatedAt && (
-                <SummaryGeneratedAt>
-                  Generated: {formatGeneratedAt(summaryData.generatedAt)}
-                </SummaryGeneratedAt>
-              )}
+              {summaryData.generatedAt && <GeneratedAt date={summaryData.generatedAt} />}
               <Popover.Root>
                 <Popover.Trigger asChild>
                   <InfoTrigger aria-label="About AI summary">

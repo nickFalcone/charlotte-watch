@@ -4,6 +4,7 @@ export * from './AnimatedTooltip';
 export * from './CardList.styles';
 export * from './DetailModal.styles';
 export * from './formatTimestamp';
+export * from './GeneratedAt';
 export * from './InfoPopover.styles';
 export * from './leafletTheme';
 export * from './MapRecenterButton';

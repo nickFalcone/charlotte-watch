@@ -27,7 +27,8 @@ export const TabTrigger = styled(Tabs.Trigger)`
   font-size: 14px;
   font-weight: 500;
   font-family: inherit;
-  color: ${props => props.theme.colors.textMuted};
+  /* 7:1 on backgroundTertiary for WCAG AAA */
+  color: ${props => (props.theme.name === 'light' ? '#4e4e52' : props.theme.colors.textMuted)};
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;

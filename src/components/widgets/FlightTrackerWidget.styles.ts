@@ -14,8 +14,16 @@ export const FlightContainer = styled.div`
   display: flex;
   flex-direction: column;
   height: 100%;
-  gap: 8px;
   overflow: hidden;
+`;
+
+// Negate TabContentForceMount's padding so the radar map stays full-bleed
+export const MapTabWrapper = styled.div`
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: -16px -12px 0 0;
 `;
 
 export const FlightHeader = styled.div`
@@ -23,6 +31,7 @@ export const FlightHeader = styled.div`
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+  padding-bottom: 16px;
 `;
 
 export const AirportInfo = styled.div`
@@ -44,8 +53,15 @@ export const FlightCount = styled.span<{ $hasFlights: boolean }>`
   border-radius: 12px;
   background: ${({ $hasFlights, theme }) =>
     $hasFlights ? `${theme.colors.secondary}30` : `${theme.colors.textMuted}30`};
+  /* 7:1 on tinted badge background for WCAG AAA */
   color: ${({ $hasFlights, theme }) =>
-    $hasFlights ? theme.colors.secondary : theme.colors.textMuted};
+    theme.name === 'light'
+      ? $hasFlights
+        ? '#3730a3'
+        : theme.colors.textSecondary
+      : $hasFlights
+        ? '#c7d2fe'
+        : theme.colors.textSecondary};
   font-weight: 500;
 `;
 

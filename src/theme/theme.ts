@@ -42,6 +42,15 @@ export interface Theme {
     // Badge/pill (e.g. event count) - same style as Alerts count pill, blue; 7:1 on badgeBackground
     badgeBackground: string;
     badgeText: string;
+
+    // Status badges (flight schedule) - solid bg+fg for 7:1 contrast
+    statusBadge: {
+      success: { bg: string; fg: string };
+      warning: { bg: string; fg: string };
+      neutral: { bg: string; fg: string };
+      error: { bg: string; fg: string };
+      secondary: { bg: string; fg: string };
+    };
   };
   spacing: {
     xs: string;
@@ -136,13 +145,13 @@ export const lightTheme: Theme = {
     secondary: '#5e5ce6',
     secondaryHover: '#4a4acb',
 
-    // Links - ≥4.5:1 on #ffffff
-    link: '#0066cc',
+    // Links - 7:1 on #ffffff (WCAG AAA)
+    link: '#004c99',
     linkVisited: '#551a8b',
 
-    // Status colors - WCAG AAA compliant on white
-    success: '#18662a', // 4.70:1 on #ffffff
-    warning: '#b35600', // 4.94:1 on #ffffff
+    // Status colors - 7:1 on #ffffff (WCAG AAA)
+    success: '#0d4a1a',
+    warning: '#7a3e00',
     error: '#ffbdb9',
     info: '#1d4ed8', // 6.70:1 on #ffffff
 
@@ -154,6 +163,14 @@ export const lightTheme: Theme = {
     // Badge/pill - blue (like Alerts pill style: tint + text), 7:1
     badgeBackground: '#eff6ff',
     badgeText: '#1e3a8a',
+
+    statusBadge: {
+      success: { bg: '#0d4a1a', fg: '#ffffff' },
+      warning: { bg: '#5c3a00', fg: '#ffffff' },
+      neutral: { bg: '#e5e5ea', fg: '#3c3c3f' },
+      error: { bg: '#b91c1c', fg: '#ffffff' },
+      secondary: { bg: '#3730a3', fg: '#ffffff' },
+    },
   },
   spacing,
   radii,
@@ -196,9 +213,9 @@ export const darkTheme: Theme = {
     link: '#6eb4ff',
     linkVisited: '#b388ff',
 
-    // Status colors
-    success: '#32d45c',
-    warning: '#ff9f0a',
+    // Status colors - 7:1 on #2c2c2e and on tinted badge backgrounds
+    success: '#90ffa8',
+    warning: '#ffdd99',
     error: '#ffbdb9',
     info: '#64d2ff',
 
@@ -210,6 +227,14 @@ export const darkTheme: Theme = {
     // Badge/pill - blue (like Alerts pill style), 7:1
     badgeBackground: '#0d2137',
     badgeText: '#7dc8ff',
+
+    statusBadge: {
+      success: { bg: '#0d4a1a', fg: '#90ffa8' },
+      warning: { bg: '#5c3a00', fg: '#ffdd99' },
+      neutral: { bg: '#48484a', fg: '#e5e5ea' },
+      error: { bg: '#b91c1c', fg: '#ffffff' },
+      secondary: { bg: '#3730a3', fg: '#a5b4fc' },
+    },
   },
   spacing,
   radii,

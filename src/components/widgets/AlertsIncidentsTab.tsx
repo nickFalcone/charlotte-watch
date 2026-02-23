@@ -5,7 +5,7 @@ import type { SummarizeResponse } from '../../utils/alertSummaryApi';
 import { AlertIcon } from '../AlertIcon';
 import infoIcon from '../../assets/icons/info.svg';
 import * as Popover from '@radix-ui/react-popover';
-import { AnimatedPopoverContent, formatGeneratedAt, InfoIcon, InfoTrigger } from '../common';
+import { AnimatedPopoverContent, GeneratedAt, InfoIcon, InfoTrigger } from '../common';
 import { getDisplaySeverity } from './alertsMapUtils';
 import { SourceFilterBar } from './SourceFilterBar';
 import { AlertEmptyState } from './AlertEmptyState';
@@ -29,7 +29,6 @@ import {
   AISummaryText,
   AISummaryList,
   AISummaryListItem,
-  AISummaryGeneratedAt,
   AISummaryMetaRow,
   AISummarySkeleton,
   AISummarySkeletonLine,
@@ -125,11 +124,7 @@ export function AlertsIncidentsTab({
               <AISummaryText>
                 <AISummaryContent summary={summaryData.summary} />
                 <AISummaryMetaRow>
-                  {summaryData.generatedAt && (
-                    <AISummaryGeneratedAt>
-                      Generated: {formatGeneratedAt(summaryData.generatedAt)}
-                    </AISummaryGeneratedAt>
-                  )}
+                  {summaryData.generatedAt && <GeneratedAt date={summaryData.generatedAt} />}
                   <Popover.Root>
                     <Popover.Trigger asChild>
                       <InfoTrigger aria-label="About AI summary">

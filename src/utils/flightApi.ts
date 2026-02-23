@@ -7,6 +7,7 @@ import type {
   FAAGeneralDelay,
   FAAClosure,
   FAAGroundStop,
+  AeroDataBoxSchedule,
 } from '../types';
 import type { GenericAlert } from '../types/alerts';
 import { mapFAADelaySeverity } from '../types/alerts';
@@ -478,6 +479,14 @@ export function lastContactToMs(lastContact: Date | number): number {
   if (typeof lastContact === 'number')
     return lastContact >= 1e12 ? lastContact : lastContact * 1000;
   return 0;
+}
+
+const AERODATABOX_FLIGHTS_URL = '/api/aerodatabox-flights';
+
+export async function fetchCLTSchedule(signal?: AbortSignal): Promise<AeroDataBoxSchedule> {
+  const response = await fetch(AERODATABOX_FLIGHTS_URL, { signal });
+  if (!response.ok) throw new Error(`AeroDataBox API error: ${response.status}`);
+  return response.json() as Promise<AeroDataBoxSchedule>;
 }
 
 // Format how long ago the position was last updated

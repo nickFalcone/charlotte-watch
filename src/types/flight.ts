@@ -184,3 +184,57 @@ export const FLIGHT_PHASE_LABELS: Record<FlightPhase, string> = {
   descending: 'Descending',
   approaching: 'Approaching',
 };
+
+// AeroDataBox FIDS schedule types (GetAirportFlightsRelative endpoint)
+
+export interface AeroDataBoxSchedule {
+  departures: AeroDataBoxFlight[];
+  arrivals: AeroDataBoxFlight[];
+}
+
+export interface AeroDataBoxFlight {
+  departure: AeroDataBoxFlightLeg;
+  arrival: AeroDataBoxFlightLeg;
+  number: string;
+  callSign?: string;
+  status: string;
+  codeshareStatus: string;
+  isCargo: boolean;
+  aircraft: AeroDataBoxAircraft;
+  airline: AeroDataBoxAirline;
+}
+
+export interface AeroDataBoxFlightLeg {
+  airport?: AeroDataBoxAirport;
+  scheduledTime: AeroDataBoxTimePair;
+  revisedTime?: AeroDataBoxTimePair;
+  runwayTime?: AeroDataBoxTimePair;
+  terminal?: string;
+  runway?: string;
+  quality: string[];
+}
+
+export interface AeroDataBoxAirport {
+  icao: string;
+  iata: string;
+  name: string;
+  countryCode: string;
+  timeZone: string;
+}
+
+export interface AeroDataBoxTimePair {
+  utc: string;
+  local: string;
+}
+
+export interface AeroDataBoxAircraft {
+  reg?: string;
+  modeS?: string;
+  model: string;
+}
+
+export interface AeroDataBoxAirline {
+  name: string;
+  iata: string;
+  icao: string;
+}
