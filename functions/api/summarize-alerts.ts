@@ -92,8 +92,14 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const cachedResponse = await checkCache(context.env.CACHE, cacheKey);
   if (cachedResponse) return cachedResponse;
 
-  // Limit alerts to prevent abuse
-  const alerts = request.alerts.slice(0, MAX_ALERTS);
+  // Sort by updatedAt descending, then cap to prevent abuse.
+  // Must sort before slicing so we keep the most recent alerts when > MAX_ALERTS.
+  const sorted = [...request.alerts].sort((a, b) => {
+    const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return bTime - aTime;
+  });
+  const alerts = sorted.slice(0, MAX_ALERTS);
 
   try {
     const userPrompt = buildUserPrompt(alerts);
