@@ -70,14 +70,16 @@ const RouteName = styled.div`
   margin-top: 2px;
 `;
 
-const StatusBadge = styled.span<{ $color: string }>`
+const StatusBadge = styled.span<{
+  $variant: 'success' | 'warning' | 'neutral' | 'error' | 'secondary';
+}>`
   display: inline-block;
   padding: 3px 8px;
   border-radius: 3px;
   font-size: 11px;
   font-weight: 600;
-  background: ${({ $color }) => `${$color}20`};
-  color: ${({ $color }) => $color};
+  background: ${({ $variant, theme }) => theme.colors.statusBadge[$variant].bg};
+  color: ${({ $variant, theme }) => theme.colors.statusBadge[$variant].fg};
 `;
 
 const DataGrid = styled.div`
@@ -182,7 +184,20 @@ export function AircraftDetailDialog({
 
   const matchedLeg = match ? (isDeparture ? match.departure : match.arrival) : undefined;
   const schedStatus = match
-    ? scheduleStatusInfo(match.status, theme.colors as Record<string, string>)
+    ? scheduleStatusInfo(
+        match.status,
+        {
+          success: theme.colors.success,
+          warning: theme.colors.warning,
+          error: theme.colors.error,
+          secondary: theme.colors.secondary,
+          textMuted: theme.colors.textMuted,
+        },
+        {
+          revisedTime: matchedLeg?.revisedTime,
+          scheduledTime: matchedLeg?.scheduledTime,
+        }
+      )
     : undefined;
 
   return (
@@ -240,7 +255,7 @@ export function AircraftDetailDialog({
                 <DialogSection>
                   <DialogLabel>Status</DialogLabel>
                   <StatusBadge
-                    $color={schedStatus.color}
+                    $variant={schedStatus.variant}
                     aria-label={`Status: ${schedStatus.label}`}
                   >
                     {schedStatus.label}

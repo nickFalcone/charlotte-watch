@@ -58,7 +58,7 @@ function FlightSection({ title, flights, direction, emptyLabel }: FlightSectionP
   const sorted = sortByScheduled(flights, direction);
 
   return (
-    <TableContainer>
+    <TableContainer tabIndex={0} aria-label={`${title} flight schedule`}>
       <FlightTable role="grid" aria-label={title}>
         <TableHead>
           <tr>
@@ -78,9 +78,15 @@ function FlightSection({ title, flights, direction, emptyLabel }: FlightSectionP
               const leg = direction === 'arrivals' ? flight.departure : flight.arrival;
               const otherAirport = leg.airport;
               const myLeg = direction === 'arrivals' ? flight.arrival : flight.departure;
-              const { label, color } = scheduleStatusInfo(
+              const { label, variant } = scheduleStatusInfo(
                 flight.status,
-                theme.colors as Record<string, string>,
+                {
+                  success: theme.colors.success,
+                  warning: theme.colors.warning,
+                  error: theme.colors.error,
+                  secondary: theme.colors.secondary,
+                  textMuted: theme.colors.textMuted,
+                },
                 { revisedTime: myLeg.revisedTime, scheduledTime: myLeg.scheduledTime }
               );
               const showRevised =
@@ -111,7 +117,7 @@ function FlightSection({ title, flights, direction, emptyLabel }: FlightSectionP
                     </TimeCell>
                   </FlightCell>
                   <FlightCell>
-                    <StatusBadge $color={color} aria-label={`Status: ${label}`}>
+                    <StatusBadge $variant={variant} aria-label={`Status: ${label}`}>
                       {label}
                     </StatusBadge>
                   </FlightCell>

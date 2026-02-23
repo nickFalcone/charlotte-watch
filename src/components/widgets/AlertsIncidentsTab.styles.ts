@@ -244,11 +244,6 @@ export const AISummaryMetaRow = styled.div`
   margin-top: 8px;
 `;
 
-export const AISummaryGeneratedAt = styled.div`
-  font-size: 10px;
-  color: ${props => props.theme.colors.textMuted};
-`;
-
 export const AISummarySkeleton = styled.div`
   flex: 1;
   display: flex;

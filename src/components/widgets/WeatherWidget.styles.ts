@@ -218,11 +218,6 @@ export const SummaryMetaRow = styled.div`
   margin-top: 8px;
 `;
 
-export const SummaryGeneratedAt = styled.div`
-  font-size: 10px;
-  color: ${props => props.theme.colors.textMuted};
-`;
-
 // --- Air Quality tab ---
 
 export const AqiScoreRow = styled.div`

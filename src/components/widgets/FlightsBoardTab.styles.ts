@@ -130,14 +130,16 @@ export const RevisedTime = styled.span`
   white-space: nowrap;
 `;
 
-export const StatusBadge = styled.span<{ $color: string }>`
+export const StatusBadge = styled.span<{
+  $variant: 'success' | 'warning' | 'neutral' | 'error' | 'secondary';
+}>`
   display: inline-block;
   padding: 2px 6px;
   border-radius: 3px;
   font-size: 10px;
   font-weight: 600;
-  background: ${({ $color }) => `${$color}20`};
-  color: ${({ $color }) => $color};
+  background: ${({ $variant, theme }) => theme.colors.statusBadge[$variant].bg};
+  color: ${({ $variant, theme }) => theme.colors.statusBadge[$variant].fg};
   white-space: nowrap;
 `;
 
@@ -153,6 +155,12 @@ export const EmptyCell = styled.td`
 export const TableContainer = styled.div`
   overflow-y: auto;
   height: 100%;
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.colors.primary};
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 `;
 
 export const LoadingText = styled.div`
