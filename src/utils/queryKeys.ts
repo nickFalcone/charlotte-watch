@@ -44,6 +44,7 @@ export const queryKeys = {
   flight: {
     aircraft: (airportCode: string) => ['flight', 'aircraft', airportCode] as const,
     faaStatus: () => ['flight', 'faaStatus'] as const,
+    schedule: (airportCode: string) => ['flight', 'schedule', airportCode] as const,
   },
 
   /**

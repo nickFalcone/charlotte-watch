@@ -9,7 +9,7 @@ import {
   useMap,
 } from 'react-leaflet';
 import { BaseMapTileLayer } from './BaseMapTileLayer';
-import { TileAccessibilityHandler, MapRecenterButton } from '../common';
+import { TileAccessibilityHandler, MapRecenterButton, WidgetTabs, TabPanel } from '../common';
 import L from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
 import type { WidgetProps, Aircraft } from '../../types';
@@ -21,6 +21,7 @@ import {
 } from '../../types/flight';
 import {
   fetchAircraftInBoundingBox,
+  fetchCLTSchedule,
   formatVelocity,
   formatAltitude,
   formatHeading,
@@ -39,6 +40,7 @@ import {
   AirportCode,
   FlightCount,
   MapContainer,
+  MapTabWrapper,
   MapOverlay,
   MapControls,
   LegendItem,
@@ -52,6 +54,8 @@ import {
   RetryButton,
   VisuallyHidden,
 } from './FlightTrackerWidget.styles';
+import { AircraftDetailDialog } from './AircraftDetailDialog';
+import { FlightsBoardTab } from './FlightsBoardTab';
 
 const DEFAULT_ZOOM = 7;
 const DEFAULT_CENTER: [number, number] = [KCLT_AIRPORT.latitude, KCLT_AIRPORT.longitude];
@@ -64,11 +68,6 @@ function escapeHtml(str: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#x27;');
-}
-
-// Validate callsign format (alphanumeric, 1-8 chars) for safe URL construction
-function isValidCallsign(callsign: string): boolean {
-  return /^[A-Z0-9]{1,8}$/i.test(callsign);
 }
 
 // Calculate 3 o'clock positions for range ring labels
@@ -168,7 +167,13 @@ function buildAircraftTooltipHtml(aircraft: Aircraft): string {
 
 // Imperative layer: add/remove Leaflet markers when flights changes. Bypasses
 // react-leaflet's declarative Marker so the map reliably updates after refetch.
-function AircraftMarkersLayer({ flights }: { flights: Aircraft[] }) {
+function AircraftMarkersLayer({
+  flights,
+  onAircraftClick,
+}: {
+  flights: Aircraft[];
+  onAircraftClick: (aircraft: Aircraft) => void;
+}) {
   const map = useMap();
   const layerRef = useRef<L.LayerGroup | null>(null);
 
@@ -195,13 +200,7 @@ function AircraftMarkersLayer({ flights }: { flights: Aircraft[] }) {
         className: 'aircraft-tooltip',
       });
       marker.on('click', () => {
-        if (aircraft.callsign && isValidCallsign(aircraft.callsign)) {
-          window.open(
-            `https://www.flightaware.com/live/flight/${encodeURIComponent(aircraft.callsign)}`,
-            '_blank',
-            'noopener,noreferrer'
-          );
-        }
+        onAircraftClick(aircraft);
       });
       marker.addTo(group);
     });
@@ -215,7 +214,7 @@ function AircraftMarkersLayer({ flights }: { flights: Aircraft[] }) {
       }
       layerRef.current = null;
     };
-  }, [map, flights]);
+  }, [map, flights, onAircraftClick]);
 
   return null;
 }
@@ -234,6 +233,8 @@ export function FlightTrackerWidget(_props: WidgetProps) {
   const { setLastUpdated } = useWidgetMetadata();
   const [widgetRef, isWidgetVisible] = useIntersectionObserver<HTMLDivElement>();
   const [liveAnnouncement, setLiveAnnouncement] = useState('');
+  const [activeTab, setActiveTab] = useState<string>('radar');
+  const [selectedAircraft, setSelectedAircraft] = useState<Aircraft | null>(null);
 
   const {
     data: aircraft,
@@ -252,12 +253,24 @@ export function FlightTrackerWidget(_props: WidgetProps) {
     structuralSharing: false, // Always new reference so AircraftMarkersLayer effect runs on refetch
   });
 
-  // Use the actual freshness of position data for the "Updated" label, not the
-  // fetch time. OpenSky's last_contact/time_position can be much older than
-  // when we requested the data (e.g. delayed/cached upstream), so we take the newest
-  // position report in the payload. When there are no aircraft, fall back to
-  // dataUpdatedAt (when we last successfully fetched).
+  const {
+    data: scheduleData,
+    isLoading: scheduleLoading,
+    isError: scheduleError,
+    dataUpdatedAt: scheduleUpdatedAt,
+  } = useQuery({
+    queryKey: queryKeys.flight.schedule(KCLT_AIRPORT.code),
+    queryFn: ({ signal }) => fetchCLTSchedule(signal),
+    staleTime: 10 * 60 * 1000,
+    refetchInterval: false,
+    enabled: isWidgetVisible && activeTab === 'flights',
+  });
+
+  // Use the actual freshness of position data for the "Updated" label on the Radar tab.
+  // OpenSky's last_contact/time_position can be much older than when we requested
+  // the data, so we take the newest position report in the payload.
   useEffect(() => {
+    if (activeTab !== 'radar') return;
     let ts: number | null = null;
     if (aircraft && aircraft.length > 0) {
       const toMs = (a: Aircraft) =>
@@ -267,7 +280,13 @@ export function FlightTrackerWidget(_props: WidgetProps) {
       ts = dataUpdatedAt || null;
     }
     setLastUpdated(ts);
-  }, [aircraft, dataUpdatedAt, setLastUpdated]);
+  }, [aircraft, dataUpdatedAt, activeTab, setLastUpdated]);
+
+  // On the Flights tab, report the schedule data's fetch time instead.
+  useEffect(() => {
+    if (activeTab !== 'flights') return;
+    setLastUpdated(scheduleUpdatedAt || null);
+  }, [scheduleUpdatedAt, activeTab, setLastUpdated]);
 
   const handleResetView = () => {
     if (mapRef.current) {
@@ -308,118 +327,159 @@ export function FlightTrackerWidget(_props: WidgetProps) {
 
   const flights = aircraft || [];
 
+  // Stable callback ref to avoid re-creating Leaflet markers on every render
+  const handleAircraftClick = (ac: Aircraft) => setSelectedAircraft(ac);
+
   return (
     <FlightContainer ref={widgetRef}>
       <FlightHeader>
         <AirportInfo>
-          <AirportCode>KCLT Radar</AirportCode>
+          <AirportCode>KCLT</AirportCode>
         </AirportInfo>
-        <FlightCount $hasFlights={flights.length > 0}>{flights.length} aircraft</FlightCount>
+        {activeTab === 'radar' && (
+          <FlightCount $hasFlights={flights.length > 0}>{flights.length} aircraft</FlightCount>
+        )}
       </FlightHeader>
 
-      <MapContainer>
-        <VisuallyHidden>
-          Interactive flight radar map showing aircraft near Charlotte Douglas International
-          Airport. Map displays aircraft within 200 kilometers, color-coded by flight phase:
-          departing, climbing, cruising, descending, approaching, or on ground. Click aircraft to
-          view details on FlightAware. Map shows range rings at 100km and 200km. Base map tiles are
-          decorative, aircraft positions and airport marker provide flight tracking information.
-        </VisuallyHidden>
-        <VisuallyHidden aria-live="polite" aria-atomic="true">
-          {liveAnnouncement}
-        </VisuallyHidden>
-        <LeafletMapContainer
-          center={DEFAULT_CENTER}
-          zoom={DEFAULT_ZOOM}
-          zoomControl={true}
-          scrollWheelZoom={false}
-          minZoom={DEFAULT_ZOOM}
-          maxZoom={10}
-          aria-label="Flight radar map for Charlotte Douglas International Airport showing nearby aircraft"
-        >
-          <MapController mapRef={mapRef} />
-          <TileAccessibilityHandler />
-          <BaseMapTileLayer />
+      <VisuallyHidden aria-live="polite" aria-atomic="true">
+        {liveAnnouncement}
+      </VisuallyHidden>
 
-          {/* 100km range ring */}
-          <Circle
-            center={DEFAULT_CENTER}
-            radius={100000}
-            pathOptions={{
-              color: '#4b5563',
-              weight: 1,
-              fillOpacity: 0,
-              dashArray: '6, 6',
-            }}
+      <WidgetTabs defaultValue="radar" value={activeTab} onValueChange={setActiveTab}>
+        <TabPanel value="radar" label="Radar" forceMount>
+          <MapTabWrapper>
+            <MapContainer>
+              <VisuallyHidden>
+                Interactive flight radar map showing aircraft near Charlotte Douglas International
+                Airport. Map displays aircraft within 200 kilometers, color-coded by flight phase:
+                departing, climbing, cruising, descending, approaching, or on ground. Click aircraft
+                to view details. Map shows range rings at 100km and 200km. Base map tiles are
+                decorative, aircraft positions and airport marker provide flight tracking
+                information.
+              </VisuallyHidden>
+              <LeafletMapContainer
+                center={DEFAULT_CENTER}
+                zoom={DEFAULT_ZOOM}
+                zoomControl={true}
+                scrollWheelZoom={false}
+                minZoom={DEFAULT_ZOOM}
+                maxZoom={10}
+                aria-label="Flight radar map for Charlotte Douglas International Airport showing nearby aircraft"
+              >
+                <MapController mapRef={mapRef} />
+                <TileAccessibilityHandler />
+                <BaseMapTileLayer />
+
+                {/* 100km range ring */}
+                <Circle
+                  center={DEFAULT_CENTER}
+                  radius={100000}
+                  pathOptions={{
+                    color: '#4b5563',
+                    weight: 1,
+                    fillOpacity: 0,
+                    dashArray: '6, 6',
+                  }}
+                />
+                <Marker
+                  position={RANGE_100KM_POS}
+                  icon={createRangeLabelIcon('100km', '#9ca3af')}
+                />
+
+                {/* 200km range ring */}
+                <Circle
+                  center={DEFAULT_CENTER}
+                  radius={200000}
+                  pathOptions={{
+                    color: '#374151',
+                    weight: 1,
+                    fillOpacity: 0,
+                    dashArray: '6, 6',
+                  }}
+                />
+                <Marker
+                  position={RANGE_200KM_POS}
+                  icon={createRangeLabelIcon('200km', '#6b7280')}
+                />
+
+                {/* Airport marker */}
+                <Marker position={DEFAULT_CENTER} icon={createAirportIcon()}>
+                  <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
+                    Charlotte Douglas International Airport (KCLT)
+                  </Tooltip>
+                </Marker>
+
+                <AircraftMarkersLayer
+                  key={dataUpdatedAt ?? 0}
+                  flights={flights}
+                  onAircraftClick={handleAircraftClick}
+                />
+              </LeafletMapContainer>
+
+              <MapOverlay>
+                <LegendItem $color={FLIGHT_PHASE_COLORS.departing}>
+                  <LegendPlane $color={FLIGHT_PHASE_COLORS.departing}>
+                    <PlaneSvg color={FLIGHT_PHASE_COLORS.departing} />
+                  </LegendPlane>
+                  Departing
+                </LegendItem>
+                <LegendItem $color={FLIGHT_PHASE_COLORS.climbing}>
+                  <LegendPlane $color={FLIGHT_PHASE_COLORS.climbing}>
+                    <PlaneSvg color={FLIGHT_PHASE_COLORS.climbing} />
+                  </LegendPlane>
+                  Climbing
+                </LegendItem>
+                <LegendItem $color={FLIGHT_PHASE_COLORS.cruise}>
+                  <LegendPlane $color={FLIGHT_PHASE_COLORS.cruise}>
+                    <PlaneSvg color={FLIGHT_PHASE_COLORS.cruise} />
+                  </LegendPlane>
+                  Cruising
+                </LegendItem>
+                <LegendItem $color={FLIGHT_PHASE_COLORS.descending}>
+                  <LegendPlane $color={FLIGHT_PHASE_COLORS.descending}>
+                    <PlaneSvg color={FLIGHT_PHASE_COLORS.descending} />
+                  </LegendPlane>
+                  Descending
+                </LegendItem>
+                <LegendItem $color={FLIGHT_PHASE_COLORS.approaching}>
+                  <LegendPlane $color={FLIGHT_PHASE_COLORS.approaching}>
+                    <PlaneSvg color={FLIGHT_PHASE_COLORS.approaching} />
+                  </LegendPlane>
+                  Approaching
+                </LegendItem>
+                <LegendItem $color={FLIGHT_PHASE_COLORS.ground}>
+                  <LegendPlane $color={FLIGHT_PHASE_COLORS.ground}>
+                    <PlaneSvg color={FLIGHT_PHASE_COLORS.ground} />
+                  </LegendPlane>
+                  Ground
+                </LegendItem>
+              </MapOverlay>
+
+              <MapControls>
+                <MapRecenterButton
+                  onClick={handleResetView}
+                  title="Reset view"
+                  aria-label="Reset view"
+                />
+              </MapControls>
+            </MapContainer>
+          </MapTabWrapper>
+        </TabPanel>
+
+        <TabPanel value="flights" label="Flights">
+          <FlightsBoardTab
+            schedule={scheduleData}
+            isLoading={scheduleLoading}
+            isError={scheduleError}
           />
-          <Marker position={RANGE_100KM_POS} icon={createRangeLabelIcon('100km', '#9ca3af')} />
+        </TabPanel>
+      </WidgetTabs>
 
-          {/* 200km range ring */}
-          <Circle
-            center={DEFAULT_CENTER}
-            radius={200000}
-            pathOptions={{
-              color: '#374151',
-              weight: 1,
-              fillOpacity: 0,
-              dashArray: '6, 6',
-            }}
-          />
-          <Marker position={RANGE_200KM_POS} icon={createRangeLabelIcon('200km', '#6b7280')} />
-
-          {/* Airport marker */}
-          <Marker position={DEFAULT_CENTER} icon={createAirportIcon()}>
-            <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
-              Charlotte Douglas International Airport (KCLT)
-            </Tooltip>
-          </Marker>
-
-          <AircraftMarkersLayer key={dataUpdatedAt ?? 0} flights={flights} />
-        </LeafletMapContainer>
-
-        <MapOverlay>
-          <LegendItem $color={FLIGHT_PHASE_COLORS.departing}>
-            <LegendPlane $color={FLIGHT_PHASE_COLORS.departing}>
-              <PlaneSvg color={FLIGHT_PHASE_COLORS.departing} />
-            </LegendPlane>
-            Departing
-          </LegendItem>
-          <LegendItem $color={FLIGHT_PHASE_COLORS.climbing}>
-            <LegendPlane $color={FLIGHT_PHASE_COLORS.climbing}>
-              <PlaneSvg color={FLIGHT_PHASE_COLORS.climbing} />
-            </LegendPlane>
-            Climbing
-          </LegendItem>
-          <LegendItem $color={FLIGHT_PHASE_COLORS.cruise}>
-            <LegendPlane $color={FLIGHT_PHASE_COLORS.cruise}>
-              <PlaneSvg color={FLIGHT_PHASE_COLORS.cruise} />
-            </LegendPlane>
-            Cruising
-          </LegendItem>
-          <LegendItem $color={FLIGHT_PHASE_COLORS.descending}>
-            <LegendPlane $color={FLIGHT_PHASE_COLORS.descending}>
-              <PlaneSvg color={FLIGHT_PHASE_COLORS.descending} />
-            </LegendPlane>
-            Descending
-          </LegendItem>
-          <LegendItem $color={FLIGHT_PHASE_COLORS.approaching}>
-            <LegendPlane $color={FLIGHT_PHASE_COLORS.approaching}>
-              <PlaneSvg color={FLIGHT_PHASE_COLORS.approaching} />
-            </LegendPlane>
-            Approaching
-          </LegendItem>
-          <LegendItem $color={FLIGHT_PHASE_COLORS.ground}>
-            <LegendPlane $color={FLIGHT_PHASE_COLORS.ground}>
-              <PlaneSvg color={FLIGHT_PHASE_COLORS.ground} />
-            </LegendPlane>
-            Ground
-          </LegendItem>
-        </MapOverlay>
-
-        <MapControls>
-          <MapRecenterButton onClick={handleResetView} title="Reset view" aria-label="Reset view" />
-        </MapControls>
-      </MapContainer>
+      <AircraftDetailDialog
+        aircraft={selectedAircraft}
+        scheduleData={scheduleData}
+        onClose={() => setSelectedAircraft(null)}
+      />
     </FlightContainer>
   );
 }
