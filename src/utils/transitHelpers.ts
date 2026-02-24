@@ -15,9 +15,20 @@ export function getDirectionLabel(bearing: number): string {
 export function findNearestStation(
   lat: number,
   lng: number,
-  routeId: string
+  routeId: '501' | '510'
 ): TransitStation | null {
-  const stations = routeId === '501' ? BLUE_LINE_STATIONS : GOLD_LINE_STATIONS;
+  let stations: TransitStation[] | null;
+  switch (routeId) {
+    case '501':
+      stations = BLUE_LINE_STATIONS;
+      break;
+    case '510':
+      stations = GOLD_LINE_STATIONS;
+      break;
+    default:
+      // Unknown routeId: surface the problem by returning null instead of misclassifying.
+      return null;
+  }
   let nearest: TransitStation | null = null;
   let minDist = Infinity;
   for (const station of stations) {
