@@ -68,10 +68,10 @@ describe('findNearestStation', () => {
     expect(result?.name).toBe('I-485/South Blvd');
   });
 
-  it('searches Gold Line stations for unknown routeId (fallback)', () => {
+  it('returns null for unknown routeId', () => {
     const goldStation = GOLD_LINE_STATIONS[0];
     const result = findNearestStation(goldStation.lat, goldStation.lng, '999');
-    expect(result?.name).toBe(goldStation.name);
+    expect(result).toBeNull();
   });
 
   it('returns a station from the correct line when same coordinates queried on different routes', () => {

@@ -261,7 +261,13 @@ export function TransitWidget(_props: WidgetProps) {
   const stationStroke = theme.colors.text;
   const mapRef = useRef<L.Map | null>(null);
 
-  const { data: vehicles, dataUpdatedAt } = useQuery({
+  const {
+    data: vehicles,
+    dataUpdatedAt,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.transit.vehiclePositions,
     queryFn: ({ signal }) => fetchTransitVehicles(signal),
     refetchInterval: 60000,

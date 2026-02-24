@@ -24,7 +24,14 @@ export async function fetchTransitVehicles(
   return data.entity
     .filter(entity => {
       const routeId = entity.vehicle?.trip?.routeId;
-      return routeId !== undefined && (LYNX_ROUTE_IDS as readonly string[]).includes(routeId);
+      const pos = entity.vehicle?.position;
+      return (
+        routeId !== undefined &&
+        (LYNX_ROUTE_IDS as readonly string[]).includes(routeId) &&
+        pos != null &&
+        pos.latitude != null &&
+        pos.longitude != null
+      );
     })
     .map(entity => {
       const v = entity.vehicle!;

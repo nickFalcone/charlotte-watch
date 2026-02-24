@@ -15,7 +15,7 @@ export function getDirectionLabel(bearing: number): string {
 export function findNearestStation(
   lat: number,
   lng: number,
-  routeId: '501' | '510'
+  routeId: string
 ): TransitStation | null {
   let stations: TransitStation[] | null;
   switch (routeId) {
