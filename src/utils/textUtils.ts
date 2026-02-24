@@ -5,3 +5,8 @@ export function stripEmojis(text: string): string {
     .replace(/\uFE0F/g, '')
     .trim();
 }
+
+/** Remove Twitter t.co shortened URLs from text. */
+export function stripTcoLinks(text: string): string {
+  return text.replace(/https?:\/\/t\.co\/\S+/g, '').trim();
+}

@@ -11,6 +11,9 @@ const FlightTrackerWidget = lazy(() =>
 );
 const AlertsWidget = lazy(() => import('./AlertsWidget').then(m => ({ default: m.AlertsWidget })));
 const StockWidget = lazy(() => import('./StockWidget').then(m => ({ default: m.StockWidget })));
+const TransitWidget = lazy(() =>
+  import('./TransitWidget').then(m => ({ default: m.TransitWidget }))
+);
 
 export const widgetRegistry: Record<WidgetType, WidgetDefinition> = {
   weather: {
@@ -57,6 +60,15 @@ export const widgetRegistry: Record<WidgetType, WidgetDefinition> = {
     minSize: { w: 3, h: 2 },
     icon: WIDGET_ICONS.news,
     color: WIDGET_COLORS.news,
+  },
+  transit: {
+    type: 'transit',
+    component: TransitWidget,
+    defaultTitle: 'LYNX Transit',
+    defaultSize: { w: 5, h: 5 },
+    minSize: { w: 3, h: 3 },
+    icon: WIDGET_ICONS.transit,
+    color: WIDGET_COLORS.transit,
   },
 };
 

@@ -148,4 +148,16 @@ Avoid `useMemo` and `useCallback` by default. Only add them when you've measured
 - Use Styled Components (files named `*.styles.ts`)
 - Avoid inline styles except for truly dynamic values (e.g., colors from API data)
 
+## Numeric Literals
+
+Do not use numeric separator underscores (`_`). Write numbers plainly.
+
+```typescript
+// Bad
+refetchInterval: 30_000,
+
+// Good
+refetchInterval: 30000,
+```
+
 

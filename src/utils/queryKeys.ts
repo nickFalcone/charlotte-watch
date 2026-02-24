@@ -71,6 +71,20 @@ export const queryKeys = {
     all: ['hereFlow', 'all'] as const,
     route: (routeId: string) => ['hereFlow', 'route', routeId] as const,
   },
+
+  /**
+   * CATS Twitter service alert queries
+   */
+  cats: {
+    twitter: ['cats', 'twitter'] as const,
+  },
+
+  /**
+   * LYNX Transit (Blue Line 501 + Gold Line 510) queries
+   */
+  transit: {
+    vehiclePositions: ['transit', 'vehiclePositions'] as const,
+  },
 } as const;
 
 /**
@@ -83,3 +97,5 @@ export type FlightKeys = QueryKeys['flight'];
 export type StockKeys = QueryKeys['stock'];
 export type NewsKeys = QueryKeys['news'];
 export type HereFlowKeys = QueryKeys['hereFlow'];
+export type CatsKeys = QueryKeys['cats'];
+export type TransitKeys = QueryKeys['transit'];

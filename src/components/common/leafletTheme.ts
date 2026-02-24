@@ -33,4 +33,24 @@ export const leafletControlTheme = css`
   .leaflet-control-attribution a {
     color: ${props => props.theme.colors.primary} !important;
   }
+
+  .leaflet-popup-content-wrapper {
+    background-color: ${props => props.theme.colors.backgroundSecondary} !important;
+    color: ${props => props.theme.colors.text} !important;
+    border: 1px solid ${props => props.theme.colors.border} !important;
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4) !important;
+    border-radius: 8px !important;
+  }
+
+  .leaflet-popup-tip {
+    background-color: ${props => props.theme.colors.backgroundSecondary} !important;
+  }
+
+  .leaflet-popup-close-button {
+    color: ${props => props.theme.colors.textMuted} !important;
+  }
+
+  .leaflet-popup-close-button:hover {
+    color: ${props => props.theme.colors.text} !important;
+  }
 `;

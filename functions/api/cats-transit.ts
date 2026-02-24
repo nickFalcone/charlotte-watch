@@ -13,8 +13,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     });
   }
 
-  // Check KV cache (15min TTL shared across all clients)
-  const CACHE_KEY = 'alerts:cats';
+  // KV cache with 60s TTL for live vehicle positions
+  const CACHE_KEY = 'transit:vehicle-positions';
   try {
     const cached = await context.env.CACHE.get(CACHE_KEY);
     if (cached) {
@@ -22,7 +22,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Cache-Control': 'private, max-age=900',
+          'Cache-Control': 'private, max-age=60',
         },
       });
     }
@@ -30,7 +30,7 @@ export const onRequestGet: PagesFunction<Env> = async context => {
     console.error('KV cache read error:', e);
   }
 
-  const url = `${CATS_BASE_URL}/feeds/${CATS_FEED_ID}/download_latest_rt/alerts.json`;
+  const url = `${CATS_BASE_URL}/feeds/${CATS_FEED_ID}/download_latest_rt/vehicle_positions.json`;
 
   try {
     const response = await fetch(url, {
@@ -50,9 +50,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
     const data = await response.text();
 
-    // Store in KV cache (15min TTL); failures are non-fatal
     try {
-      await context.env.CACHE.put(CACHE_KEY, data, { expirationTtl: 900 });
+      await context.env.CACHE.put(CACHE_KEY, data, { expirationTtl: 60 });
     } catch (e) {
       console.error('KV cache write error:', e);
     }
@@ -61,13 +60,13 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
-        'Cache-Control': 'private, max-age=900',
+        'Cache-Control': 'private, max-age=60',
       },
     });
   } catch (error) {
     return new Response(
       JSON.stringify({
-        error: 'Failed to fetch CATS alerts',
+        error: 'Failed to fetch CATS vehicle positions',
         message: error instanceof Error ? error.message : 'Unknown error',
       }),
       {
