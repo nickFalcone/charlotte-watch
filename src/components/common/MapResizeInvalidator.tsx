@@ -11,11 +11,25 @@ export function MapResizeInvalidator() {
 
   useEffect(() => {
     const container = map.getContainer();
+    let frameId: number | null = null;
+
     const observer = new ResizeObserver(() => {
-      map.invalidateSize();
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
+      frameId = requestAnimationFrame(() => {
+        map.invalidateSize();
+      });
     });
+
     observer.observe(container);
-    return () => observer.disconnect();
+
+    return () => {
+      if (frameId !== null) {
+        cancelAnimationFrame(frameId);
+      }
+      observer.disconnect();
+    };
   }, [map]);
 
   return null;
