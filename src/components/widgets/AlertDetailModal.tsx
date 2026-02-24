@@ -232,7 +232,7 @@ export function AlertDetailModal({ alert, onClose }: AlertDetailModalProps) {
                     <AlertModalText>{alert.summary}</AlertModalText>
                   </AlertModalSection>
 
-                  {alert.description && (
+                  {alert.description && alert.description !== alert.summary && (
                     <AlertModalSection>
                       <AlertModalLabel>Description</AlertModalLabel>
                       <AlertModalText>{alert.description}</AlertModalText>

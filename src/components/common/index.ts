@@ -12,4 +12,5 @@ export * from './WidgetStates.styles';
 export * from './WidgetTabs';
 export * from './TileAccessibilityHandler';
 export * from './MapSizeInvalidator';
+export * from './MapResizeInvalidator';
 export * from './FitBounds';

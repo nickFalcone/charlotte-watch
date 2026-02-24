@@ -8,7 +8,7 @@ import constructionIconUrl from '../assets/icons/construction.svg';
 import powerIconUrl from '../assets/icons/power.svg';
 import hurricaneIconUrl from '../assets/icons/hurricane.svg';
 import planeIconUrl from '../assets/icons/plane.svg';
-import catsIconUrl from '../assets/icons/cats.svg';
+import catsIconUrl from '../assets/icons/cats-alert.svg';
 import fireIconUrl from '../assets/icons/fire.svg';
 import schoolIconUrl from '../assets/icons/school.svg';
 
