@@ -296,10 +296,20 @@ export function TransitWidget(_props: WidgetProps) {
     map.fitBounds(bounds, { padding: [24, 24], maxZoom: 14 });
   }, []);
 
-  if (!vehicles) {
+  if (isLoading && !vehicles) {
     return <TransitLoadingContainer>Loading transit data...</TransitLoadingContainer>;
   }
 
+  if (isError) {
+    return (
+      <TransitLoadingContainer>
+        <div>Unable to load transit data.</div>
+        <button type="button" onClick={() => refetch()}>
+          Retry
+        </button>
+      </TransitLoadingContainer>
+    );
+  }
   return (
     <TransitMapContainer>
       <LeafletMapContainer
