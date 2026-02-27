@@ -48,11 +48,30 @@ export const ArticleLink = styled.a`
 export const SourcesList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
 `;
 
 export const SourceItem = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+export const SourceTitle = styled.div`
   font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+`;
+
+export const SourceMeta = styled.div`
+  font-size: 12px;
+  color: ${props => props.theme.colors.textMuted};
+`;
+
+export const SourceSnippet = styled.p`
+  margin: 4px 0 0;
+  font-size: 13px;
   color: ${props => props.theme.colors.text};
-  line-height: 1.5;
+  line-height: 1.6;
+  opacity: 0.85;
 `;

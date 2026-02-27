@@ -1,7 +1,7 @@
 /**
  * Cloudflare Worker: News Cache Warmer
  *
- * WRITE path: Cron -> fetch articles -> LLM parse -> write KV
+ * WRITE path: Cron -> fetch RSS feeds -> LLM parse -> write KV
  * The Pages Function (read path) serves cached data instantly.
  *
  * Deploy: npx wrangler deploy --config workers/wrangler.toml
@@ -9,17 +9,24 @@
 
 /// <reference types="@cloudflare/workers-types" />
 
+import { XMLParser } from 'fast-xml-parser';
 import { callOpenAIResponses } from '../functions/_lib/openaiResponses';
 import newsParsingPrompt from '../src/prompts/newsParsing.json';
 
 const NEWS_PARSING_SYSTEM_PROMPT: string = newsParsingPrompt.systemPrompt;
-const NEWS_API_HOST = 'google-trend-news.p.rapidapi.com';
 const CACHE_KEY = 'news:parsed';
-const MAX_ARTICLES_TO_SEND = 100;
+const MAX_ARTICLES_TO_SEND = 200;
+
+/** Charlotte-area local news RSS feeds */
+const RSS_FEEDS: Array<{ url: string; name: string }> = [
+  { url: 'https://www.wbtv.com/arc/outboundfeeds/rss/?outputType=xml', name: 'WBTV' },
+  { url: 'https://www.wcnc.com/feeds/syndication/rss/news/', name: 'WCNC' },
+  { url: 'https://www.wsoctv.com/arc/outboundfeeds/rss/?outputType=xml', name: 'WSOC' },
+  { url: 'https://www.wccbcharlotte.com/feed/', name: 'WCCB' },
+];
 
 export interface Env {
   CACHE: KVNamespace;
-  RAPIDAPI_KEY: string;
   OPENAI_API_KEY?: string;
   ANTHROPIC_API_KEY?: string;
   AI_PROVIDER?: string;
@@ -27,19 +34,7 @@ export interface Env {
   SITE_URL?: string;
 }
 
-/** Shape returned by google-trend-news API */
-interface GoogleTrendArticle {
-  title: string;
-  description: string;
-  date: string;
-  url: string;
-  source: { name: string; url: string; favicon?: string };
-  authors?: string[];
-  keywords?: string[];
-  thumbnail?: string;
-}
-
-/** Normalized shape for LLM prompt (matches existing prompt field names) */
+/** Normalized shape for LLM prompt (matches prompt field names) */
 interface RawArticle {
   title: string;
   snippet: string;
@@ -47,17 +42,6 @@ interface RawArticle {
   source_name: string;
   link: string;
   article_id?: string;
-}
-
-function normalizeArticle(a: GoogleTrendArticle): RawArticle {
-  return {
-    title: a.title,
-    snippet: a.description,
-    published_datetime_utc: a.date,
-    source_name: a.source?.name ?? '',
-    link: a.url,
-    article_id: a.url,
-  };
 }
 
 interface ParsedNewsEvent {
@@ -72,6 +56,142 @@ interface ParsedNewsEvent {
     title: string;
     article_id: string;
   }>;
+}
+
+const rssParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  // Always return arrays for item/entry so single-item feeds parse consistently
+  isArray: name => name === 'item' || name === 'entry',
+  // Preserve CDATA content as plain text (default behaviour in v5)
+  processEntities: true,
+  trimValues: true,
+});
+
+/** Coerce a parsed XML value to a plain string, handling text nodes and objects */
+function xmlStr(val: unknown): string {
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return String(val);
+  if (typeof val === 'object' && val !== null) {
+    // fast-xml-parser mixed content: { '#text': '...' }
+    const t = (val as Record<string, unknown>)['#text'];
+    if (typeof t === 'string') return t;
+  }
+  return '';
+}
+
+/**
+ * Resolve <link> from an RSS item/entry.
+ * RSS 2.0: plain string. Atom: object with @_href, or array of link objects.
+ */
+function xmlLink(val: unknown, fallback: string): string {
+  if (typeof val === 'string') return val.trim();
+  if (Array.isArray(val)) {
+    // Atom multi-link: prefer rel="alternate", then first entry
+    const alt = (val as Record<string, unknown>[]).find(
+      l => !l['@_rel'] || l['@_rel'] === 'alternate'
+    );
+    const href = alt?.['@_href'];
+    if (typeof href === 'string') return href.trim();
+  }
+  if (typeof val === 'object' && val !== null) {
+    const href = (val as Record<string, unknown>)['@_href'];
+    if (typeof href === 'string') return href.trim();
+  }
+  return fallback;
+}
+
+/** Strip residual HTML tags and normalise whitespace for clean LLM input */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** Parse an RSS 2.0 or Atom XML string into RawArticle array */
+function parseRssFeed(xml: string, sourceName: string): RawArticle[] {
+  const doc = rssParser.parse(xml) as Record<string, unknown>;
+
+  // RSS 2.0: doc.rss.channel.item  |  Atom: doc.feed.entry
+  const rssChannel = (doc['rss'] as Record<string, unknown> | undefined)?.['channel'] as
+    | Record<string, unknown>
+    | undefined;
+  const items = (rssChannel?.['item'] ?? []) as unknown[];
+  const entries = ((doc['feed'] as Record<string, unknown> | undefined)?.['entry'] ??
+    []) as unknown[];
+
+  return [...items, ...entries].flatMap(raw => {
+    if (typeof raw !== 'object' || raw === null) return [];
+    const r = raw as Record<string, unknown>;
+
+    const title = stripHtml(xmlStr(r['title']));
+    const link = xmlLink(r['link'], xmlStr(r['guid']));
+    const snippet = stripHtml(
+      xmlStr(r['description']) || xmlStr(r['summary']) || xmlStr(r['content'])
+    );
+    const pubDate = xmlStr(r['pubDate']) || xmlStr(r['published']) || xmlStr(r['updated']);
+
+    if (!title || !link) return [];
+
+    let publishedAt: string;
+    try {
+      publishedAt = pubDate ? new Date(pubDate).toISOString() : new Date().toISOString();
+    } catch {
+      publishedAt = new Date().toISOString();
+    }
+
+    return [
+      {
+        title,
+        snippet,
+        published_datetime_utc: publishedAt,
+        source_name: sourceName,
+        link,
+        article_id: link,
+      },
+    ];
+  });
+}
+
+/** Fetch all RSS feeds concurrently; log and skip any that fail */
+async function fetchAllFeeds(feeds: Array<{ url: string; name: string }>): Promise<RawArticle[]> {
+  const results = await Promise.allSettled(
+    feeds.map(async feed => {
+      const res = await fetch(feed.url, {
+        headers: { Accept: 'application/rss+xml, application/xml, text/xml, */*' },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status} from ${feed.url}`);
+      const xml = await res.text();
+      return parseRssFeed(xml, feed.name);
+    })
+  );
+
+  const allArticles: RawArticle[] = [];
+  const seenLinks = new Set<string>();
+
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === 'fulfilled') {
+      for (const article of result.value) {
+        if (!seenLinks.has(article.link)) {
+          seenLinks.add(article.link);
+          allArticles.push(article);
+        }
+      }
+    } else {
+      console.warn(`Feed "${feeds[i].name}" failed:`, result.reason);
+    }
+  }
+
+  // Newest first before handing to LLM
+  allArticles.sort(
+    (a, b) =>
+      new Date(b.published_datetime_utc).getTime() - new Date(a.published_datetime_utc).getTime()
+  );
+
+  return allArticles;
 }
 
 function buildUserPrompt(articles: RawArticle[]): string {
@@ -99,47 +219,21 @@ function parseJsonArray(text: string): ParsedNewsEvent[] {
 }
 
 /**
- * Fetch articles, send to LLM, write parsed result to KV.
+ * Fetch articles from RSS feeds, send to LLM, write parsed result to KV.
  */
 async function warmNewsCache(
   env: Env
 ): Promise<{ success: boolean; eventCount: number; articlesFound: number }> {
-  const rapidApiKey = env.RAPIDAPI_KEY;
   const provider = env.AI_PROVIDER || 'openai';
   const apiKey = provider === 'anthropic' ? env.ANTHROPIC_API_KEY : env.OPENAI_API_KEY;
-
-  if (!rapidApiKey) throw new Error('RAPIDAPI_KEY not configured');
   if (!apiKey) throw new Error(`${provider.toUpperCase()} API key not configured`);
 
-  // 1. Fetch articles from Google Trend News (RapidAPI)
-  const params = new URLSearchParams({
-    q: 'Charlotte, NC',
-    country: 'us',
-    language: 'en',
-  });
-  const fetchOptions = {
-    method: 'GET' as const,
-    headers: {
-      'x-rapidapi-key': rapidApiKey,
-      'x-rapidapi-host': NEWS_API_HOST,
-      Accept: 'application/json',
-    },
-  };
-
-  let newsResponse = await fetch(`https://${NEWS_API_HOST}/news?${params}`, fetchOptions);
-  if (newsResponse.status === 429) {
-    await new Promise(r => setTimeout(r, 2000));
-    newsResponse = await fetch(`https://${NEWS_API_HOST}/news?${params}`, fetchOptions);
-  }
-  if (!newsResponse.ok) {
-    const detail = await newsResponse.text();
-    throw new Error(`RapidAPI error: ${newsResponse.status} - ${detail.slice(0, 200)}`);
-  }
-
-  const newsJson = (await newsResponse.json()) as {
-    data?: { articles?: GoogleTrendArticle[] };
-  };
-  const articles = (newsJson.data?.articles ?? []).map(normalizeArticle);
+  // 1. Fetch RSS feeds and filter to last 24 hours
+  const allArticles = await fetchAllFeeds(RSS_FEEDS);
+  const cutoffMs = Date.now() - 72 * 60 * 60 * 1000;
+  const articles = allArticles.filter(
+    a => new Date(a.published_datetime_utc).getTime() >= cutoffMs
+  );
 
   if (articles.length === 0) {
     const body = JSON.stringify({ data: [], generatedAt: new Date().toISOString() });
@@ -147,7 +241,7 @@ async function warmNewsCache(
     return { success: true, eventCount: 0, articlesFound: 0 };
   }
 
-  // 2. Send to LLM for parsing
+  // 2. Send to LLM for filtering and parsing
   const userPrompt = buildUserPrompt(articles);
   let rawOutput: string;
 
@@ -183,12 +277,39 @@ async function warmNewsCache(
     });
   }
 
-  // 3. Parse response
-  const data = parseJsonArray(rawOutput);
+  // 3. Parse LLM response
+  const parsed = parseJsonArray(rawOutput);
 
-  // 4. Write to KV (2h TTL, cron runs hourly so overlap for resilience)
+  // 4. Deduplicate by event_key (safety net — LLM occasionally emits repeated entries)
+  const seenKeys = new Set<string>();
+  const data = parsed.filter(event => {
+    if (seenKeys.has(event.event_key)) return false;
+    seenKeys.add(event.event_key);
+    return true;
+  });
+
+  // 5. Enrich sources with RSS snippets (joined by URL, not passed through LLM)
+  const snippetByUrl = new Map<string, string>();
+  for (const article of articles) {
+    if (article.snippet) {
+      const truncated = article.snippet.slice(0, 500);
+      snippetByUrl.set(article.link, truncated);
+      if (article.article_id && article.article_id !== article.link) {
+        snippetByUrl.set(article.article_id, truncated);
+      }
+    }
+  }
+  const enrichedData = data.map(event => ({
+    ...event,
+    sources: event.sources.map(src => ({
+      ...src,
+      snippet: snippetByUrl.get(src.link) ?? snippetByUrl.get(src.article_id) ?? '',
+    })),
+  }));
+
+  // 5. Write to KV (2h TTL; cron runs hourly for overlap resilience)
   const responseBody = JSON.stringify({
-    data,
+    data: enrichedData,
     generatedAt: new Date().toISOString(),
   });
   await env.CACHE.put(CACHE_KEY, responseBody, { expirationTtl: 7200 });

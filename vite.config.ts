@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { XMLParser } from 'fast-xml-parser';
 import {
   BLUF_SYSTEM_PROMPT,
   NEWS_PARSING_SYSTEM_PROMPT,
@@ -156,19 +157,21 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
   };
 }
 
-const NEWS_API_HOST = 'google-trend-news.p.rapidapi.com';
-const MAX_ARTICLES_TO_SEND = 100;
+const NEWS_RSS_FEEDS: Array<{ url: string; name: string }> = [
+  { url: 'https://www.wbtv.com/arc/outboundfeeds/rss/?outputType=xml', name: 'WBTV' },
+  { url: 'https://www.wcnc.com/feeds/syndication/rss/news/', name: 'WCNC' },
+  { url: 'https://www.wsoctv.com/arc/outboundfeeds/rss/?outputType=xml', name: 'WSOC' },
+  { url: 'https://www.wccbcharlotte.com/feed/', name: 'WCCB' },
+];
+const MAX_ARTICLES_TO_SEND = 200;
 
-interface GoogleTrendArticleForParse {
-  title: string;
-  description: string;
-  date: string;
-  url: string;
-  source: { name: string; url: string; favicon?: string };
-  authors?: string[];
-  keywords?: string[];
-  thumbnail?: string;
-}
+const devRssParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  isArray: (name: string) => name === 'item' || name === 'entry',
+  processEntities: true,
+  trimValues: true,
+});
 
 interface RawArticleForParse {
   title: string;
@@ -179,15 +182,110 @@ interface RawArticleForParse {
   article_id?: string;
 }
 
-function normalizeNewsArticle(a: GoogleTrendArticleForParse): RawArticleForParse {
-  return {
-    title: a.title,
-    snippet: a.description,
-    published_datetime_utc: a.date,
-    source_name: a.source?.name ?? '',
-    link: a.url,
-    article_id: a.url,
-  };
+function devXmlStr(val: unknown): string {
+  if (typeof val === 'string') return val;
+  if (typeof val === 'number') return String(val);
+  if (typeof val === 'object' && val !== null) {
+    const t = (val as Record<string, unknown>)['#text'];
+    if (typeof t === 'string') return t;
+  }
+  return '';
+}
+
+function devXmlLink(val: unknown, fallback: string): string {
+  if (typeof val === 'string') return val.trim();
+  if (Array.isArray(val)) {
+    const alt = (val as Record<string, unknown>[]).find(
+      l => !l['@_rel'] || l['@_rel'] === 'alternate'
+    );
+    const href = alt?.['@_href'];
+    if (typeof href === 'string') return href.trim();
+  }
+  if (typeof val === 'object' && val !== null) {
+    const href = (val as Record<string, unknown>)['@_href'];
+    if (typeof href === 'string') return href.trim();
+  }
+  return fallback;
+}
+
+function devStripHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parseRssFeedForDev(xml: string, sourceName: string): RawArticleForParse[] {
+  const doc = devRssParser.parse(xml) as Record<string, unknown>;
+  const rssChannel = (doc['rss'] as Record<string, unknown> | undefined)?.['channel'] as
+    | Record<string, unknown>
+    | undefined;
+  const items = (rssChannel?.['item'] ?? []) as unknown[];
+  const entries = ((doc['feed'] as Record<string, unknown> | undefined)?.['entry'] ??
+    []) as unknown[];
+
+  return [...items, ...entries].flatMap(raw => {
+    if (typeof raw !== 'object' || raw === null) return [];
+    const r = raw as Record<string, unknown>;
+    const title = devStripHtml(devXmlStr(r['title']));
+    const link = devXmlLink(r['link'], devXmlStr(r['guid']));
+    const snippet = devStripHtml(
+      devXmlStr(r['description']) || devXmlStr(r['summary']) || devXmlStr(r['content'])
+    );
+    const pubDate = devXmlStr(r['pubDate']) || devXmlStr(r['published']) || devXmlStr(r['updated']);
+    if (!title || !link) return [];
+    let publishedAt: string;
+    try {
+      publishedAt = pubDate ? new Date(pubDate).toISOString() : new Date().toISOString();
+    } catch {
+      publishedAt = new Date().toISOString();
+    }
+    return [
+      {
+        title,
+        snippet,
+        published_datetime_utc: publishedAt,
+        source_name: sourceName,
+        link,
+        article_id: link,
+      },
+    ];
+  });
+}
+
+async function fetchRssFeedsForDev(
+  feeds: Array<{ url: string; name: string }>
+): Promise<RawArticleForParse[]> {
+  const results = await Promise.allSettled(
+    feeds.map(async feed => {
+      const res = await fetch(feed.url, {
+        headers: { Accept: 'application/rss+xml, application/xml, text/xml, */*' },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status} from ${feed.url}`);
+      return parseRssFeedForDev(await res.text(), feed.name);
+    })
+  );
+  const allArticles: RawArticleForParse[] = [];
+  const seenLinks = new Set<string>();
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === 'fulfilled') {
+      for (const article of result.value) {
+        if (!seenLinks.has(article.link)) {
+          seenLinks.add(article.link);
+          allArticles.push(article);
+        }
+      }
+    } else {
+      console.warn(`[news-charlotte-parsed] Feed "${feeds[i].name}" failed:`, result.reason);
+    }
+  }
+  allArticles.sort(
+    (a, b) =>
+      new Date(b.published_datetime_utc).getTime() - new Date(a.published_datetime_utc).getTime()
+  );
+  return allArticles;
 }
 
 function buildNewsParseUserPrompt(articles: RawArticleForParse[]): string {
@@ -235,16 +333,9 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
           return;
         }
 
-        const rapidApiKey = env.RAPIDAPI_KEY;
         const provider = env.AI_PROVIDER || 'openai';
         const apiKey = provider === 'anthropic' ? env.ANTHROPIC_API_KEY : env.OPENAI_API_KEY;
 
-        if (!rapidApiKey) {
-          res.statusCode = 500;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'RapidAPI key not configured' }));
-          return;
-        }
         if (!apiKey) {
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
@@ -253,77 +344,11 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
         }
 
         try {
-          const params = new URLSearchParams({
-            q: 'Charlotte, NC',
-            country: 'us',
-            language: 'en',
-          });
-          const newsFetchOpts = {
-            method: 'GET' as const,
-            headers: {
-              'x-rapidapi-key': rapidApiKey,
-              'x-rapidapi-host': NEWS_API_HOST,
-              Accept: 'application/json',
-            },
-          };
-
-          let newsResponse: Response;
-          try {
-            newsResponse = await fetch(`https://${NEWS_API_HOST}/news?${params}`, newsFetchOpts);
-            if (newsResponse.status === 429) {
-              await new Promise(r => setTimeout(r, 2000));
-              newsResponse = await fetch(`https://${NEWS_API_HOST}/news?${params}`, newsFetchOpts);
-            }
-          } catch (fetchErr) {
-            const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
-            console.error('[news-charlotte-parsed] RapidAPI fetch failed:', fetchErr);
-            res.statusCode = 502;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(
-              JSON.stringify({
-                error: 'Failed to fetch news',
-                message: `RapidAPI request failed: ${msg}. Check network and RapidAPI availability.`,
-              })
-            );
-            return;
-          }
-
-          if (!newsResponse.ok) {
-            const detail = await newsResponse.text();
-            const isRateLimit = newsResponse.status === 429;
-            res.statusCode = isRateLimit ? 503 : newsResponse.status;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(
-              JSON.stringify({
-                error: isRateLimit ? 'News API rate limit exceeded' : 'Failed to fetch news',
-                detail: detail.slice(0, 200),
-                ...(isRateLimit && {
-                  retryAfter: 'Try again in a few minutes or check your RapidAPI quota.',
-                }),
-              })
-            );
-            return;
-          }
-
-          let newsJson: { data?: { articles?: GoogleTrendArticleForParse[] } };
-          try {
-            newsJson = (await newsResponse.json()) as {
-              data?: { articles?: GoogleTrendArticleForParse[] };
-            };
-          } catch (parseErr) {
-            console.error('[news-charlotte-parsed] RapidAPI response not JSON:', parseErr);
-            res.statusCode = 502;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(
-              JSON.stringify({
-                error: 'Failed to fetch news',
-                message: 'News API returned invalid JSON. Try again.',
-              })
-            );
-            return;
-          }
-
-          const articles = (newsJson.data?.articles ?? []).map(normalizeNewsArticle);
+          const allFeedArticles = await fetchRssFeedsForDev(NEWS_RSS_FEEDS);
+          const cutoffMs = Date.now() - 72 * 60 * 60 * 1000;
+          const articles = allFeedArticles.filter(
+            a => new Date(a.published_datetime_utc).getTime() >= cutoffMs
+          );
 
           if (articles.length === 0) {
             res.statusCode = 200;
@@ -427,8 +452,43 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
             return;
           }
 
-          const data = parseJsonArrayFromNews(rawOutput);
-          const responseBody = JSON.stringify({ data, generatedAt: new Date().toISOString() });
+          const parsed = parseJsonArrayFromNews(rawOutput);
+
+          // Deduplicate by event_key (safety net — LLM occasionally emits repeated entries)
+          const seenKeys = new Set<string>();
+          const data = parsed.filter((event: Record<string, unknown>) => {
+            const key = event['event_key'] as string;
+            if (seenKeys.has(key)) return false;
+            seenKeys.add(key);
+            return true;
+          });
+
+          // Enrich sources with RSS snippets (joined by URL, not passed through LLM)
+          const snippetByUrl = new Map<string, string>();
+          for (const article of articles) {
+            if (article.snippet) {
+              const truncated = article.snippet.slice(0, 500);
+              snippetByUrl.set(article.link, truncated);
+              if (article.article_id && article.article_id !== article.link) {
+                snippetByUrl.set(article.article_id, truncated);
+              }
+            }
+          }
+          const enrichedData = data.map((event: Record<string, unknown>) => ({
+            ...event,
+            sources: (event.sources as Array<Record<string, unknown>>).map(src => ({
+              ...src,
+              snippet:
+                snippetByUrl.get(src['link'] as string) ??
+                snippetByUrl.get(src['article_id'] as string) ??
+                '',
+            })),
+          }));
+
+          const responseBody = JSON.stringify({
+            data: enrichedData,
+            generatedAt: new Date().toISOString(),
+          });
 
           devCachePut('news:parsed', responseBody, 60 * 60 * 1000);
 

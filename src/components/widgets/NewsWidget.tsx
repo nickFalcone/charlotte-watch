@@ -50,6 +50,9 @@ import {
   ArticleLink,
   SourcesList,
   SourceItem,
+  SourceTitle,
+  SourceMeta,
+  SourceSnippet,
 } from './NewsWidget.styles';
 
 const ACCENT_COLOR = '#6366f1';
@@ -193,10 +196,20 @@ export function NewsWidget(_props: WidgetProps) {
                       <SourcesList>
                         {selectedEvent.sources.map((src, i) => (
                           <SourceItem key={src.link + i}>
-                            <ArticleLink href={src.link} target="_blank" rel="noopener noreferrer">
-                              {src.source_name}
-                            </ArticleLink>{' '}
-                            ({formatTimestamp(src.published_datetime_utc)})
+                            <SourceTitle>
+                              <ArticleLink
+                                href={src.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                {src.title}
+                              </ArticleLink>
+                            </SourceTitle>
+                            <SourceMeta>
+                              {src.source_name} &middot;{' '}
+                              {formatTimestamp(src.published_datetime_utc)}
+                            </SourceMeta>
+                            {src.snippet && <SourceSnippet>{src.snippet}</SourceSnippet>}
                           </SourceItem>
                         ))}
                       </SourcesList>

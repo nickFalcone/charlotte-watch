@@ -5,6 +5,7 @@ export interface ParsedNewsSource {
   published_datetime_utc: string;
   title: string;
   article_id: string;
+  snippet?: string;
 }
 
 /** Parsed/deduplicated news event from AI pipeline (newsParsing prompt) */

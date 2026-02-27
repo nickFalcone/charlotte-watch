@@ -2,7 +2,6 @@
 # Deploy with: npx wrangler deploy --config workers/wrangler.toml
 #
 # Required secrets (set via `npx wrangler secret put <NAME> --config workers/wrangler.toml`):
-#   RAPIDAPI_KEY          - OpenWebNinja Real-Time News (RapidAPI)
 #   OPENAI_API_KEY        - OpenAI API key (default provider)
 #   CACHE_WARMING_SECRET  - Secret for authenticated /warm requests
 # Optional secrets:
