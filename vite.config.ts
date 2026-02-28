@@ -7,6 +7,9 @@ import {
   NEWS_PARSING_SYSTEM_PROMPT,
   WEATHER_SYSTEM_PROMPT,
 } from './src/utils/aiPrompts';
+import newsParsingPrompt from './src/prompts/newsParsing.json';
+import { sortNewsEvents } from './src/utils/newsApi';
+import type { ParsedNewsEvent } from './src/types/news';
 import { isServiceAlertTweet, isWithinLast24Hours } from './src/utils/catsFilters';
 import { isCMSAlertTweet } from './src/utils/cmsFilters';
 import { isCFDIncidentTweet } from './src/utils/cfdFilters';
@@ -157,13 +160,8 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
   };
 }
 
-const NEWS_RSS_FEEDS: Array<{ url: string; name: string }> = [
-  { url: 'https://www.wbtv.com/arc/outboundfeeds/rss/?outputType=xml', name: 'WBTV' },
-  { url: 'https://www.wcnc.com/feeds/syndication/rss/news/', name: 'WCNC' },
-  { url: 'https://www.wsoctv.com/arc/outboundfeeds/rss/?outputType=xml', name: 'WSOC' },
-  { url: 'https://www.wccbcharlotte.com/feed/', name: 'WCCB' },
-];
-const MAX_ARTICLES_TO_SEND = 200;
+const NEWS_RSS_FEEDS: Array<{ url: string; name: string }> = newsParsingPrompt.feeds;
+const MAX_ARTICLES_TO_SEND = newsParsingPrompt.maxArticlesToSend;
 
 const devRssParser = new XMLParser({
   ignoreAttributes: false,
@@ -474,16 +472,18 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
               }
             }
           }
-          const enrichedData = data.map((event: Record<string, unknown>) => ({
-            ...event,
-            sources: (event.sources as Array<Record<string, unknown>>).map(src => ({
-              ...src,
-              snippet:
-                snippetByUrl.get(src['link'] as string) ??
-                snippetByUrl.get(src['article_id'] as string) ??
-                '',
-            })),
-          }));
+          const enrichedData = sortNewsEvents(
+            data.map((event: Record<string, unknown>) => ({
+              ...event,
+              sources: (event.sources as Array<Record<string, unknown>>).map(src => ({
+                ...src,
+                snippet:
+                  snippetByUrl.get(src['link'] as string) ??
+                  snippetByUrl.get(src['article_id'] as string) ??
+                  '',
+              })),
+            })) as ParsedNewsEvent[]
+          );
 
           const responseBody = JSON.stringify({
             data: enrichedData,

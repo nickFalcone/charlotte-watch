@@ -12,18 +12,12 @@
 import { XMLParser } from 'fast-xml-parser';
 import { callOpenAIResponses } from '../functions/_lib/openaiResponses';
 import newsParsingPrompt from '../src/prompts/newsParsing.json';
+import { sortNewsEvents } from '../src/utils/newsApi';
 
 const NEWS_PARSING_SYSTEM_PROMPT: string = newsParsingPrompt.systemPrompt;
+const MAX_ARTICLES_TO_SEND: number = newsParsingPrompt.maxArticlesToSend;
+const RSS_FEEDS: Array<{ url: string; name: string }> = newsParsingPrompt.feeds;
 const CACHE_KEY = 'news:parsed';
-const MAX_ARTICLES_TO_SEND = 200;
-
-/** Charlotte-area local news RSS feeds */
-const RSS_FEEDS: Array<{ url: string; name: string }> = [
-  { url: 'https://www.wbtv.com/arc/outboundfeeds/rss/?outputType=xml', name: 'WBTV' },
-  { url: 'https://www.wcnc.com/feeds/syndication/rss/news/', name: 'WCNC' },
-  { url: 'https://www.wsoctv.com/arc/outboundfeeds/rss/?outputType=xml', name: 'WSOC' },
-  { url: 'https://www.wccbcharlotte.com/feed/', name: 'WCCB' },
-];
 
 export interface Env {
   CACHE: KVNamespace;
@@ -299,13 +293,15 @@ async function warmNewsCache(
       }
     }
   }
-  const enrichedData = data.map(event => ({
-    ...event,
-    sources: event.sources.map(src => ({
-      ...src,
-      snippet: snippetByUrl.get(src.link) ?? snippetByUrl.get(src.article_id) ?? '',
-    })),
-  }));
+  const enrichedData = sortNewsEvents(
+    data.map(event => ({
+      ...event,
+      sources: event.sources.map(src => ({
+        ...src,
+        snippet: snippetByUrl.get(src.link) ?? snippetByUrl.get(src.article_id) ?? '',
+      })),
+    }))
+  );
 
   // 5. Write to KV (2h TTL; cron runs hourly for overlap resilience)
   const responseBody = JSON.stringify({
