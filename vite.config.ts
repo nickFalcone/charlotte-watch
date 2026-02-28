@@ -8,6 +8,8 @@ import {
   WEATHER_SYSTEM_PROMPT,
 } from './src/utils/aiPrompts';
 import newsParsingPrompt from './src/prompts/newsParsing.json';
+import { sortNewsEvents } from './src/utils/newsApi';
+import type { ParsedNewsEvent } from './src/types/news';
 import { isServiceAlertTweet, isWithinLast24Hours } from './src/utils/catsFilters';
 import { isCMSAlertTweet } from './src/utils/cmsFilters';
 import { isCFDIncidentTweet } from './src/utils/cfdFilters';
@@ -470,8 +472,8 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
               }
             }
           }
-          const enrichedData = data
-            .map((event: Record<string, unknown>) => ({
+          const enrichedData = sortNewsEvents(
+            data.map((event: Record<string, unknown>) => ({
               ...event,
               sources: (event.sources as Array<Record<string, unknown>>).map(src => ({
                 ...src,
@@ -480,19 +482,8 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
                   snippetByUrl.get(src['article_id'] as string) ??
                   '',
               })),
-            }))
-            .sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
-              const aSources = a.sources as Array<Record<string, unknown>>;
-              const bSources = b.sources as Array<Record<string, unknown>>;
-              if (bSources.length !== aSources.length) return bSources.length - aSources.length;
-              const aNewest = Math.max(
-                ...aSources.map(s => new Date(s['published_datetime_utc'] as string).getTime())
-              );
-              const bNewest = Math.max(
-                ...bSources.map(s => new Date(s['published_datetime_utc'] as string).getTime())
-              );
-              return bNewest - aNewest;
-            });
+            })) as ParsedNewsEvent[]
+          );
 
           const responseBody = JSON.stringify({
             data: enrichedData,

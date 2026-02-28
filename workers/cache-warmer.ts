@@ -12,6 +12,7 @@
 import { XMLParser } from 'fast-xml-parser';
 import { callOpenAIResponses } from '../functions/_lib/openaiResponses';
 import newsParsingPrompt from '../src/prompts/newsParsing.json';
+import { sortNewsEvents } from '../src/utils/newsApi';
 
 const NEWS_PARSING_SYSTEM_PROMPT: string = newsParsingPrompt.systemPrompt;
 const MAX_ARTICLES_TO_SEND: number = newsParsingPrompt.maxArticlesToSend;
@@ -292,20 +293,15 @@ async function warmNewsCache(
       }
     }
   }
-  const enrichedData = data
-    .map(event => ({
+  const enrichedData = sortNewsEvents(
+    data.map(event => ({
       ...event,
       sources: event.sources.map(src => ({
         ...src,
         snippet: snippetByUrl.get(src.link) ?? snippetByUrl.get(src.article_id) ?? '',
       })),
     }))
-    .sort((a, b) => {
-      if (b.sources.length !== a.sources.length) return b.sources.length - a.sources.length;
-      const aNewest = Math.max(...a.sources.map(s => new Date(s.published_datetime_utc).getTime()));
-      const bNewest = Math.max(...b.sources.map(s => new Date(s.published_datetime_utc).getTime()));
-      return bNewest - aNewest;
-    });
+  );
 
   // 5. Write to KV (2h TTL; cron runs hourly for overlap resilience)
   const responseBody = JSON.stringify({
