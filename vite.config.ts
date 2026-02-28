@@ -7,6 +7,7 @@ import {
   NEWS_PARSING_SYSTEM_PROMPT,
   WEATHER_SYSTEM_PROMPT,
 } from './src/utils/aiPrompts';
+import newsParsingPrompt from './src/prompts/newsParsing.json';
 import { isServiceAlertTweet, isWithinLast24Hours } from './src/utils/catsFilters';
 import { isCMSAlertTweet } from './src/utils/cmsFilters';
 import { isCFDIncidentTweet } from './src/utils/cfdFilters';
@@ -157,13 +158,8 @@ function dukeOutagePlugin(env: Record<string, string>): Plugin {
   };
 }
 
-const NEWS_RSS_FEEDS: Array<{ url: string; name: string }> = [
-  { url: 'https://www.wbtv.com/arc/outboundfeeds/rss/?outputType=xml', name: 'WBTV' },
-  { url: 'https://www.wcnc.com/feeds/syndication/rss/news/', name: 'WCNC' },
-  { url: 'https://www.wsoctv.com/arc/outboundfeeds/rss/?outputType=xml', name: 'WSOC' },
-  { url: 'https://www.wccbcharlotte.com/feed/', name: 'WCCB' },
-];
-const MAX_ARTICLES_TO_SEND = 200;
+const NEWS_RSS_FEEDS: Array<{ url: string; name: string }> = newsParsingPrompt.feeds;
+const MAX_ARTICLES_TO_SEND = newsParsingPrompt.maxArticlesToSend;
 
 const devRssParser = new XMLParser({
   ignoreAttributes: false,
@@ -474,16 +470,29 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
               }
             }
           }
-          const enrichedData = data.map((event: Record<string, unknown>) => ({
-            ...event,
-            sources: (event.sources as Array<Record<string, unknown>>).map(src => ({
-              ...src,
-              snippet:
-                snippetByUrl.get(src['link'] as string) ??
-                snippetByUrl.get(src['article_id'] as string) ??
-                '',
-            })),
-          }));
+          const enrichedData = data
+            .map((event: Record<string, unknown>) => ({
+              ...event,
+              sources: (event.sources as Array<Record<string, unknown>>).map(src => ({
+                ...src,
+                snippet:
+                  snippetByUrl.get(src['link'] as string) ??
+                  snippetByUrl.get(src['article_id'] as string) ??
+                  '',
+              })),
+            }))
+            .sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+              const aSources = a.sources as Array<Record<string, unknown>>;
+              const bSources = b.sources as Array<Record<string, unknown>>;
+              if (bSources.length !== aSources.length) return bSources.length - aSources.length;
+              const aNewest = Math.max(
+                ...aSources.map(s => new Date(s['published_datetime_utc'] as string).getTime())
+              );
+              const bNewest = Math.max(
+                ...bSources.map(s => new Date(s['published_datetime_utc'] as string).getTime())
+              );
+              return bNewest - aNewest;
+            });
 
           const responseBody = JSON.stringify({
             data: enrichedData,
