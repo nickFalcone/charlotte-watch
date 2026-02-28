@@ -2,15 +2,13 @@
 
 **Real-time dashboard for Charlotte, NC metro area**
 
-Monitor weather, flight delays, traffic, power outages, transit alerts, and market updates—all in one place.
+Monitor weather, flights, traffic alerts, transit, power outages, news, and markets — all in one place.
 
-[Live Demo](https://charlotte-watch.pages.dev) (if deployed)
+**Live:** [clt.watch](https://clt.watch)
 
 ## Table of Contents
 
 - [What is Charlotte Watch?](#what-is-charlotte-watch)
-- [Screenshots](#screenshots)
-- [Features](#features)
 - [For Developers](#for-developers)
   - [Quick Start](#quick-start)
   - [Environment Variables](#environment-variables)
@@ -18,43 +16,38 @@ Monitor weather, flight delays, traffic, power outages, transit alerts, and mark
   - [Contributing](#contributing)
 - [Deployment](#deployment)
 
+---
+
 ## What is Charlotte Watch?
 
-Charlotte Watch is a real-time monitoring dashboard built for residents of the Charlotte, NC metro area. It aggregates critical information from multiple sources into a single, easy-to-read interface:
+Charlotte Watch is a real-time monitoring dashboard for residents of the Charlotte, NC metro area. It aggregates critical information from multiple sources into a single, customizable interface.
 
-- **Weather**: Current conditions, radar, and National Weather Service alerts
-- **Aviation**: CLT airport delays, ground stops, and FAA advisories
-- **Alerts**: AI-summarized BLUF (Bottom Line Up Front) summary of all active alerts
-- **Traffic**: Real-time congestion, construction, and incidents from NCDOT
-- **Transit**: CATS bus and rail service disruptions
-- **Power**: Duke Energy outage reports
-- **Markets**: Real-time stock quotes for major indices
+### Widgets
 
-Built with React, TypeScript, and TanStack Query. Deployed on Cloudflare Pages with serverless functions for API proxies and AI-powered alert summarization.
+Each widget is an independently updating panel on the dashboard. Widgets can be rearranged and resized, and each refreshes on its own schedule so data stays current without a page reload.
 
-## Screenshots
+| Widget | Description |
+|--------|-------------|
+| **Alerts** | Unified feed from 9 sources with AI-powered BLUF summary and interactive map |
+| **Weather** | Current conditions, NWS alerts, forecast, radar map, air quality, and pollen |
+| **Flights** | Live aircraft positions around CLT, arrivals/departures board, and FAA status |
+| **LYNX Transit** | Real-time vehicle positions on Blue and Gold Lines, service alerts |
+| **News** | Charlotte-area RSS news parsed and categorized by AI |
+| **Markets** | Real-time stock quotes for CLT-area public companies |
 
-<!-- Add screenshots here -->
-_Screenshots coming soon_
+### Alert Sources
 
-## Features
+The Alerts widget aggregates from 9 sources simultaneously:
 
-- Real-time data from official sources (NWS, FAA, NCDOT, Duke Energy, CATS)
-- AI-powered alert summaries using OpenAI or Anthropic
-- Dark/light theme with persistent preferences
-- Responsive widget-based layout
-- Privacy-focused: no tracking, no ads, no user data collection
-- Fast: Cloudflare CDN + edge caching + optimized React rendering
-
-## Why Charlotte Watch?
-
-Instead of checking multiple websites and apps for weather, traffic, flight delays, and transit alerts, Charlotte Watch consolidates everything into one dashboard. The AI-powered BLUF (Bottom Line Up Front) summary gives you the most critical information first, so you can make informed decisions quickly.
-
-Perfect for:
-- Daily commuters checking traffic and transit
-- Travelers monitoring CLT airport delays
-- Residents tracking severe weather and power outages
-- Anyone who wants a quick overview of what's happening in Charlotte
+- **NWS** — National Weather Service warnings and advisories
+- **FAA** — CLT airport delays and ground stops
+- **NCDOT** — Traffic incidents and construction
+- **Duke Energy** — Power outage reports
+- **CATS** — Charlotte Area Transit service disruptions
+- **CMPD** — Charlotte-Mecklenburg Police advisories
+- **CFD** — Charlotte Fire Department alerts
+- **CMS** — Charlotte-Mecklenburg Schools notifications
+- **HERE** — Real-time traffic flow incidents
 
 ---
 
@@ -62,110 +55,108 @@ Perfect for:
 
 ### Quick Start
 
-**Option 1: Basic development (no AI features)**
+**Option 1: Basic development (no API functions)**
+
 ```bash
 npm install
 npm run dev
 # Open http://localhost:5173
 ```
 
-**Option 2: Full development (with AI summaries and API functions)**
+Most widgets work without API keys. Stocks, AI summaries, air quality, pollen, and some alert feeds require keys.
+
+**Option 2: Full development (with API functions)**
+
 ```bash
 npm install
-cp .env.example .dev.vars  # Then add your API keys
+cp .env.example .dev.vars  # Then fill in your API keys
 npm run dev:pages
 # Open http://localhost:8788
 ```
 
+This mode uses Wrangler to run Cloudflare Pages Functions locally, which is required for AI summaries, stock quotes, and any endpoint that needs API keys.
+
 ### Prerequisites
+
 - Node.js 18+
-- npm (or yarn/pnpm)
-- (Optional) API keys for AI summaries and other features
+- npm
 
 ### Available Scripts
+
 ```bash
-# Start development server
-npm run dev
+# Development
+npm run dev             # Vite dev server only (no serverless functions)
+npm run dev:pages       # Full dev with Cloudflare Pages Functions (requires wrangler)
 
-# Start with Cloudflare Pages Functions (for AI summaries, API proxies)
-npm run dev:pages
+# Build
+npm run build           # TypeScript compile + Vite production build
+npm run preview         # Preview the production build locally
 
-# Build for production
-npm run build
+# Quality checks (run after every change)
+npm run check:fix       # Format + lint (auto-fix) + type-check
+npm run check           # Format + lint + type-check (read-only)
 
-# Preview production build
-npm run preview
+# Individual checks
+npm run type-check      # TypeScript type checking (frontend)
+npm run type-check:functions  # TypeScript type checking (functions/)
+npm run lint            # ESLint
+npm run lint:fix        # ESLint with auto-fix
+npm run format          # Prettier format
+npm run format:check    # Prettier check (no write)
 
-# Quality checks (recommended before committing)
-npm run check:fix    # Format + lint with auto-fix + type-check
-npm run check        # Format + lint + type-check (read-only)
+# Tests
+npm test                # Run all tests once
+npm run test:watch      # Run tests in watch mode
 
-# Individual commands
-npm run type-check   # Type checking
-npm run lint         # Linting
-npm run lint:fix     # Auto-fix linting issues
-npm run format       # Format code
-npm run format:check # Check code formatting
+# Workers
+npm run deploy:cache-warmer  # Deploy the cache warmer worker to Cloudflare
 ```
 
-**Before committing, always run:**
+**Always run before committing:**
+
 ```bash
-npm run check:fix    # Auto-format, lint, and type-check
+npm run check:fix
 ```
+
+---
 
 ### Environment Variables
 
-Most features work without API keys (weather, traffic, transit alerts display raw data). API keys are **only required** for:
+Copy `.env.example` to set up your local environment:
 
-- **AI alert summaries** (OpenAI or Anthropic)
-- **Stock quotes** (Finnhub)
-- **Flight tracking** (OpenSky Network - optional credentials for higher rate limits)
+- `.env.local` — used by `npm run dev` (Vite dev server). Vite loads these via `loadEnv(...)`, and the values are read only by server-side dev middlewares/proxies.
+- `.dev.vars` — used by `wrangler pages dev` and Cloudflare Pages Functions/Workers in deployment.
 
-#### Local Development Setup
-
-Create `.dev.vars` in the project root (used by Wrangler for local development):
-
-```bash
-# Required for AI summaries
-AI_PROVIDER=openai                    # or "anthropic"
-OPENAI_API_KEY=sk-your-key-here      # if using OpenAI
-# ANTHROPIC_API_KEY=sk-ant-...       # if using Anthropic
-
-# Required for stock quotes
-FINNHUB_API_KEY=your-finnhub-key
-
-# Optional: OpenSky Network credentials (higher rate limits)
-OPENSKY_CLIENT_ID=your-username
-OPENSKY_CLIENT_SECRET=your-password
-```
-
-See `.env.example` for a complete list of available environment variables.
+Environment variables are never bundled into client-side code. They are only read in server-side contexts (Vite dev server middleware and Cloudflare Functions) and are not exposed directly to the browser.
+| Variable | Purpose | Required |
+|----------|---------|---------|
+| `AI_PROVIDER` | AI provider: `openai` or `anthropic` | For AI summaries |
+| `OPENAI_API_KEY` | OpenAI API key | If `AI_PROVIDER=openai` |
+| `ANTHROPIC_API_KEY` | Anthropic API key | If `AI_PROVIDER=anthropic` |
+| `FINNHUB_API_KEY` | Stock quotes (Markets widget) | For Markets widget |
+| `RAPIDAPI_KEY` | CATS Twitter, CFD Twitter, CMS Twitter, AeroDataBox | For transit/alerts/flights board |
+| `HERE_API_KEY` | Real-time traffic flow | For HERE traffic alerts |
+| `GOOGLE_API_KEY` | Air quality and pollen data | For Weather widget extras |
+| `TRANSIT_LAND_API_KEY` | CATS Blue/Gold Line vehicle positions | For LYNX transit map |
+| `DUKE_OUTAGE_URL` | Duke Energy outage API endpoint | For Duke outage alerts |
+| `DUKE_OUTAGE_AUTH` | Duke Energy auth (Base64-encoded) | For Duke outage alerts |
+| `OPENSKY_CLIENT_ID` | OpenSky Network username | Optional — increases rate limits |
+| `OPENSKY_CLIENT_SECRET` | OpenSky Network password | Optional — increases rate limits |
 
 #### Where to Get API Keys
 
 | Service | Purpose | Free Tier | Sign Up |
 |---------|---------|-----------|---------|
-| OpenAI | AI alert summaries | Yes (limited) | [platform.openai.com](https://platform.openai.com) |
-| Anthropic | AI alert summaries | Yes (limited) | [console.anthropic.com](https://console.anthropic.com) |
+| OpenAI | AI alert/weather summaries | Yes (limited) | [platform.openai.com](https://platform.openai.com) |
+| Anthropic | AI alert/weather summaries | Yes (limited) | [console.anthropic.com](https://console.anthropic.com) |
 | Finnhub | Stock quotes | Yes | [finnhub.io](https://finnhub.io) |
-| OpenSky Network | Flight tracking | Yes (anonymous), better with account | [opensky-network.org](https://opensky-network.org) |
-| RapidAPI | Required for CATS and CMS Twitter alerts (`RAPIDAPI_KEY`) | Varies by API | [rapidapi.com](https://rapidapi.com) |
+| RapidAPI | CATS/CFD/CMS Twitter, AeroDataBox flights | Varies | [rapidapi.com](https://rapidapi.com) |
+| HERE Technologies | Traffic flow data | Yes | [developer.here.com](https://developer.here.com) |
+| Google Cloud | Air quality + pollen | Yes (limited) | [console.cloud.google.com](https://console.cloud.google.com) |
+| Transitland | CATS vehicle positions | Yes | [transit.land](https://www.transit.land) |
+| OpenSky Network | Live aircraft positions | Yes (anonymous OK) | [opensky-network.org](https://opensky-network.org) |
 
-**Note:** API functions only work with `npm run dev:pages` (uses Wrangler) or in production. Regular `npm run dev` will show raw alerts without AI summaries.
-
-**Full development guide:** See [docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)
-
-### Code Quality
-This project uses:
-- **ESLint** for JavaScript/TypeScript linting
-- **Prettier** for code formatting
-- **TypeScript** for type checking
-
-### VS Code Setup
-The project includes VS Code settings and recommended extensions:
-- Auto-format on save
-- ESLint auto-fix on save
-- Recommended extensions for React/TypeScript development
+---
 
 ### Project Structure
 
@@ -174,128 +165,88 @@ charlotte-watch/
 ├── src/
 │   ├── components/
 │   │   ├── widgets/          # Dashboard widgets (Weather, Flights, Alerts, etc.)
-│   │   └── Widget/           # Widget wrapper components
+│   │   └── common/           # Reusable UI primitives
 │   ├── services/             # API client functions
+│   ├── alerts/               # Per-source alert fetchers (NWS, FAA, NCDOT, etc.)
 │   ├── hooks/                # Custom React hooks
-│   ├── utils/                # Utility functions (including queryKeys.ts)
+│   ├── utils/
+│   │   └── queryKeys.ts      # Centralized TanStack Query keys
+│   ├── data/
+│   │   └── transitRoutes.ts  # Blue/Gold Line geometry and station coordinates
 │   ├── types/                # TypeScript type definitions
-│   ├── stores/               # State management
-│   ├── prompts/              # AI prompts (BLUF summary, etc.)
-│   └── assets/               # Icons and static assets
-├── functions/                # Cloudflare Pages Functions (serverless API)
+│   ├── stores/               # Zustand state (layout, theme)
+│   ├── prompts/              # AI system prompts (JSON)
+│   └── assets/icons/         # Material Design SVG icons
+├── functions/                # Cloudflare Pages Functions (serverless API proxies)
 │   ├── api/                  # API routes (/api/*)
 │   └── _lib/                 # Shared utilities for functions
-├── docs/                     # Documentation
-│   ├── DEVELOPMENT.md        # Full development guide
-│   ├── DEPLOYMENT.md         # Deployment instructions
-│   ├── CONVENTIONS_*.md      # Coding conventions
-│   └── GUIDE_*.md            # Feature implementation guides
-└── public/
-    └── _headers              # CSP and security headers
+├── workers/
+│   └── cache-warmer.ts       # Cloudflare Worker — pre-warms KV cache for news
+├── public/
+│   └── _headers              # CSP and security headers
+└── docs/                     # Documentation
+    ├── DEVELOPMENT.md
+    ├── DEPLOYMENT.md
+    ├── CONVENTIONS_*.md
+    └── GUIDE_*.md
 ```
 
-### Architecture Overview
+### Architecture
 
-**Frontend:**
-- React 18 with TypeScript
-- TanStack Query for data fetching and caching
-- Styled Components for styling
-- Vite for build tooling
+**Frontend:** React 18 + TypeScript, TanStack Query, Styled Components, Radix UI, Vite
 
-**Backend:**
-- Cloudflare Pages Functions (serverless, edge-deployed)
-- API proxies to avoid CORS and keep API keys secure
-- AI summarization using OpenAI or Anthropic APIs
+**Backend:** Cloudflare Pages Functions (17 serverless API routes), Cloudflare KV for response caching (30 seconds to 6 hours depending on endpoint)
 
-**Data Sources:**
-- National Weather Service (NWS) - Weather alerts and forecasts
-- FAA - Flight delays and ground stops
-- NCDOT - Traffic and construction
-- Duke Energy - Power outages
-- CATS (Charlotte Area Transit) - Transit alerts
-- HERE Maps - Real-time traffic flow
-- Finnhub - Stock market data
+**Cache Warmer:** A separate Cloudflare Worker (`workers/cache-warmer.ts`) pre-fetches and LLM-parses RSS news feeds on a schedule, writing results to KV so the News widget loads instantly.
 
 **Key Patterns:**
-- Centralized query keys (`src/utils/queryKeys.ts`)
-- Widget-based architecture for easy extensibility
-- Serverless functions for API key security
-- CSP-compliant external resource loading
+- Centralized query keys (`src/utils/queryKeys.ts`) — never inline query key strings
+- All API keys server-side only — never in client code or `.env` files loaded by Vite
+- CSP enforced via `public/_headers`
+
+---
 
 ### Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome. Before you start:
 
-1. Read [AGENTS.md](./AGENTS.md) (symlinked as CLAUDE.md) for coding conventions
-2. Run `npm run check:fix` before committing
-3. Write tests for new features
-4. Follow existing patterns (see `docs/CONVENTIONS_*.md`)
-5. Ask before adding new dependencies or modifying CSP headers
+1. Read [AGENTS.md](./AGENTS.md) for coding conventions and critical rules
+2. Check `docs/` for relevant guides (widgets, API integration, accessibility, etc.)
+3. Run `npm run check:fix` before committing
+4. Write tests for new features — test failures block CI
 
-**For AI coding agents:** This project includes detailed instructions in [AGENTS.md](./AGENTS.md) covering query keys, API patterns, accessibility requirements (WCAG 2.2 AAA), and more.
+**For AI coding agents:** See [AGENTS.md](./AGENTS.md) for full instructions including query key conventions, accessibility requirements (WCAG 2.2 AAA), and API patterns.
 
-### Testing
-
-```bash
-npm test              # Run all tests once
-npm run test:watch    # Run tests in watch mode
-```
-
-Tests are required for CI. See [docs/TESTING.md](./docs/TESTING.md) for conventions.
-
-### SVG Icon Styling
-
-The project uses Material Design icons from Google Fonts. Most icons have light fills (`#e3e3e3`) for dark mode visibility.
-
-**For light-fill SVGs** (like those from Material Design), use this filter pattern:
-
-```typescript
-filter: ${props =>
-  props.theme.name === 'dark'
-    ? 'brightness(0) invert(1)'  // Dark mode: black → white
-    : 'brightness(0)'             // Light mode: any color → black
-};
-```
-
-**For black SVGs** (`#000`), use:
-
-```typescript
-filter: ${props =>
-  props.theme.name === 'dark'
-    ? 'invert(1) brightness(0.9)'  // Dark mode: black → light gray
-    : 'none'                        // Light mode: keep black
-};
-```
-
-See `ThemeToggle.tsx` and `Dashboard.styles.ts` (`CrownIcon`, `EmptyStateIcon`) for examples.
+---
 
 ## Deployment
 
-The project deploys automatically via GitHub Actions on push to `master` (production) or pull requests (preview).
+Deploys automatically via GitHub Actions on push to `master` (production) and on pull requests (preview deployments).
 
-**Quick deployment checklist:**
+**Quick checklist:**
 
-1. Create Cloudflare Pages project (Direct Upload method)
+1. Create a Cloudflare Pages project (Direct Upload method)
 2. Set GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PAGES_PROJECT`
-3. Set environment variables in Cloudflare Pages dashboard (same keys as `.dev.vars`)
+3. Set environment variables in the Cloudflare Pages dashboard (same keys as `.dev.vars`)
 4. Push to `master` or open a PR
 
-See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for detailed instructions.
+See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for full instructions, including the cache warmer worker deployment.
 
 ---
 
 ## License
 
-MIT (or specify your license)
+MIT
 
 ## Acknowledgments
 
-- Weather data: [National Weather Service](https://weather.gov)
-- Flight data: [FAA](https://faa.gov), [OpenSky Network](https://opensky-network.org)
-- Traffic data: [NCDOT](https://ncdot.gov), [HERE Technologies](https://here.com)
-- Transit data: [CATS (Charlotte Area Transit System)](https://charlottenc.gov/cats)
-- Power outage data: [Duke Energy](https://duke-energy.com)
+- Weather: [National Weather Service](https://weather.gov)
+- Flights: [FAA](https://faa.gov), [OpenSky Network](https://opensky-network.org), [AeroDataBox](https://rapidapi.com/aedbx-aedbx/api/aerodatabox)
+- Traffic: [NCDOT](https://ncdot.gov), [HERE Technologies](https://here.com)
+- Transit: [CATS](https://charlottenc.gov/cats), [Transitland](https://transit.land)
+- Power outages: [Duke Energy](https://duke-energy.com)
 - Market data: [Finnhub](https://finnhub.io)
+- Air quality / pollen: [Google](https://developers.google.com/maps/documentation/air-quality)
 - Icons: [Material Design Icons](https://fonts.google.com/icons)
 
-Built with love for the Charlotte community.
+Built for the Charlotte community.
