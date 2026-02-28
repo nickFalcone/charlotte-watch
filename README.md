@@ -123,8 +123,12 @@ npm run check:fix
 
 ### Environment Variables
 
-Copy `.env.example` to `.dev.vars` for local development. All variables are server-side only and accessed exclusively through Cloudflare Functions — none are exposed to the browser.
+Copy `.env.example` to set up your local environment:
 
+- `.env.local` — used by `npm run dev` (Vite dev server). Vite loads these via `loadEnv(...)`, and the values are read only by server-side dev middlewares/proxies.
+- `.dev.vars` — used by `wrangler pages dev` and Cloudflare Pages Functions/Workers in deployment.
+
+Environment variables are never bundled into client-side code. They are only read in server-side contexts (Vite dev server middleware and Cloudflare Functions) and are not exposed directly to the browser.
 | Variable | Purpose | Required |
 |----------|---------|---------|
 | `AI_PROVIDER` | AI provider: `openai` or `anthropic` | For AI summaries |
