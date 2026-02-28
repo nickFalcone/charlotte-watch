@@ -15,7 +15,7 @@ import newsParsingPrompt from '../src/prompts/newsParsing.json';
 
 const NEWS_PARSING_SYSTEM_PROMPT: string = newsParsingPrompt.systemPrompt;
 const CACHE_KEY = 'news:parsed';
-const MAX_ARTICLES_TO_SEND = 200;
+const MAX_ARTICLES_TO_SEND = 300;
 
 /** Charlotte-area local news RSS feeds */
 const RSS_FEEDS: Array<{ url: string; name: string }> = [
@@ -23,6 +23,9 @@ const RSS_FEEDS: Array<{ url: string; name: string }> = [
   { url: 'https://www.wcnc.com/feeds/syndication/rss/news/', name: 'WCNC' },
   { url: 'https://www.wsoctv.com/arc/outboundfeeds/rss/?outputType=xml', name: 'WSOC' },
   { url: 'https://www.wccbcharlotte.com/feed/', name: 'WCCB' },
+  { url: 'https://www.qcnews.com/feed/', name: 'QC News' },
+  { url: 'https://spectrumlocalnews.com/services/contentfeed.nc%7Ccharlotte%7Cnews.landing.rss', name: 'Spectrum News' },
+  { url: 'https://rss.bizjournals.com/feed/5a7c497f91cf168c20ba89d13bcd6782720cc22e/14526?market=charlotte&selectortype=channel&selectorvalue=1,2,3,4,17,5,9,10,7,12,15,8', name: 'Charlotte Business Journal' },
 ];
 
 export interface Env {
