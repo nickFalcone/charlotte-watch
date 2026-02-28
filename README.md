@@ -9,7 +9,6 @@ Monitor weather, flights, traffic alerts, transit, power outages, news, and mark
 ## Table of Contents
 
 - [What is Charlotte Watch?](#what-is-charlotte-watch)
-- [Features](#features)
 - [For Developers](#for-developers)
   - [Quick Start](#quick-start)
   - [Environment Variables](#environment-variables)
