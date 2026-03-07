@@ -36,6 +36,8 @@ export interface WidgetTabsProps {
   value?: string;
   /** Called when the active tab changes */
   onValueChange?: (value: string) => void;
+  /** Accessible label for the tab list (announces context to screen readers) */
+  'aria-label'?: string;
   children: ReactNode;
 }
 
@@ -69,7 +71,13 @@ function parseTabs(children: ReactNode): ParsedTab[] {
  *
  * Panels with `forceMount` stay mounted when inactive (hidden via CSS).
  */
-export function WidgetTabs({ defaultValue, value, onValueChange, children }: WidgetTabsProps) {
+export function WidgetTabs({
+  defaultValue,
+  value,
+  onValueChange,
+  'aria-label': ariaLabel,
+  children,
+}: WidgetTabsProps) {
   const tabs = parseTabs(children);
 
   // Track active tab for forceMount visibility toggling
@@ -92,7 +100,7 @@ export function WidgetTabs({ defaultValue, value, onValueChange, children }: Wid
       value={value}
       onValueChange={handleValueChange}
     >
-      <TabList>
+      <TabList aria-label={ariaLabel}>
         {tabs.map(tab => (
           <TabTrigger key={tab.value} value={tab.value}>
             {tab.label}

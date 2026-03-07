@@ -257,7 +257,7 @@ export function WeatherWidget(_props: WidgetProps) {
   const epaIndex = airQuality?.indexes.find(i => i.code === 'usa_epa');
 
   return (
-    <WidgetTabs defaultValue="summary" onValueChange={setActiveTab}>
+    <WidgetTabs defaultValue="summary" onValueChange={setActiveTab} aria-label="Weather views">
       <TabPanel value="summary" label="Summary">
         {summaryLoading || !summaryData ? (
           <LoadingContainer>

@@ -192,7 +192,10 @@ function AircraftMarkersLayer({
       const altitudeFeet = aircraft.altitude * 3.28084;
       const size = isOnGround ? 16 : Math.min(24, Math.max(18, 18 + altitudeFeet / 8000));
       const icon = createPlaneIcon(color, aircraft.heading, aircraft.callsign, size);
-      const marker = L.marker([aircraft.latitude, aircraft.longitude], { icon });
+      const marker = L.marker([aircraft.latitude, aircraft.longitude], {
+        icon,
+        title: aircraft.callsign || 'Unknown aircraft',
+      });
       marker.bindTooltip(buildAircraftTooltipHtml(aircraft), {
         direction: 'top',
         offset: [0, -12],
@@ -344,7 +347,12 @@ export function FlightTrackerWidget(_props: WidgetProps) {
         {liveAnnouncement}
       </VisuallyHidden>
 
-      <WidgetTabs defaultValue="radar" value={activeTab} onValueChange={setActiveTab}>
+      <WidgetTabs
+        defaultValue="radar"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        aria-label="Flight tracker views"
+      >
         <TabPanel value="radar" label="Radar" forceMount>
           <MapTabWrapper>
             <MapContainer>
@@ -383,6 +391,8 @@ export function FlightTrackerWidget(_props: WidgetProps) {
                 <Marker
                   position={RANGE_100KM_POS}
                   icon={createRangeLabelIcon('100km', '#9ca3af')}
+                  interactive={false}
+                  keyboard={false}
                 />
 
                 {/* 200km range ring */}
@@ -399,10 +409,16 @@ export function FlightTrackerWidget(_props: WidgetProps) {
                 <Marker
                   position={RANGE_200KM_POS}
                   icon={createRangeLabelIcon('200km', '#6b7280')}
+                  interactive={false}
+                  keyboard={false}
                 />
 
                 {/* Airport marker */}
-                <Marker position={DEFAULT_CENTER} icon={createAirportIcon()}>
+                <Marker
+                  position={DEFAULT_CENTER}
+                  icon={createAirportIcon()}
+                  title="Charlotte Douglas International Airport (KCLT)"
+                >
                   <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
                     Charlotte Douglas International Airport (KCLT)
                   </Tooltip>
