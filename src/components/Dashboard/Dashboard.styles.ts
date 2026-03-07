@@ -378,3 +378,24 @@ export const EmptyStateText = styled.p`
   margin: 0;
   font-size: 14px;
 `;
+
+export const EmptyStateLink = styled.button`
+  background: none;
+  border: none;
+  padding: 0;
+  color: ${props => props.theme.colors.link};
+  font-size: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+
+  &:hover {
+    color: ${props => props.theme.colors.primaryHover};
+  }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.colors.primary};
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+`;

@@ -15,6 +15,7 @@ import { widgetRegistry } from '../widgets';
 import { WIDGET_COLORS, WIDGET_ICONS } from '../widgets/constants';
 import { BREAKPOINTS, COLS, ROW_HEIGHT, MARGIN } from '../../utils/layoutDefaults';
 import { ThemeToggle } from '../../theme';
+import { OnboardingTour } from './OnboardingTour';
 import { Footer } from '../Footer';
 import {
   CloseButton,
@@ -29,6 +30,7 @@ import {
   DrawerTitle,
   EmptyState,
   EmptyStateIcon,
+  EmptyStateLink,
   EmptyStateText,
   GridContainer,
   HeaderButton,
@@ -69,9 +71,11 @@ export function Dashboard() {
           </DashboardTitle>
           <HeaderControls>
             <ThemeToggle />
-            <Dialog.Trigger asChild>
-              <HeaderButton aria-label="Open widgets menu">Manage Widgets</HeaderButton>
-            </Dialog.Trigger>
+            <OnboardingTour>
+              <Dialog.Trigger asChild>
+                <HeaderButton aria-label="Open widgets menu">Manage Widgets</HeaderButton>
+              </Dialog.Trigger>
+            </OnboardingTour>
             <HeaderButton
               $variant="secondary"
               onClick={resetLayout}
@@ -124,7 +128,10 @@ export function Dashboard() {
           ) : (
             <EmptyState>
               <EmptyStateIcon src={noResultsIcon} alt="" aria-hidden />
-              <EmptyStateText>No widgets visible. Click "Widgets" to add some.</EmptyStateText>
+              <EmptyStateText>
+                No widgets visible, try{' '}
+                <EmptyStateLink onClick={() => setIsDrawerOpen(true)}>adding some</EmptyStateLink>
+              </EmptyStateText>
             </EmptyState>
           )}
         </GridContainer>
