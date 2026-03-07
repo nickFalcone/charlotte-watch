@@ -70,7 +70,7 @@ export function Dashboard() {
           <HeaderControls>
             <ThemeToggle />
             <Dialog.Trigger asChild>
-              <HeaderButton aria-label="Open widgets menu">Widgets</HeaderButton>
+              <HeaderButton aria-label="Open widgets menu">Manage Widgets</HeaderButton>
             </Dialog.Trigger>
             <HeaderButton
               $variant="secondary"
@@ -131,7 +131,7 @@ export function Dashboard() {
 
         <Dialog.Portal>
           <DrawerOverlay />
-          <WidgetDrawer as="aside" aria-label="Widget manager">
+          <WidgetDrawer aria-label="Widget manager">
             <DrawerHeader>
               <Dialog.Title asChild>
                 <DrawerTitle as="h2">Manage Widgets</DrawerTitle>

@@ -36,6 +36,7 @@ export function SourceFilterBar({
         type="multiple"
         value={Array.from(visibleSources)}
         onValueChange={onVisibleSourcesChange}
+        aria-label="Filter alerts by source"
         asChild
       >
         <SourceToggleGroup>
@@ -45,7 +46,11 @@ export function SourceFilterBar({
               return (
                 <Tooltip.Root key={sourceKey}>
                   <Tooltip.Trigger asChild>
-                    <ToggleGroup.Item value={sourceKey} asChild>
+                    <ToggleGroup.Item
+                      value={sourceKey}
+                      aria-label={ALERT_SOURCE_FULL_NAMES[sourceKey]}
+                      asChild
+                    >
                       <SourceToggleItem $success={status.success} $visible={isVisible}>
                         {ALERT_SOURCE_LABELS[sourceKey]}
                       </SourceToggleItem>

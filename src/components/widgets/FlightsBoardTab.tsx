@@ -144,7 +144,7 @@ export function FlightsBoardTab({ schedule, isLoading, isError }: FlightsBoardTa
   const departures = schedule?.departures ?? [];
 
   return (
-    <WidgetTabs defaultValue="arrivals">
+    <WidgetTabs defaultValue="arrivals" aria-label="KCLT flight schedule">
       <TabPanel value="arrivals" label="Arrivals">
         <FlightSection
           title="Arrivals"

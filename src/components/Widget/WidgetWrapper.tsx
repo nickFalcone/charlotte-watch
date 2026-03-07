@@ -103,11 +103,11 @@ function WidgetWrapperInner({
           )}
           {onToggleVisibility && (
             <ControlButton
+              aria-label="Hide widget"
               onClick={e => {
                 e.stopPropagation();
                 onToggleVisibility();
               }}
-              title="Hide widget"
             >
               ✕
             </ControlButton>

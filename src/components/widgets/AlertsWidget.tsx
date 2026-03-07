@@ -130,7 +130,7 @@ export function AlertsWidget(_props: WidgetProps) {
 
   return (
     <>
-      <WidgetTabs defaultValue="incidents" onValueChange={setActiveTab}>
+      <WidgetTabs defaultValue="incidents" onValueChange={setActiveTab} aria-label="Alert views">
         <TabPanel value="incidents" label="Incidents">
           <AlertsIncidentsTab
             sortedAlerts={sortedAlerts}
