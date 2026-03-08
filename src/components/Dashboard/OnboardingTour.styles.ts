@@ -1,6 +1,16 @@
 import styled from 'styled-components';
 import { AnimatedPopoverContent } from '../common';
 
+// Semi-transparent overlay above the dialog (z-index 1000) but below the popover
+// (z-index 3000), blocking clicks and signalling that the tour requires attention.
+export const TourOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 2999;
+  background: ${props => props.theme.overlay};
+  opacity: 0.9;
+`;
+
 // Fixed-width popover so both steps render at the same size
 export const TourContent = styled(AnimatedPopoverContent)`
   width: 320px;
@@ -84,8 +94,8 @@ export const TourHintIcon = styled.img`
 
 // CSS-drawn bottom-right corner to represent the resize handle (no resize SVG in assets)
 export const TourResizeCorner = styled.div`
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
   border-right: 2px solid ${props => props.theme.colors.textMuted};
   border-bottom: 2px solid ${props => props.theme.colors.textMuted};
@@ -116,7 +126,8 @@ export const TourDot = styled.div<{ $active: boolean }>`
 
 export const TourButton = styled.button`
   padding: 5px 14px;
-  background: ${props => props.theme.colors.primary};
+  /* #004c99 gives 7.54:1 against #ffffff (WCAG AAA) in both light and dark themes */
+  background: #004c99;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -126,11 +137,12 @@ export const TourButton = styled.button`
   transition: ${props => props.theme.transitions.fast};
 
   &:hover {
-    background: ${props => props.theme.colors.primaryHover};
+    /* #003880 gives 10.07:1 against #ffffff */
+    background: #003880;
   }
 
   &:focus-visible {
-    outline: 2px solid ${props => props.theme.colors.primary};
+    outline: 2px solid #004c99;
     outline-offset: 2px;
   }
 `;
