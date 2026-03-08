@@ -57,6 +57,15 @@ import {
 
 const ACCENT_COLOR = '#6366f1';
 
+function isSafeUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function mostRecentSourceDate(sources: ParsedNewsSource[]): string | null {
   if (sources.length === 0) return null;
   const dates = sources
@@ -197,13 +206,17 @@ export function NewsWidget(_props: WidgetProps) {
                         {selectedEvent.sources.map((src, i) => (
                           <SourceItem key={src.link + i}>
                             <SourceTitle>
-                              <ArticleLink
-                                href={src.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                {src.title}
-                              </ArticleLink>
+                              {isSafeUrl(src.link) ? (
+                                <ArticleLink
+                                  href={src.link}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {src.title}
+                                </ArticleLink>
+                              ) : (
+                                src.title
+                              )}
                             </SourceTitle>
                             <SourceMeta>
                               {src.source_name} &middot;{' '}
