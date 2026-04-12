@@ -20,6 +20,7 @@ export default tseslint.config(
       '*.config.ts',
       'vite.config.ts',
       'functions/**/*.ts', // Cloudflare Pages Functions - linted separately by Wrangler
+      'e2e/**', // Playwright e2e tests — use their own type context
     ],
   },
   {

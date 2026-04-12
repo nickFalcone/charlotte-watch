@@ -6,3 +6,6 @@ build
 .dev.vars
 .wrangler
 *.tsbuildinfo
+# Playwright
+playwright-report
+test-results
