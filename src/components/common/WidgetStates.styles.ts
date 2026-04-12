@@ -61,6 +61,11 @@ export const RetryButton = styled.button`
   &:hover {
     background: ${props => props.theme.colors.primary}40;
   }
+
+  &:focus-visible {
+    outline: 2px solid ${props => props.theme.colors.primary};
+    outline-offset: 2px;
+  }
 `;
 
 export const EmptyContainer = styled.div`
