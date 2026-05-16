@@ -15,6 +15,7 @@ Widgets are self-contained dashboard components in `src/components/widgets/`.
 ## Widget Template
 
 ```tsx
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { WidgetProps } from '../../types';
 import { useWidgetMetadata } from '../Widget';
@@ -31,8 +32,10 @@ export function YourWidget(_props: WidgetProps) {
     refetchInterval: 1000 * 60 * 10, // 10 minutes
   });
 
-  // Sync timestamp to widget header (setLastUpdated is memoized, safe to call during render)
-  setLastUpdated(dataUpdatedAt || null);
+  // Sync timestamp to widget header -- must use useEffect (calling during render causes infinite loops)
+  useEffect(() => {
+    setLastUpdated(dataUpdatedAt || null);
+  }, [dataUpdatedAt, setLastUpdated]);
 
   // Handle states
   if (isLoading) return <LoadingState />;

@@ -113,7 +113,11 @@ Pages Functions use **Cloudflare KV** (`CACHE` binding) to share responses acros
 |---|---|---|---|
 | `/api/news-charlotte-parsed` | `news:parsed` | 12 hours | Parsed news events (AI pipeline) |
 | `/api/summarize-alerts` | `summary:<hash>` | 15 minutes | Alert BLUF summary, keyed by alert set hash |
-| `/api/cats-alerts` | `alerts:cats` | 15 minutes | CATS transit alerts |
+| `/api/summarize-weather` | `weather-summary:<hash>` | 15 minutes | AI weather summary, keyed by hash |
+| `/api/cats-transit` | `transit:vehicle-positions` | 60 seconds | CATS live vehicle positions |
+| `/api/cats-twitter` | `alerts:cats-twitter` | 6 hours | CATS Twitter/X posts |
+| `/api/cfd-twitter` | `alerts:cfd-twitter` | 6 hours | Charlotte Fire Dept Twitter/X posts |
+| `/api/cms-twitter` | `alerts:cms-twitter` | 6 hours | Charlotte Mecklenburg Schools Twitter/X posts |
 | `/api/duke-outages` | `alerts:duke` | 15 minutes | Duke Energy outage data |
 | `/api/here-flow` | `alerts:here` | 15 minutes | HERE traffic flow |
 | `/api/faa-status` | `alerts:faa` | 15 minutes | FAA airport status |

@@ -47,16 +47,31 @@ CACHE: KVNamespace;
 |---|---|---|---|---|
 | `GET /api/news-charlotte-parsed` | `functions/api/news-charlotte-parsed.ts` | `news:parsed` | 12 hours (43200s) | Read-only; populated by `workers/cache-warmer.ts` on cron schedule |
 | `POST /api/summarize-alerts` | `functions/api/summarize-alerts.ts` | `summary:<hash>` | 15 minutes (900s) | Keyed by client-provided `hash` from request body |
+| `POST /api/summarize-weather` | `functions/api/summarize-weather.ts` | `weather-summary:<hash>` | 15 minutes (900s) | Keyed by client-provided `hash` from request body |
+
+### Transit endpoints
+
+| Endpoint | File | Cache key | TTL | Notes |
+|---|---|---|---|---|
+| `GET /api/cats-transit` | `functions/api/cats-transit.ts` | `transit:vehicle-positions` | 60 seconds (60s) | CATS live vehicle positions |
+
+### Social media endpoints
+
+| Endpoint | File | Cache key | TTL | Notes |
+|---|---|---|---|---|
+| `GET /api/cats-twitter` | `functions/api/cats-twitter.ts` | `alerts:cats-twitter` | 6 hours (21600s) | CATS Twitter/X posts |
+| `GET /api/cfd-twitter` | `functions/api/cfd-twitter.ts` | `alerts:cfd-twitter` | 6 hours (21600s) | Charlotte Fire Dept Twitter/X posts |
+| `GET /api/cms-twitter` | `functions/api/cms-twitter.ts` | `alerts:cms-twitter` | 6 hours (21600s) | Charlotte Mecklenburg Schools Twitter/X posts |
 
 ### Raw alert proxy endpoints
 
 | Endpoint | File | Cache key | TTL | Notes |
 |---|---|---|---|---|
-| `GET /api/cats-alerts` | `functions/api/cats-alerts.ts` | `alerts:cats` | 15 minutes (900s) | Single global key |
 | `GET /api/duke-outages` | `functions/api/duke-outages.ts` | `alerts:duke` | 15 minutes (900s) | Single global key; includes detail enrichment |
 | `GET /api/here-flow` | `functions/api/here-flow.ts` | `alerts:here` | 15 minutes (900s) | Single key (params are fixed by allowlist) |
 | `GET /api/faa-status` | `functions/api/faa-status.ts` | `alerts:faa` | 15 minutes (900s) | Returns XML (`Content-Type: application/xml`) |
 | `GET /api/opensky-auth` | `functions/api/opensky-auth.ts` | `alerts:opensky-auth` | 5 minutes (300s) | Short TTL because tokens expire |
+
 ### Stock data endpoints
 
 | Endpoint | File | Cache key | TTL | Notes |
@@ -69,6 +84,9 @@ CACHE: KVNamespace;
 | Endpoint | File | Reason |
 |---|---|---|
 | `GET /api/opensky-states` | `functions/api/opensky-states.ts` | Real-time aircraft positions; polled every 15s by flight tracker |
+| `GET /api/aerodatabox-flights` | `functions/api/aerodatabox-flights.ts` | Uses Cloudflare CDN caching (`cf.cacheTtl`), not KV |
+| `GET /api/google-air-quality` | `functions/api/google-air-quality.ts` | Not cached |
+| `GET /api/google-pollen` | `functions/api/google-pollen.ts` | Not cached |
 
 ---
 
