@@ -116,8 +116,8 @@ Pages Functions use **Cloudflare KV** (`CACHE` binding) to share responses acros
 | `/api/summarize-weather` | `weather-summary:<hash>` | 15 minutes | AI weather summary, keyed by hash |
 | `/api/cats-transit` | `transit:vehicle-positions` | 60 seconds | CATS live vehicle positions |
 | `/api/cats-twitter` | `alerts:cats-twitter` | 6 hours | CATS Twitter/X posts |
-| `/api/cfd-twitter` | `alerts:cfd-twitter` | 6 hours | Charlotte Fire Dept Twitter/X posts |
-| `/api/cms-twitter` | `alerts:cms-twitter` | 6 hours | Charlotte Mecklenburg Schools Twitter/X posts |
+| `/api/cfd-twitter` | `alerts:cfd-twitter` | 6 hours | Charlotte Fire Department Twitter/X posts |
+| `/api/cms-twitter` | `alerts:cms-twitter` | 6 hours | Charlotte-Mecklenburg Schools Twitter/X posts |
 | `/api/duke-outages` | `alerts:duke` | 15 minutes | Duke Energy outage data |
 | `/api/here-flow` | `alerts:here` | 15 minutes | HERE traffic flow |
 | `/api/faa-status` | `alerts:faa` | 15 minutes | FAA airport status |
@@ -132,7 +132,7 @@ The KV namespace must be bound as `CACHE` in the Cloudflare Pages dashboard unde
 
 ### Local development
 
-The Vite dev plugins for `/api/news-charlotte-parsed` and `/api/summarize-alerts` use an in-memory `Map`-based cache with the same TTLs. Other alert endpoints are proxied directly in dev and are not cached locally.
+Most endpoints have in-memory dev caching via `devCacheGet`/`devCachePut` in `vite.config.ts` that mirrors production TTLs — including the Twitter endpoints, `summarize-weather`, `aerodatabox-flights`, and the Google endpoints. See [CLOUDFLARE_KV_CACHING.md](./CLOUDFLARE_KV_CACHING.md#local-development-vite) for the full table. This table covers KV-cached endpoints only; `aerodatabox-flights` and the Google endpoints use CDN or dev-only caching rather than KV.
 
 ## Common Issues
 

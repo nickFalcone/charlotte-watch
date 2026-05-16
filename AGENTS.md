@@ -35,7 +35,7 @@ npm run check:fix    # Format, lint, and typecheck (run after every change)
 useQuery(['weather'], fetchWeather)
 
 // ✅ Good (TanStack Query v5 object syntax)
-useQuery({ queryKey: queryKeys.weather.current(lat, lng), queryFn: fetchWeather })
+useQuery({ queryKey: queryKeys.weather.current(lat, lng), queryFn: () => fetchWeather(lat, lng) })
 ```
 
 ### 2. API Keys Stay Server-Side
@@ -225,9 +225,10 @@ Never use `transform` in CSS animations on `.react-grid-item`. RGL uses transfor
 
 ### Radix UI + happy-dom test cleanup
 
-Despite TESTING.md saying cleanup is automatic, Radix UI components do not auto-cleanup between tests in happy-dom. Always add `afterEach(cleanup)` and scope queries with `within(container)` when testing any Radix primitive:
+Radix UI components do not auto-cleanup between tests in happy-dom. Always add `afterEach(cleanup)` when testing any Radix primitive. For non-portal Radix components, scope queries with `within(container)`; for Radix portals (e.g. `Popover.Portal`), use `screen` as usual since portals render outside the container.
 
 ```typescript
+import { afterEach } from 'vitest';
 import { cleanup, render, within } from '@testing-library/react';
 afterEach(cleanup);
 ```

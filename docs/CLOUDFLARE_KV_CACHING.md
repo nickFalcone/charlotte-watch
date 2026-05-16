@@ -60,8 +60,8 @@ CACHE: KVNamespace;
 | Endpoint | File | Cache key | TTL | Notes |
 |---|---|---|---|---|
 | `GET /api/cats-twitter` | `functions/api/cats-twitter.ts` | `alerts:cats-twitter` | 6 hours (21600s) | CATS Twitter/X posts |
-| `GET /api/cfd-twitter` | `functions/api/cfd-twitter.ts` | `alerts:cfd-twitter` | 6 hours (21600s) | Charlotte Fire Dept Twitter/X posts |
-| `GET /api/cms-twitter` | `functions/api/cms-twitter.ts` | `alerts:cms-twitter` | 6 hours (21600s) | Charlotte Mecklenburg Schools Twitter/X posts |
+| `GET /api/cfd-twitter` | `functions/api/cfd-twitter.ts` | `alerts:cfd-twitter` | 6 hours (21600s) | Charlotte Fire Department Twitter/X posts |
+| `GET /api/cms-twitter` | `functions/api/cms-twitter.ts` | `alerts:cms-twitter` | 6 hours (21600s) | Charlotte-Mecklenburg Schools Twitter/X posts |
 
 ### Raw alert proxy endpoints
 
@@ -146,12 +146,21 @@ export const onRequestGet: PagesFunction<Env> = async context => {
 
 ## Local development (Vite)
 
-Two Vite dev plugins have **in-memory caching** that mirrors KV behavior:
+Most endpoints have **in-memory caching** in dev via `devCacheGet`/`devCachePut` (a `Map<string, { data: string; expiresAt: number }>` in `vite.config.ts`) that mirrors their production TTLs:
 
-- **`newsCharlotteParsedPlugin`** in `vite.config.ts` -- 12h TTL via `devCacheGet`/`devCachePut` using a `Map<string, { data: string; expiresAt: number }>`.
-- **`aiSummarizationPlugin`** in `vite.config.ts` -- 15min TTL, keyed by `summary:<hash>`.
+| Dev plugin | Cache key | TTL |
+|---|---|---|
+| `newsCharlotteParsedPlugin` | `news:parsed` | 12 hours |
+| `aiSummarizationPlugin` | `summary:<hash>` | 15 minutes |
+| `aiWeatherSummaryPlugin` | `weather-summary:<hash>` | 15 minutes |
+| `catsTwitterPlugin` | `cats-twitter` | 6 hours |
+| `cmsTwitterPlugin` | `cms-twitter` | 6 hours |
+| `cfdTwitterPlugin` | `cfd-twitter` | 6 hours |
+| inline (aerodatabox-flights) | `aerodatabox-flights` | 15 minutes |
+| inline (google-air-quality) | `google-air-quality` | 15 minutes |
+| inline (google-pollen) | `google-pollen` | 1 hour |
 
-Other alert endpoints are handled by Vite's built-in proxy config and are **not cached in dev** (each request hits upstream directly). This is acceptable since dev traffic is single-user.
+Note: `aerodatabox-flights`, `google-air-quality`, and `google-pollen` use dev in-memory caching but do **not** use KV in production (they rely on Cloudflare CDN cache or have no server-side caching). They appear in the "Not cached" KV table above for that reason.
 
 ---
 
