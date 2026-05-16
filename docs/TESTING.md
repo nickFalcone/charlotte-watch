@@ -143,7 +143,10 @@ Follow these principles from Kent C. Dodds:
 - Don't put side effects inside `waitFor` callbacks
 - Don't use `container.querySelector()` -- use Testing Library queries
 - Don't test internal component state -- test what the user sees
-- Don't manually call `cleanup` -- it happens automatically
+- Don't manually call `cleanup` unless testing Radix UI primitives -- happy-dom does not
+  auto-cleanup Radix components between tests. Add `afterEach(cleanup)` in those test files.
+  For non-portal Radix components, scope queries with `within(container)`; for Radix portals
+  (e.g. `Popover.Portal`), use `screen` as usual since portals render outside the container.
 
 ### Query Priority
 

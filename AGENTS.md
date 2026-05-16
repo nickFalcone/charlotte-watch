@@ -34,8 +34,8 @@ npm run check:fix    # Format, lint, and typecheck (run after every change)
 // ❌ Bad
 useQuery(['weather'], fetchWeather)
 
-// ✅ Good
-useQuery(queryKeys.weather.current, fetchWeather)
+// ✅ Good (TanStack Query v5 object syntax)
+useQuery({ queryKey: queryKeys.weather.current(lat, lng), queryFn: () => fetchWeather(lat, lng) })
 ```
 
 ### 2. API Keys Stay Server-Side
@@ -111,10 +111,15 @@ charlotte-monitor/
 │   ├── components/
 │   │   ├── widgets/          # Dashboard widgets (Weather, Flights, etc.)
 │   │   └── ...               # Shared UI components
+│   ├── alerts/               # Alert registry, sources, and converters
 │   ├── hooks/                # Custom React hooks
-│   ├── services/             # API client functions
+│   ├── stores/               # Zustand state stores
+│   ├── data/                 # Static reference data (transit routes, geometry)
+│   ├── types/                # TypeScript type definitions
+│   ├── theme/                # Theme tokens and styled-components theme
 │   ├── utils/
-│   │   └── queryKeys.ts      # Centralized TanStack Query keys
+│   │   ├── queryKeys.ts      # Centralized TanStack Query keys
+│   │   └── *Api.ts           # API client functions (catsApi, cfdApi, etc.)
 │   └── assets/
 │       └── icons/            # SVG icons (do not modify)
 ├── functions/                # Cloudflare Functions (serverless API proxies)
@@ -194,8 +199,8 @@ Ask the user. It's better to clarify requirements than to make assumptions.
 ### Adding a Query
 
 1. Add key to `src/utils/queryKeys.ts`
-2. Create service function in `src/services/`
-3. Use in component with `useQuery(queryKeys.yourKey, serviceFunction)`
+2. Create service function in `src/utils/` (e.g., `src/utils/myThingApi.ts`)
+3. Use in component with `useQuery({ queryKey: queryKeys.yourKey, queryFn: serviceFunction })`
 
 ### Adding a Widget
 
@@ -211,6 +216,22 @@ Ask the user. It's better to clarify requirements than to make assumptions.
 - Display user-friendly error messages
 - Log errors to console in development
 - Never expose API keys or sensitive data in error messages
+
+## Known Gotchas
+
+### React Grid Layout animations
+
+Never use `transform` in CSS animations on `.react-grid-item`. RGL uses transforms for drag and resize; a competing animation transform causes layout glitches.
+
+### Radix UI + happy-dom test cleanup
+
+Radix UI components do not auto-cleanup between tests in happy-dom. Always add `afterEach(cleanup)` when testing any Radix primitive. For non-portal Radix components, scope queries with `within(container)`; for Radix portals (e.g. `Popover.Portal`), use `screen` as usual since portals render outside the container.
+
+```typescript
+import { afterEach } from 'vitest';
+import { cleanup, render, within } from '@testing-library/react';
+afterEach(cleanup);
+```
 
 ## Performance Considerations
 
