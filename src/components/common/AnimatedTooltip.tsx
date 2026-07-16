@@ -1,64 +1,17 @@
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import {
+  slideUpAndFade,
+  slideDownAndFade,
+  slideRightAndFade,
+  slideLeftAndFade,
+  fadeOut,
+} from './slideFade';
 
 /**
  * Shared animated Tooltip components for consistent tooltip UX across the app.
  * Uses Radix UI Tooltip with CSS animations for smooth enter/exit transitions.
  */
-
-// Keyframe animations
-const slideUpAndFade = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`;
-
-const slideDownAndFade = keyframes`
-  from {
-    opacity: 0;
-    transform: translateY(-2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-`;
-
-const slideRightAndFade = keyframes`
-  from {
-    opacity: 0;
-    transform: translateX(-2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-`;
-
-const slideLeftAndFade = keyframes`
-  from {
-    opacity: 0;
-    transform: translateX(2px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-`;
-
-const fadeOut = keyframes`
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-`;
 
 export const AnimatedTooltipContent = styled(Tooltip.Content)`
   padding: 8px 12px;

@@ -1,5 +1,6 @@
 import type { Env } from '../_lib/env';
-import { isServiceAlertTweet, isWithinLast24Hours } from '../../src/utils/catsFilters';
+import { isServiceAlertTweet } from '../../src/utils/catsFilters';
+import { isWithinLast24Hours } from '../../src/utils/twitterFilters';
 import { jsonResponse, errorResponse, getCached, setCached } from '../_lib/responseHelpers';
 import { fetchTwitter241Tweets, TwitterApiError } from '../_lib/twitter241';
 

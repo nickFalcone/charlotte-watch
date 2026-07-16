@@ -1,5 +1,6 @@
 import type { Env } from '../_lib/env';
-import { isCMSAlertTweet, isWithinLast24Hours } from '../../src/utils/cmsFilters';
+import { isCMSAlertTweet } from '../../src/utils/cmsFilters';
+import { isWithinLast24Hours } from '../../src/utils/twitterFilters';
 import { jsonResponse, errorResponse, getCached, setCached } from '../_lib/responseHelpers';
 import { fetchTwitter241Tweets, TwitterApiError } from '../_lib/twitter241';
 

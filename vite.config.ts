@@ -10,9 +10,10 @@ import {
 import newsParsingPrompt from './src/prompts/newsParsing.json';
 import { sortNewsEvents } from './src/utils/newsApi';
 import type { ParsedNewsEvent } from './src/types/news';
-import { isServiceAlertTweet, isWithinLast24Hours } from './src/utils/catsFilters';
+import { isServiceAlertTweet } from './src/utils/catsFilters';
 import { isCMSAlertTweet } from './src/utils/cmsFilters';
 import { isCFDIncidentTweet } from './src/utils/cfdFilters';
+import { isWithinLast24Hours } from './src/utils/twitterFilters';
 import { extractLocationFromTweet } from './src/utils/cfdAddressParser';
 import { geocodeAddress } from './functions/_lib/hereGeocode';
 
