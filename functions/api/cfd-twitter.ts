@@ -1,5 +1,6 @@
 import type { Env } from '../_lib/env';
-import { isCFDIncidentTweet, isWithinLast24Hours } from '../../src/utils/cfdFilters';
+import { isCFDIncidentTweet } from '../../src/utils/cfdFilters';
+import { isWithinLast24Hours } from '../../src/utils/twitterFilters';
 import { extractLocationFromTweet } from '../../src/utils/cfdAddressParser';
 import { jsonResponse, errorResponse, getCached, setCached } from '../_lib/responseHelpers';
 import { fetchTwitter241Tweets, TwitterApiError } from '../_lib/twitter241';
