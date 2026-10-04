@@ -2,12 +2,22 @@
 
 ## Current Setup
 
-The flight tracker uses **CARTO basemap tiles** with theme-aware selection:
+All maps (flight tracker, LYNX transit, weather radar) use **CARTO basemap tiles** via `BaseMapTileLayer`, with theme-aware selection:
 
-- **Dark Mode**: `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png`
-- **Light Mode**: `https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png`
+- **Dark Mode**: `https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=KEY`
+- **Light Mode**: `https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png?key=KEY`
 
 The tile URL automatically switches based on the current theme (`useTheme()` hook).
+
+### CARTO API key
+
+CARTO requires an API key on every basemap tile request (since 2026-09-23). Requests without one are served with an "API KEY REQUIRED" watermark. Free keys are available at https://carto.com/basemaps/apikey (no CARTO account needed).
+
+The key is read from `VITE_CARTO_API_KEY` at build time (`src/utils/mapTileUrl.ts`). It is inlined into the client bundle and visible in tile URLs, which is unavoidable for client-side tile layers.
+
+- **Production and previews**: set a GitHub Actions repository **variable** (not a secret) named `VITE_CARTO_API_KEY`. `deploy-pages.yml` passes it to the build step. Cloudflare dashboard variables are not used because the site is built in GitHub Actions, not by Cloudflare.
+- **Local dev**: add `VITE_CARTO_API_KEY` to `.env.local`. Using a separate key for local development is fine.
+- **If missing**: tiles still load but show the watermark, and a one-time console warning is logged.
 
 ### Retry Logic
 
