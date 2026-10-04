@@ -39,6 +39,8 @@ jobs:
           sed -i "s|<lastmod>.*</lastmod>|<lastmod>${TODAY}</lastmod>|" public/sitemap.xml
 
       - name: Build
+        env:
+          VITE_CARTO_API_KEY: ${{ vars.VITE_CARTO_API_KEY }}
         run: npm run build
 
       - name: Deploy to Cloudflare Pages (Production)
