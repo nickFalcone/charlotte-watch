@@ -46,7 +46,7 @@ CACHE: KVNamespace;
 | Endpoint | File | Cache key | TTL | Notes |
 |---|---|---|---|---|
 | `GET /api/news-charlotte-parsed` | `functions/api/news-charlotte-parsed.ts` | `news:parsed` | 12 hours (43200s) | Read-only; populated by `workers/cache-warmer.ts` on cron schedule |
-| `POST /api/summarize-alerts` | `functions/api/summarize-alerts.ts` | `summary:<hash>` | 15 minutes (900s) | Keyed by client-provided `hash` from request body |
+| `POST /api/summarize-alerts` | `functions/api/summarize-alerts.ts` | `summary:<model>:<hash>` (OpenAI), `summary:<hash>` (Anthropic) | 15 minutes (900s) | Keyed by client-provided `hash` from request body; the OpenAI key includes the model so deploys on different models sharing one KV namespace do not serve each other's summaries. Empty results are not cached |
 | `POST /api/summarize-weather` | `functions/api/summarize-weather.ts` | `weather-summary:<hash>` | 15 minutes (900s) | Keyed by client-provided `hash` from request body |
 
 ### Transit endpoints
