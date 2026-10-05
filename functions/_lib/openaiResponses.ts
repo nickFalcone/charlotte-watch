@@ -42,6 +42,7 @@ interface OpenAIResponsesResult {
   usage?: {
     input_tokens: number;
     output_tokens: number;
+    output_tokens_details?: { reasoning_tokens?: number };
     total_tokens: number;
   };
 }
@@ -80,9 +81,13 @@ export async function callOpenAIResponses(options: OpenAIResponsesOptions): Prom
     }),
   });
 
+  const requestId = response.headers.get('x-request-id');
+
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`OpenAI API error: ${response.status} - ${error}`);
+    throw new Error(
+      `OpenAI API error: ${response.status} - ${error}${requestId ? ` (request ${requestId})` : ''}`
+    );
   }
 
   const data: OpenAIResponsesResult = await response.json();
@@ -91,7 +96,13 @@ export async function callOpenAIResponses(options: OpenAIResponsesOptions): Prom
   // response before any visible text is written.
   if (data.status === 'incomplete') {
     console.warn(
-      `OpenAI response incomplete (${data.incomplete_details?.reason ?? 'unknown'}) for ${model}`
+      `OpenAI response incomplete (${data.incomplete_details?.reason ?? 'unknown'}) for ${model} (request ${requestId})`
+    );
+  }
+
+  if (reasoningEffort) {
+    console.info(
+      `OpenAI ${model} effort=${reasoningEffort} input=${data.usage?.input_tokens} output=${data.usage?.output_tokens} reasoning=${data.usage?.output_tokens_details?.reasoning_tokens} (request ${requestId})`
     );
   }
 

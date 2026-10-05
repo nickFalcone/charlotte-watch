@@ -38,10 +38,12 @@ interface SummarizeResponse {
 const MAX_ALERTS = 50;
 
 // OpenAI path. Luna is a reasoning model: effort 'low' leaves some room to resolve
-// conflicting alert timestamps, and the output cap must cover reasoning tokens too.
+// conflicting alert timestamps. The cap covers reasoning plus visible tokens and is
+// only a ceiling (an incomplete response can end before any text is written), so keep
+// it generous; the summary itself is ~150 tokens. Tune from the logged reasoning counts.
 const OPENAI_MODEL = 'gpt-6-luna';
 const OPENAI_REASONING_EFFORT = 'low';
-const OPENAI_MAX_OUTPUT_TOKENS = 1000;
+const OPENAI_MAX_OUTPUT_TOKENS = 8000;
 
 /** Returns ms since epoch, or 0 if missing/invalid (sorts as oldest). */
 function getSortTimestamp(updatedAt?: string): number {
