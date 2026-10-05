@@ -37,6 +37,12 @@ interface SummarizeResponse {
 
 const MAX_ALERTS = 50;
 
+// OpenAI path. Luna is a reasoning model: effort 'low' leaves some room to resolve
+// conflicting alert timestamps, and the output cap must cover reasoning tokens too.
+const OPENAI_MODEL = 'gpt-6-luna';
+const OPENAI_REASONING_EFFORT = 'low';
+const OPENAI_MAX_OUTPUT_TOKENS = 1000;
+
 /** Returns ms since epoch, or 0 if missing/invalid (sorts as oldest). */
 function getSortTimestamp(updatedAt?: string): number {
   if (!updatedAt) return 0;
@@ -92,8 +98,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     });
   }
 
-  // Check KV cache (15min TTL, keyed by alert set hash)
-  const cacheKey = `summary:${request.hash}`;
+  // Check KV cache (15min TTL, keyed by alert set hash). The OpenAI key includes the
+  // model so deploys on different models sharing one KV namespace never serve each
+  // other's summaries.
+  const cacheKey =
+    provider === 'openai' ? `summary:${OPENAI_MODEL}:${request.hash}` : `summary:${request.hash}`;
   const cachedResponse = await checkCache(context.env.CACHE, cacheKey);
   if (cachedResponse) return cachedResponse;
 
@@ -114,11 +123,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
       // Use OpenAI Responses API
       summary = await callOpenAIResponses({
         apiKey: key,
-        model: 'gpt-4o-mini',
+        model: OPENAI_MODEL,
         instructions: BLUF_SYSTEM_PROMPT,
         input: userPrompt,
-        maxOutputTokens: 150,
-        temperature: 0.3,
+        maxOutputTokens: OPENAI_MAX_OUTPUT_TOKENS,
+        reasoningEffort: OPENAI_REASONING_EFFORT,
       });
     }
 

@@ -5,13 +5,19 @@
  * See: https://platform.openai.com/docs/api-reference/responses
  */
 
+export type OpenAIReasoningEffort = 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
 export interface OpenAIResponsesOptions {
   apiKey: string;
   model?: string;
   instructions: string;
   input: string;
+  /** Upper bound on visible output plus reasoning tokens. */
   maxOutputTokens?: number;
+  /** Ignored when reasoningEffort is set to anything other than 'none'. */
   temperature?: number;
+  /** Only for reasoning-capable models (e.g. gpt-6-luna). Omit for models like gpt-4o-mini. */
+  reasoningEffort?: OpenAIReasoningEffort;
 }
 
 interface ResponseOutput {
@@ -30,6 +36,8 @@ interface OpenAIResponsesResult {
   object: string;
   created_at: number;
   model: string;
+  status?: string;
+  incomplete_details?: { reason?: string } | null;
   output: ResponseOutput[];
   usage?: {
     input_tokens: number;
@@ -49,7 +57,11 @@ export async function callOpenAIResponses(options: OpenAIResponsesOptions): Prom
     input,
     maxOutputTokens = 150,
     temperature = 0.3,
+    reasoningEffort,
   } = options;
+
+  // Reasoning models reject temperature (HTTP 400) unless reasoning is off.
+  const reasoningActive = reasoningEffort !== undefined && reasoningEffort !== 'none';
 
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
@@ -62,7 +74,8 @@ export async function callOpenAIResponses(options: OpenAIResponsesOptions): Prom
       instructions,
       input,
       max_output_tokens: maxOutputTokens,
-      temperature,
+      temperature: reasoningActive ? undefined : temperature,
+      reasoning: reasoningEffort ? { effort: reasoningEffort } : undefined,
       store: false,
     }),
   });
@@ -73,6 +86,14 @@ export async function callOpenAIResponses(options: OpenAIResponsesOptions): Prom
   }
 
   const data: OpenAIResponsesResult = await response.json();
+
+  // Reasoning tokens count against max_output_tokens, so a low cap can end the
+  // response before any visible text is written.
+  if (data.status === 'incomplete') {
+    console.warn(
+      `OpenAI response incomplete (${data.incomplete_details?.reason ?? 'unknown'}) for ${model}`
+    );
+  }
 
   // Extract the assistant output text from the response
   // Find first output item where type === "message"
