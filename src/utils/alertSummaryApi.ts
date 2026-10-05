@@ -3,6 +3,9 @@ import type { AlertSeverity, GenericAlert } from '../types/alerts';
 /** Construction/lane-closure alerts older than this are excluded from the summary. */
 const CONSTRUCTION_SUMMARY_MAX_AGE_MS = 48 * 60 * 60 * 1000;
 
+/** Shown when every alert was filtered out as not summary-worthy; no AI call needed. */
+export const NO_SIGNIFICANT_ALERTS_SUMMARY = '- No significant alerts affecting Charlotte.';
+
 /** CATS posts about a single elevator or escalator are not summary-worthy. */
 const SINGLE_STATION_AMENITY_PATTERN = /\b(elevator|escalator)s?\b/i;
 /** ...unless the post also describes a service-level disruption. */
@@ -196,6 +199,14 @@ export async function fetchAlertSummary(
   hash: string,
   signal?: AbortSignal
 ): Promise<SummarizeResponse> {
+  if (alerts.length === 0) {
+    return {
+      summary: NO_SIGNIFICANT_ALERTS_SUMMARY,
+      hash,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
   const API_URL = '/api/summarize-alerts';
 
   const response = await fetch(API_URL, {

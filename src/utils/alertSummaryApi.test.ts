@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { combinePowerAlerts, computeAlertsHash, filterAlertsForSummary } from './alertSummaryApi';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import {
+  combinePowerAlerts,
+  computeAlertsHash,
+  fetchAlertSummary,
+  filterAlertsForSummary,
+  NO_SIGNIFICANT_ALERTS_SUMMARY,
+} from './alertSummaryApi';
 import type { GenericAlert } from '../types/alerts';
 
 function makeAlert(overrides: Partial<GenericAlert> = {}): GenericAlert {
@@ -311,5 +317,34 @@ describe('combinePowerAlerts', () => {
     ]);
     expect(result?.severity).toBe('critical');
     expect(result?.updatedAt).toBe('2024-01-15T14:00:00.000Z');
+  });
+});
+
+describe('fetchAlertSummary', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns the fixed no-alerts summary without calling the API when nothing is summary-worthy', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchAlertSummary([], 'empty');
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.summary).toBe(NO_SIGNIFICANT_ALERTS_SUMMARY);
+    expect(result.hash).toBe('empty');
+    expect(result.generatedAt).toBeTruthy();
+  });
+
+  it('posts alerts to the summarize endpoint otherwise', async () => {
+    const body = { summary: '- Test', hash: 'abc', generatedAt: '2026-02-04T17:00:00.000Z' };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => body });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchAlertSummary([makeAlert()], 'abc');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/summarize-alerts', expect.any(Object));
+    expect(result).toEqual(body);
   });
 });

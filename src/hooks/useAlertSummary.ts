@@ -30,7 +30,9 @@ export function useAlertSummary(alerts: GenericAlert[], options: UseAlertSummary
   return useQuery({
     queryKey: queryKeys.alerts.summary(hash),
     queryFn: ({ signal }) => fetchAlertSummary(alertsForSummary, hash, signal),
-    enabled: enabled && alertsForSummary.length > 0,
+    // Runs even when every alert was filtered out: fetchAlertSummary then returns a
+    // fixed "no significant alerts" summary instead of leaving the summary area blank.
+    enabled,
     // Cache forever - we use hash-based invalidation
     staleTime: Infinity,
     // Keep cached data when hash changes while fetching new summary
