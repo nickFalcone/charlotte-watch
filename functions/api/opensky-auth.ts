@@ -44,8 +44,34 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       }
     );
 
-    const data = await response.json();
+    const rawBody = await response.text();
+
+    let data: unknown;
+    try {
+      data = JSON.parse(rawBody);
+    } catch {
+      // Token endpoint answered with something that is not JSON (blocked, rate limited, HTML error page)
+      console.error(
+        'OpenSky auth returned non-JSON response:',
+        response.status,
+        rawBody.slice(0, 200)
+      );
+      return new Response(
+        JSON.stringify({
+          error: 'OpenSky auth returned an unexpected response',
+          upstreamStatus: response.status,
+        }),
+        { status: 502, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const responseBody = JSON.stringify(data);
+
+    if (!response.ok) {
+      // Log only the status and error fields; never the request credentials
+      const { error, error_description } = (data ?? {}) as Record<string, unknown>;
+      console.error('OpenSky auth upstream error:', response.status, error, error_description);
+    }
 
     if (response.ok) {
       // Store in KV cache (5min TTL); failures are non-fatal
@@ -63,7 +89,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         'Cache-Control': 'private, max-age=300',
       },
     });
-  } catch {
+  } catch (error) {
+    console.error('OpenSky auth fetch failed:', error);
     return new Response(JSON.stringify({ error: 'Failed to fetch token' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
