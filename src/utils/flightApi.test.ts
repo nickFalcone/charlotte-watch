@@ -6,8 +6,9 @@ import {
   formatVerticalRate,
   lastContactToMs,
   convertFAAStatusToAlerts,
+  parseAdsbAircraft,
 } from './flightApi';
-import type { FAAStatusResponse } from '../types';
+import type { AdsbAircraft, FAAStatusResponse } from '../types';
 
 describe('formatVelocity', () => {
   it('converts m/s to knots', () => {
@@ -257,5 +258,80 @@ describe('convertFAAStatusToAlerts', () => {
 
     const alerts = convertFAAStatusToAlerts(status, 'CLT');
     expect(alerts[0].severity).toBe('high'); // 75 min is high (>= 60, < 120)
+  });
+});
+
+describe('parseAdsbAircraft', () => {
+  const NOW_MS = 1_760_000_000_000;
+  const base: AdsbAircraft = {
+    hex: 'A75B65',
+    flight: 'AAL2981 ',
+    r: 'N573UW',
+    t: 'A321',
+    ownOp: 'AMERICAN AIRLINES INC',
+    lat: 35.5,
+    lon: -80.9,
+    alt_baro: 23775,
+    gs: 415.7,
+    track: 286.78,
+    baro_rate: 1088,
+    squawk: '7106',
+    emergency: 'none',
+    seen: 0.4,
+    seen_pos: 1.2,
+  };
+
+  it('converts feet, knots and fpm to meters and m/s', () => {
+    const ac = parseAdsbAircraft(base, NOW_MS)!;
+    expect(ac.altitude).toBeCloseTo(23775 * 0.3048, 3);
+    expect(ac.velocity).toBeCloseTo(415.7 * 0.514444, 3);
+    expect(ac.verticalRate).toBeCloseTo(1088 * 0.00508, 3);
+    expect(ac.heading).toBe(286.78);
+  });
+
+  it('normalizes identifiers and metadata', () => {
+    const ac = parseAdsbAircraft(base, NOW_MS)!;
+    expect(ac.icao24).toBe('a75b65');
+    expect(ac.callsign).toBe('AAL2981');
+    expect(ac.registration).toBe('N573UW');
+    expect(ac.aircraftType).toBe('A321');
+    expect(ac.operator).toBe('AMERICAN AIRLINES INC');
+    expect(ac.squawk).toBe('7106');
+  });
+
+  it('treats the "none" emergency status as no emergency', () => {
+    expect(parseAdsbAircraft(base, NOW_MS)!.emergency).toBeNull();
+    expect(parseAdsbAircraft({ ...base, emergency: 'general' }, NOW_MS)!.emergency).toBe('general');
+  });
+
+  it('derives position and contact times from the provider timestamp', () => {
+    const ac = parseAdsbAircraft(base, NOW_MS)!;
+    expect(ac.timePosition).toBeCloseTo(NOW_MS / 1000 - 1.2, 3);
+    expect(ac.lastContact.getTime()).toBeCloseTo(NOW_MS - 400, 0);
+  });
+
+  it('handles aircraft on the ground', () => {
+    const ac = parseAdsbAircraft({ ...base, alt_baro: 'ground' }, NOW_MS)!;
+    expect(ac.onGround).toBe(true);
+    expect(ac.altitude).toBe(0);
+  });
+
+  it('falls back to geometric vertical rate and defaults for missing fields', () => {
+    const ac = parseAdsbAircraft(
+      { hex: 'abc123', lat: 35, lon: -81, baro_rate: undefined, geom_rate: -640 },
+      NOW_MS
+    )!;
+    expect(ac.verticalRate).toBeCloseTo(-640 * 0.00508, 3);
+    expect(ac.callsign).toBe('N/A');
+    expect(ac.velocity).toBe(0);
+    expect(ac.heading).toBe(0);
+    expect(ac.squawk).toBeNull();
+    expect(ac.registration).toBeNull();
+    expect(ac.timePosition).toBeNull();
+  });
+
+  it('skips aircraft without a position', () => {
+    expect(parseAdsbAircraft({ hex: 'abc123' }, NOW_MS)).toBeNull();
+    expect(parseAdsbAircraft({ hex: 'abc123', lat: 35 }, NOW_MS)).toBeNull();
   });
 });

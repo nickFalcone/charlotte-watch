@@ -1,5 +1,6 @@
 import type {
-  OpenSkyResponse,
+  AdsbAircraft,
+  AdsbResponse,
   Aircraft,
   AirportConfig,
   FAAStatusResponse,
@@ -11,99 +12,77 @@ import type {
 } from '../types';
 import type { GenericAlert } from '../types/alerts';
 import { mapFAADelaySeverity } from '../types/alerts';
-import { getAccessToken } from './openSkyAuth';
 
 // Use proxy paths in dev, Pages Functions in production
-const OPENSKY_STATES_URL = import.meta.env.DEV
-  ? '/proxy/opensky/api/states/all'
-  : '/api/opensky-states';
 const FAA_STATUS_URL = import.meta.env.DEV
   ? '/proxy/faa/api/airport-status-information'
   : '/api/faa-status';
 
-// Parse OpenSky state vector array into Aircraft object
-function parseStateVector(state: (string | number | boolean | null | number[])[]): Aircraft | null {
-  const [
-    icao24,
-    callsign,
-    originCountry,
-    timePosition,
-    lastContact,
-    longitude,
-    latitude,
-    baroAltitude,
-    onGround,
-    velocity,
-    trueTrack,
-    verticalRate, // sensors (unused)
-    ,
-    ,
-    // geoAltitude (unused)
-    squawk,
-  ] = state;
+const FEET_TO_METERS = 0.3048;
+const KNOTS_TO_MS = 0.514444;
+const FPM_TO_MS = 0.00508;
 
+function adsbAircraftUrl(airport: AirportConfig): string {
+  const { latitude, longitude, radiusNm } = airport;
+  // Dev: Vite proxies straight to adsb.fi. Prod: Pages Function with provider fallback and caching.
+  return import.meta.env.DEV
+    ? `/proxy/adsb/v3/lat/${latitude}/lon/${longitude}/dist/${radiusNm}`
+    : `/api/adsb-aircraft?lat=${latitude}&lon=${longitude}&dist=${radiusNm}`;
+}
+
+// Convert a provider timestamp (ms since epoch) to a safe number, falling back to the local clock
+function providerNowMs(now: unknown): number {
+  return typeof now === 'number' && Number.isFinite(now) ? now : Date.now();
+}
+
+// Parse an ADS-B aircraft record into an Aircraft object (SI units: meters, m/s)
+export function parseAdsbAircraft(raw: AdsbAircraft, nowMs: number): Aircraft | null {
   // Skip if no position data
-  if (latitude === null || longitude === null) return null;
+  if (typeof raw.lat !== 'number' || typeof raw.lon !== 'number' || !raw.hex) return null;
+
+  const onGround = raw.alt_baro === 'ground';
+  const altitudeFeet = typeof raw.alt_baro === 'number' ? raw.alt_baro : 0;
+  const verticalRateFpm = raw.baro_rate ?? raw.geom_rate ?? 0;
+  const nowSeconds = nowMs / 1000;
 
   return {
-    icao24: icao24 as string,
-    callsign: ((callsign as string) || '').trim() || 'N/A',
-    originCountry: originCountry as string,
-    latitude: latitude as number,
-    longitude: longitude as number,
-    altitude: (baroAltitude as number) || 0,
-    velocity: (velocity as number) || 0,
-    heading: (trueTrack as number) || 0,
-    verticalRate: (verticalRate as number) || 0,
-    onGround: onGround as boolean,
-    squawk: squawk as string | null,
-    timePosition: typeof timePosition === 'number' ? timePosition : null,
-    lastContact: new Date((lastContact as number) * 1000),
+    icao24: raw.hex.toLowerCase(),
+    callsign: (raw.flight ?? '').trim() || 'N/A',
+    latitude: raw.lat,
+    longitude: raw.lon,
+    altitude: altitudeFeet * FEET_TO_METERS,
+    velocity: (raw.gs ?? 0) * KNOTS_TO_MS,
+    heading: raw.track ?? 0,
+    verticalRate: verticalRateFpm * FPM_TO_MS,
+    onGround,
+    squawk: raw.squawk ?? null,
+    registration: raw.r?.trim() || null,
+    aircraftType: raw.t?.trim() || null,
+    operator: raw.ownOp?.trim() || null,
+    emergency: raw.emergency && raw.emergency !== 'none' ? raw.emergency : null,
+    timePosition: typeof raw.seen_pos === 'number' ? nowSeconds - raw.seen_pos : null,
+    lastContact: new Date((nowSeconds - (raw.seen ?? raw.seen_pos ?? 0)) * 1000),
   };
 }
 
-export async function fetchAircraftInBoundingBox(
+export async function fetchAircraftNearAirport(
   airport: AirportConfig,
   signal?: AbortSignal
 ): Promise<Aircraft[]> {
-  const { lamin, lamax, lomin, lomax } = airport.boundingBox;
-
-  const params = new URLSearchParams({
-    lamin: lamin.toString(),
-    lamax: lamax.toString(),
-    lomin: lomin.toString(),
-    lomax: lomax.toString(),
-    extended: '1', // Include aircraft category data (no extra credit cost)
-  });
-  // Cache-buster: bypass browser, proxy, and CDN caches so Refresh returns fresh data
-  params.set('_', String(Date.now()));
-
-  // Get auth token (returns null if not configured)
-  const token = await getAccessToken();
-
-  const headers: HeadersInit = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${OPENSKY_STATES_URL}?${params}`, {
-    headers,
+  const response = await fetch(adsbAircraftUrl(airport), {
     signal,
     cache: 'no-store',
   });
 
   if (!response.ok) {
-    throw new Error(`OpenSky API error: ${response.status}`);
+    throw new Error(`Aircraft data error: ${response.status}`);
   }
 
-  const data: OpenSkyResponse = await response.json();
+  const data: AdsbResponse = await response.json();
+  const nowMs = providerNowMs(data.now);
 
-  if (!data.states) {
-    return [];
-  }
-
-  return data.states
-    .map(parseStateVector)
+  return (data.ac ?? [])
+    .map(raw => parseAdsbAircraft(raw, nowMs))
     .filter((aircraft): aircraft is Aircraft => aircraft !== null);
 }
 

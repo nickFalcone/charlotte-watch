@@ -9,6 +9,7 @@ import {
   useMap,
 } from 'react-leaflet';
 import { BaseMapTileLayer } from './BaseMapTileLayer';
+import { ADSB_ATTRIBUTION } from '../../utils/mapConstants';
 import { TileAccessibilityHandler, MapRecenterButton, WidgetTabs, TabPanel } from '../common';
 import L from 'leaflet';
 import type { Map as LeafletMap } from 'leaflet';
@@ -20,7 +21,7 @@ import {
   FLIGHT_PHASE_LABELS,
 } from '../../types/flight';
 import {
-  fetchAircraftInBoundingBox,
+  fetchAircraftNearAirport,
   fetchCLTSchedule,
   formatVelocity,
   formatAltitude,
@@ -248,7 +249,7 @@ export function FlightTrackerWidget(_props: WidgetProps) {
     dataUpdatedAt,
   } = useQuery({
     queryKey: queryKeys.flight.aircraft(KCLT_AIRPORT.code),
-    queryFn: ({ signal }) => fetchAircraftInBoundingBox(KCLT_AIRPORT, signal),
+    queryFn: ({ signal }) => fetchAircraftNearAirport(KCLT_AIRPORT, signal),
     staleTime: 1000 * 15,
     refetchInterval: isWidgetVisible ? 1000 * 15 : false,
     refetchIntervalInBackground: false,
@@ -270,8 +271,8 @@ export function FlightTrackerWidget(_props: WidgetProps) {
   });
 
   // Use the actual freshness of position data for the "Updated" label on the Radar tab.
-  // OpenSky's last_contact/time_position can be much older than when we requested
-  // the data, so we take the newest position report in the payload.
+  // Position reports can be much older than when we requested the data,
+  // so we take the newest position report in the payload.
   useEffect(() => {
     if (activeTab !== 'radar') return;
     let ts: number | null = null;
@@ -375,7 +376,7 @@ export function FlightTrackerWidget(_props: WidgetProps) {
               >
                 <MapController mapRef={mapRef} />
                 <TileAccessibilityHandler />
-                <BaseMapTileLayer />
+                <BaseMapTileLayer extraAttribution={ADSB_ATTRIBUTION} />
 
                 {/* 100km range ring */}
                 <Circle

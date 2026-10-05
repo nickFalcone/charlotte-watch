@@ -1,43 +1,67 @@
-// OpenSky Network ADS-B Types
+// ADS-B aircraft types (ADSBexchange v2 format, served by adsb.fi / adsb.lol via /api/adsb-aircraft)
 
-export interface OpenSkyStateVector {
-  icao24: string;
-  callsign: string | null;
-  originCountry: string;
-  timePosition: number | null;
-  lastContact: number;
-  longitude: number | null;
-  latitude: number | null;
-  baroAltitude: number | null;
-  onGround: boolean;
-  velocity: number | null;
-  trueTrack: number | null;
-  verticalRate: number | null;
-  sensors: number[] | null;
-  geoAltitude: number | null;
-  squawk: string | null;
-  spi: boolean;
-  positionSource: number;
-  category: number;
+/** One aircraft as returned by /api/adsb-aircraft. Units: feet, knots, feet/minute. */
+export interface AdsbAircraft {
+  hex: string;
+  /** Callsign, padded with trailing spaces by the feed */
+  flight?: string;
+  /** Registration */
+  r?: string;
+  /** ICAO aircraft type code (e.g. A321) */
+  t?: string;
+  /** Aircraft type description (adsb.fi only) */
+  desc?: string;
+  /** Operator (adsb.fi only) */
+  ownOp?: string;
+  lat?: number;
+  lon?: number;
+  /** Barometric altitude in feet, or the string "ground" */
+  alt_baro?: number | 'ground';
+  /** Ground speed in knots */
+  gs?: number;
+  /** True track in degrees */
+  track?: number;
+  /** Barometric vertical rate in feet/minute */
+  baro_rate?: number;
+  /** Geometric vertical rate in feet/minute (fallback for baro_rate) */
+  geom_rate?: number;
+  squawk?: string;
+  /** "none" or an emergency status such as "general" or "lifeguard" */
+  emergency?: string;
+  /** Seconds since any message was last received from this aircraft */
+  seen?: number;
+  /** Seconds since the position was last updated */
+  seen_pos?: number;
 }
 
-export interface OpenSkyResponse {
-  time: number;
-  states: (string | number | boolean | null | number[])[][] | null;
+export interface AdsbResponse {
+  /** Name of the provider that answered */
+  source?: string;
+  /** Provider timestamp in milliseconds since the epoch */
+  now?: number;
+  ac: AdsbAircraft[];
 }
 
 export interface Aircraft {
   icao24: string;
   callsign: string;
-  originCountry: string;
   latitude: number;
   longitude: number;
+  /** Meters */
   altitude: number;
+  /** Meters per second */
   velocity: number;
   heading: number;
+  /** Meters per second */
   verticalRate: number;
   onGround: boolean;
   squawk: string | null;
+  registration: string | null;
+  /** ICAO aircraft type code */
+  aircraftType: string | null;
+  operator: string | null;
+  /** Emergency status, null when none is declared */
+  emergency: string | null;
   /** Unix seconds when position was last updated; null if no recent position report. */
   timePosition: number | null;
   lastContact: Date;
@@ -104,12 +128,8 @@ export interface AirportConfig {
   name: string;
   latitude: number;
   longitude: number;
-  boundingBox: {
-    lamin: number;
-    lamax: number;
-    lomin: number;
-    lomax: number;
-  };
+  /** Radius of the aircraft query around the airport, in nautical miles */
+  radiusNm: number;
 }
 
 // KCLT - Charlotte Douglas International Airport
@@ -118,15 +138,8 @@ export const KCLT_AIRPORT: AirportConfig = {
   name: 'Charlotte Douglas International',
   latitude: 35.214,
   longitude: -80.9431,
-  boundingBox: {
-    // Maximum 1-credit bounding box (exactly 25 sq degrees)
-    // Covers ~278km x 228km at 35° latitude
-    // Includes: CLT, GSO, RDU airports + regional coverage
-    lamin: 32.714, // 2.5° south of CLT (35.214 - 2.5 = 32.714)
-    lamax: 37.714, // 2.5° north of CLT (35.214 + 2.5 = 37.714)
-    lomin: -83.4431, // 2.5° west of CLT (-80.9431 - 2.5 = -83.4431)
-    lomax: -78.4431, // 2.5° east of CLT (-80.9431 + 2.5 = -78.4431)
-  },
+  // 108 NM is 200 km, matching the outer range ring on the radar map
+  radiusNm: 108,
 };
 
 // Flight category based on altitude and vertical rate

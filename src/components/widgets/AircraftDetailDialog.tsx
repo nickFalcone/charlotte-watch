@@ -338,9 +338,25 @@ export function AircraftDetailDialog({
                   <DataItemValue>{aircraft?.icao24 ?? '—'}</DataItemValue>
                 </DataItem>
                 <DataItem>
-                  <DataItemLabel>Country</DataItemLabel>
-                  <DataItemValue>{aircraft?.originCountry ?? '—'}</DataItemValue>
+                  <DataItemLabel>Registration</DataItemLabel>
+                  <DataItemValue>{aircraft?.registration ?? '—'}</DataItemValue>
                 </DataItem>
+                <DataItem>
+                  <DataItemLabel>Aircraft Type</DataItemLabel>
+                  <DataItemValue>{aircraft?.aircraftType ?? '—'}</DataItemValue>
+                </DataItem>
+                {aircraft?.operator && (
+                  <DataItem>
+                    <DataItemLabel>Operator</DataItemLabel>
+                    <DataItemValue>{aircraft.operator}</DataItemValue>
+                  </DataItem>
+                )}
+                {aircraft?.emergency && (
+                  <DataItem>
+                    <DataItemLabel>Emergency</DataItemLabel>
+                    <DataItemValue>{aircraft.emergency}</DataItemValue>
+                  </DataItem>
+                )}
               </DataGrid>
             </DialogSection>
 

@@ -5,10 +5,6 @@
  * Settings > Environment variables
  */
 export interface Env {
-  // OpenSky Network API credentials
-  OPENSKY_CLIENT_ID?: string;
-  OPENSKY_CLIENT_SECRET?: string;
-
   // Finnhub stock data API
   FINNHUB_API_KEY?: string;
 

@@ -1301,38 +1301,10 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         // Order matters - more specific paths first
-        '/proxy/opensky-auth': {
-          target: 'https://auth.opensky-network.org',
+        '/proxy/adsb': {
+          target: 'https://opendata.adsb.fi',
           changeOrigin: true,
-          rewrite: path => path.replace(/^\/proxy\/opensky-auth/, ''),
-          configure: proxy => {
-            // Inject OAuth credentials server-side - never expose in client bundle
-            proxy.on('proxyReq', (proxyReq, req) => {
-              const clientId = env.OPENSKY_CLIENT_ID;
-              const clientSecret = env.OPENSKY_CLIENT_SECRET;
-
-              if (clientId && clientSecret && req.method === 'POST') {
-                // Build the OAuth2 client_credentials request body
-                const body = new URLSearchParams({
-                  grant_type: 'client_credentials',
-                  client_id: clientId,
-                  client_secret: clientSecret,
-                }).toString();
-
-                // Set proper headers for form submission
-                proxyReq.setHeader('Content-Type', 'application/x-www-form-urlencoded');
-                proxyReq.setHeader('Content-Length', Buffer.byteLength(body));
-
-                // Write the body with credentials
-                proxyReq.write(body);
-              }
-            });
-          },
-        },
-        '/proxy/opensky': {
-          target: 'https://opensky-network.org',
-          changeOrigin: true,
-          rewrite: path => path.replace(/^\/proxy\/opensky/, ''),
+          rewrite: path => path.replace(/^\/proxy\/adsb/, '/api'),
         },
         '/proxy/faa': {
           target: 'https://nasstatus.faa.gov',

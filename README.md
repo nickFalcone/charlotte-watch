@@ -140,8 +140,6 @@ Environment variables are never bundled into client-side code. They are only rea
 | `TRANSIT_LAND_API_KEY` | CATS Blue/Gold Line vehicle positions | For LYNX transit map |
 | `DUKE_OUTAGE_URL` | Duke Energy outage API endpoint | For Duke outage alerts |
 | `DUKE_OUTAGE_AUTH` | Duke Energy auth (Base64-encoded) | For Duke outage alerts |
-| `OPENSKY_CLIENT_ID` | OpenSky Network username | Optional — increases rate limits |
-| `OPENSKY_CLIENT_SECRET` | OpenSky Network password | Optional — increases rate limits |
 
 #### Where to Get API Keys
 
@@ -154,7 +152,7 @@ Environment variables are never bundled into client-side code. They are only rea
 | HERE Technologies | Traffic flow data | Yes | [developer.here.com](https://developer.here.com) |
 | Google Cloud | Air quality + pollen | Yes (limited) | [console.cloud.google.com](https://console.cloud.google.com) |
 | Transitland | CATS vehicle positions | Yes | [transit.land](https://www.transit.land) |
-| OpenSky Network | Live aircraft positions | Yes (anonymous OK) | [opensky-network.org](https://opensky-network.org) |
+| adsb.fi / adsb.lol | Live aircraft positions | Yes (no key needed; non-commercial) | [adsb.fi](https://adsb.fi), [adsb.lol](https://adsb.lol) |
 
 ---
 
@@ -241,7 +239,7 @@ MIT
 ## Acknowledgments
 
 - Weather: [National Weather Service](https://weather.gov)
-- Flights: [FAA](https://faa.gov), [OpenSky Network](https://opensky-network.org), [AeroDataBox](https://rapidapi.com/aedbx-aedbx/api/aerodatabox)
+- Flights: [FAA](https://faa.gov), [adsb.fi](https://adsb.fi), [adsb.lol](https://adsb.lol), [AeroDataBox](https://rapidapi.com/aedbx-aedbx/api/aerodatabox)
 - Traffic: [NCDOT](https://ncdot.gov), [HERE Technologies](https://here.com)
 - Transit: [CATS](https://charlottenc.gov/cats), [Transitland](https://transit.land)
 - Power outages: [Duke Energy](https://duke-energy.com)

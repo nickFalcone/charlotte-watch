@@ -102,5 +102,5 @@ export async function fetchYourData(): Promise<YourData> {
 - `functions/api/duke-outages.ts` — Duke Energy (auth header)
 - `functions/api/finnhub-quote.ts` — Finnhub stocks (API key header)
 - `functions/api/cats-alerts.ts` — Transit.land (API key header)
-- `functions/api/opensky-auth.ts` — OpenSky (OAuth token)
+- `functions/api/adsb-aircraft.ts` — adsb.fi / adsb.lol (keyless, provider fallback, edge caching)
 - `functions/api/summarize-alerts.ts` — AI summarization (OpenAI/Anthropic)
