@@ -94,7 +94,26 @@ export const onRequestGet: PagesFunction<Env> = async context => {
       : 'https://opensky-network.org/api/states/all';
 
     const response = await fetch(apiUrl, { headers, cf: { cacheTtl: 0, cacheEverything: false } });
-    const data = await response.json();
+    const body = await response.text();
+
+    let data: unknown;
+    try {
+      data = JSON.parse(body);
+    } catch {
+      // Upstream answered with something that is not JSON (blocked, rate limited, HTML error page)
+      console.error('OpenSky returned non-JSON response:', response.status, body.slice(0, 200));
+      return new Response(
+        JSON.stringify({
+          error: 'OpenSky returned an unexpected response',
+          upstreamStatus: response.status,
+        }),
+        { status: 502, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!response.ok) {
+      console.error('OpenSky upstream error:', response.status, body.slice(0, 200));
+    }
 
     return new Response(JSON.stringify(data), {
       status: response.status,
@@ -103,7 +122,8 @@ export const onRequestGet: PagesFunction<Env> = async context => {
         'Cache-Control': 'no-store, no-cache, must-revalidate',
       },
     });
-  } catch {
+  } catch (error) {
+    console.error('OpenSky fetch failed:', error);
     return new Response(JSON.stringify({ error: 'Failed to fetch aircraft data' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
