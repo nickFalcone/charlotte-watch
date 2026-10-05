@@ -1075,84 +1075,6 @@ function aiWeatherSummaryPlugin(env: Record<string, string>): Plugin {
   };
 }
 
-const AERODATABOX_HOST = 'aerodatabox.p.rapidapi.com';
-const AERODATABOX_FLIGHTS_CACHE_TTL_MS = 15 * 60 * 1000; // 15 min, match CF edge cache
-const AERODATABOX_FLIGHTS_URL =
-  `https://${AERODATABOX_HOST}/flights/airports/iata/CLT` +
-  '?offsetMinutes=-120&durationMinutes=720&withLeg=true&direction=Both' +
-  '&withCancelled=true&withCodeshared=false&withCargo=true&withPrivate=true&withLocation=false';
-
-// Dev-only plugin for AeroDataBox FIDS schedule (mirrors functions/api/aerodatabox-flights.ts)
-function aerodataboxFlightsPlugin(env: Record<string, string>): Plugin {
-  return {
-    name: 'aerodatabox-flights',
-    configureServer(server) {
-      server.middlewares.use('/api/aerodatabox-flights', async (req, res) => {
-        if (req.method !== 'GET') {
-          res.statusCode = 405;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'Method not allowed' }));
-          return;
-        }
-
-        const cached = devCacheGet('aerodatabox-flights');
-        if (cached) {
-          res.statusCode = 200;
-          res.setHeader('Content-Type', 'application/json');
-          res.setHeader(
-            'Cache-Control',
-            `public, max-age=${AERODATABOX_FLIGHTS_CACHE_TTL_MS / 1000}`
-          );
-          res.end(cached);
-          return;
-        }
-
-        const apiKey = env.RAPIDAPI_KEY;
-        if (!apiKey) {
-          // Allow dev without a key — return empty schedule
-          res.statusCode = 200;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ departures: [], arrivals: [] }));
-          return;
-        }
-
-        try {
-          const response = await fetch(AERODATABOX_FLIGHTS_URL, {
-            headers: {
-              'x-rapidapi-key': apiKey,
-              'x-rapidapi-host': AERODATABOX_HOST,
-              Accept: 'application/json',
-            },
-          });
-
-          if (!response.ok) {
-            res.statusCode = 502;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: `AeroDataBox API error: ${response.status}` }));
-            return;
-          }
-
-          const data = await response.text();
-          devCachePut('aerodatabox-flights', data, AERODATABOX_FLIGHTS_CACHE_TTL_MS);
-
-          res.statusCode = 200;
-          res.setHeader('Content-Type', 'application/json');
-          res.setHeader(
-            'Cache-Control',
-            `public, max-age=${AERODATABOX_FLIGHTS_CACHE_TTL_MS / 1000}`
-          );
-          res.end(data);
-        } catch (error) {
-          console.error('[aerodatabox-flights] Error:', error);
-          res.statusCode = 500;
-          res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'Failed to fetch flight schedule' }));
-        }
-      });
-    },
-  };
-}
-
 const GOOGLE_AIR_QUALITY_CACHE_TTL_MS = 15 * 60 * 1000; // 15 min
 const GOOGLE_POLLEN_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -1291,7 +1213,6 @@ export default defineConfig(({ mode }) => {
       googleAirQualityPlugin(env),
       googlePollenPlugin(env),
       dukeOutagePlugin(env),
-      aerodataboxFlightsPlugin(env),
     ],
     test: {
       environment: 'happy-dom',
@@ -1301,39 +1222,6 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         // Order matters - more specific paths first
-        '/proxy/opensky-auth': {
-          target: 'https://auth.opensky-network.org',
-          changeOrigin: true,
-          rewrite: path => path.replace(/^\/proxy\/opensky-auth/, ''),
-          configure: proxy => {
-            // Inject OAuth credentials server-side - never expose in client bundle
-            proxy.on('proxyReq', (proxyReq, req) => {
-              const clientId = env.OPENSKY_CLIENT_ID;
-              const clientSecret = env.OPENSKY_CLIENT_SECRET;
-
-              if (clientId && clientSecret && req.method === 'POST') {
-                // Build the OAuth2 client_credentials request body
-                const body = new URLSearchParams({
-                  grant_type: 'client_credentials',
-                  client_id: clientId,
-                  client_secret: clientSecret,
-                }).toString();
-
-                // Set proper headers for form submission
-                proxyReq.setHeader('Content-Type', 'application/x-www-form-urlencoded');
-                proxyReq.setHeader('Content-Length', Buffer.byteLength(body));
-
-                // Write the body with credentials
-                proxyReq.write(body);
-              }
-            });
-          },
-        },
-        '/proxy/opensky': {
-          target: 'https://opensky-network.org',
-          changeOrigin: true,
-          rewrite: path => path.replace(/^\/proxy\/opensky/, ''),
-        },
         '/proxy/faa': {
           target: 'https://nasstatus.faa.gov',
           changeOrigin: true,

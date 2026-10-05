@@ -28,8 +28,7 @@ test('renders default visible widgets in the grid', async ({ page }) => {
 
 test('does not show hidden-by-default widgets in the grid', async ({ page }) => {
   const grid = page.getByRole('main');
-  // Flight Tracker, Stocks, Weather are hidden by default
-  await expect(grid.getByText('Flight Tracker', { exact: true })).not.toBeVisible();
+  // Stocks and Weather are hidden by default
   await expect(grid.getByText('Stocks', { exact: true })).not.toBeVisible();
   await expect(grid.getByText('Weather', { exact: true })).not.toBeVisible();
 });

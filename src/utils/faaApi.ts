@@ -1,111 +1,17 @@
 import type {
-  OpenSkyResponse,
-  Aircraft,
-  AirportConfig,
   FAAStatusResponse,
   FAAGroundDelay,
   FAAGeneralDelay,
   FAAClosure,
   FAAGroundStop,
-  AeroDataBoxSchedule,
 } from '../types';
 import type { GenericAlert } from '../types/alerts';
 import { mapFAADelaySeverity } from '../types/alerts';
-import { getAccessToken } from './openSkyAuth';
 
-// Use proxy paths in dev, Pages Functions in production
-const OPENSKY_STATES_URL = import.meta.env.DEV
-  ? '/proxy/opensky/api/states/all'
-  : '/api/opensky-states';
+// Use proxy path in dev, Pages Function in production
 const FAA_STATUS_URL = import.meta.env.DEV
   ? '/proxy/faa/api/airport-status-information'
   : '/api/faa-status';
-
-// Parse OpenSky state vector array into Aircraft object
-function parseStateVector(state: (string | number | boolean | null | number[])[]): Aircraft | null {
-  const [
-    icao24,
-    callsign,
-    originCountry,
-    timePosition,
-    lastContact,
-    longitude,
-    latitude,
-    baroAltitude,
-    onGround,
-    velocity,
-    trueTrack,
-    verticalRate, // sensors (unused)
-    ,
-    ,
-    // geoAltitude (unused)
-    squawk,
-  ] = state;
-
-  // Skip if no position data
-  if (latitude === null || longitude === null) return null;
-
-  return {
-    icao24: icao24 as string,
-    callsign: ((callsign as string) || '').trim() || 'N/A',
-    originCountry: originCountry as string,
-    latitude: latitude as number,
-    longitude: longitude as number,
-    altitude: (baroAltitude as number) || 0,
-    velocity: (velocity as number) || 0,
-    heading: (trueTrack as number) || 0,
-    verticalRate: (verticalRate as number) || 0,
-    onGround: onGround as boolean,
-    squawk: squawk as string | null,
-    timePosition: typeof timePosition === 'number' ? timePosition : null,
-    lastContact: new Date((lastContact as number) * 1000),
-  };
-}
-
-export async function fetchAircraftInBoundingBox(
-  airport: AirportConfig,
-  signal?: AbortSignal
-): Promise<Aircraft[]> {
-  const { lamin, lamax, lomin, lomax } = airport.boundingBox;
-
-  const params = new URLSearchParams({
-    lamin: lamin.toString(),
-    lamax: lamax.toString(),
-    lomin: lomin.toString(),
-    lomax: lomax.toString(),
-    extended: '1', // Include aircraft category data (no extra credit cost)
-  });
-  // Cache-buster: bypass browser, proxy, and CDN caches so Refresh returns fresh data
-  params.set('_', String(Date.now()));
-
-  // Get auth token (returns null if not configured)
-  const token = await getAccessToken();
-
-  const headers: HeadersInit = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${OPENSKY_STATES_URL}?${params}`, {
-    headers,
-    signal,
-    cache: 'no-store',
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenSky API error: ${response.status}`);
-  }
-
-  const data: OpenSkyResponse = await response.json();
-
-  if (!data.states) {
-    return [];
-  }
-
-  return data.states
-    .map(parseStateVector)
-    .filter((aircraft): aircraft is Aircraft => aircraft !== null);
-}
 
 export async function fetchFAAStatus(signal?: AbortSignal): Promise<FAAStatusResponse> {
   const response = await fetch(FAA_STATUS_URL, { signal });
@@ -442,59 +348,4 @@ export function convertAllFAAStatusToAlerts(status: FAAStatusResponse): GenericA
   }
 
   return alerts;
-}
-
-// Format velocity from m/s to knots
-export function formatVelocity(metersPerSecond: number): string {
-  const knots = metersPerSecond * 1.94384;
-  return `${Math.round(knots)} kts`;
-}
-
-// Format altitude from meters to feet
-export function formatAltitude(meters: number): string {
-  const feet = meters * 3.28084;
-  if (feet < 1000) return `${Math.round(feet)} ft`;
-  return `${(feet / 1000).toFixed(1)}k ft`;
-}
-
-// Format heading as cardinal direction
-export function formatHeading(degrees: number): string {
-  const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-  const index = Math.round(degrees / 45) % 8;
-  return `${Math.round(degrees)}° ${directions[index]}`;
-}
-
-// Format vertical rate
-export function formatVerticalRate(metersPerSecond: number): string {
-  const fpm = metersPerSecond * 196.85;
-  if (Math.abs(fpm) < 100) return 'Level';
-  const sign = fpm > 0 ? '+' : '';
-  return `${sign}${Math.round(fpm)} fpm`;
-}
-
-// Normalize lastContact (Date or Unix seconds from API/serialization) to ms.
-// Exported for use in the Flight Tracker widget's timestamp logic.
-export function lastContactToMs(lastContact: Date | number): number {
-  if (lastContact instanceof Date) return lastContact.getTime();
-  if (typeof lastContact === 'number')
-    return lastContact >= 1e12 ? lastContact : lastContact * 1000;
-  return 0;
-}
-
-const AERODATABOX_FLIGHTS_URL = '/api/aerodatabox-flights';
-
-export async function fetchCLTSchedule(signal?: AbortSignal): Promise<AeroDataBoxSchedule> {
-  const response = await fetch(AERODATABOX_FLIGHTS_URL, { signal });
-  if (!response.ok) throw new Error(`AeroDataBox API error: ${response.status}`);
-  return response.json() as Promise<AeroDataBoxSchedule>;
-}
-
-// Format how long ago the position was last updated
-export function formatPositionAge(aircraft: { lastContact: Date | number }): string {
-  const lastMs = lastContactToMs(aircraft.lastContact);
-  const seconds = Math.floor((Date.now() - lastMs) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
 }

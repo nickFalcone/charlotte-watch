@@ -180,7 +180,7 @@ export const useDashboardStore = create<DashboardStore>()(
     }),
     {
       name: 'charlotte-dashboard-storage',
-      version: 5,
+      version: 6,
       migrate: (persisted: unknown, fromVersion: number) => {
         if (fromVersion < 5 && persisted != null && typeof persisted === 'object') {
           const p = persisted as Record<string, unknown>;
@@ -188,6 +188,23 @@ export const useDashboardStore = create<DashboardStore>()(
             ...p,
             layouts: DEFAULT_LAYOUTS,
             widgets: DEFAULT_WIDGET_CONFIGS,
+          };
+        }
+        if (fromVersion < 6 && persisted != null && typeof persisted === 'object') {
+          // The Flight Tracker widget was removed; drop it from saved widgets and layouts
+          const p = persisted as { widgets?: { id: string; type: string }[]; layouts?: Layouts };
+          const removedIds = new Set(
+            (p.widgets ?? []).filter(w => w.type === 'flight-tracker').map(w => w.id)
+          );
+          return {
+            ...p,
+            widgets: (p.widgets ?? []).filter(w => !removedIds.has(w.id)),
+            layouts: Object.fromEntries(
+              Object.entries(p.layouts ?? {}).map(([breakpoint, items]) => [
+                breakpoint,
+                (items as Layout[]).filter(item => !removedIds.has(item.i)),
+              ])
+            ),
           };
         }
         return persisted as Record<string, unknown>;

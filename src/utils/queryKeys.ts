@@ -39,15 +39,6 @@ export const queryKeys = {
   },
 
   /**
-   * Flight/aircraft tracking queries
-   */
-  flight: {
-    aircraft: (airportCode: string) => ['flight', 'aircraft', airportCode] as const,
-    faaStatus: () => ['flight', 'faaStatus'] as const,
-    schedule: (airportCode: string) => ['flight', 'schedule', airportCode] as const,
-  },
-
-  /**
    * Stock market queries
    */
   stock: {
@@ -93,7 +84,6 @@ export const queryKeys = {
 export type QueryKeys = typeof queryKeys;
 export type AlertsKeys = QueryKeys['alerts'];
 export type WeatherKeys = QueryKeys['weather'];
-export type FlightKeys = QueryKeys['flight'];
 export type StockKeys = QueryKeys['stock'];
 export type NewsKeys = QueryKeys['news'];
 export type HereFlowKeys = QueryKeys['hereFlow'];

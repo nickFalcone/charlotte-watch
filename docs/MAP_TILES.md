@@ -2,7 +2,7 @@
 
 ## Current Setup
 
-All maps (flight tracker, LYNX transit, weather radar) use **CARTO basemap tiles** via `BaseMapTileLayer`, with theme-aware selection:
+All maps (LYNX transit, weather radar, alerts) use **CARTO basemap tiles** via `BaseMapTileLayer`, with theme-aware selection:
 
 - **Dark Mode**: `https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png?key=KEY`
 - **Light Mode**: `https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png?key=KEY`
@@ -35,7 +35,7 @@ This handles intermittent network issues and rate limiting.
 
 ### Missing Tiles (Half Map Black)
 
-**Symptom**: Some map tiles fail to load, leaving black areas with aircraft markers visible but no basemap.
+**Symptom**: Some map tiles fail to load, leaving black areas with map markers visible but no basemap.
 
 **Causes**:
 1. **CARTO rate limiting** - Free tier has undocumented limits
@@ -101,7 +101,7 @@ Tools: [OpenMapTiles](https://openmaptiles.org/), [TileServer GL](https://tilese
 
 ## Switching Tile Providers
 
-To change providers, update `FlightTrackerWidget.tsx`:
+To change providers, update `src/utils/mapTileUrl.ts`:
 
 ```tsx
 // Example: Static tile URL
