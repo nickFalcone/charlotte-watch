@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Real-time Charlotte, NC dashboard (weather, flights, traffic, alerts, stocks) built with React, TypeScript, and TanStack Query.
+Real-time Charlotte, NC dashboard (weather, traffic, alerts, stocks) built with React, TypeScript, and TanStack Query.
 
 ## About This File
 
@@ -109,7 +109,7 @@ Propose a plan first so the user can approve the approach.
 charlotte-monitor/
 ├── src/
 │   ├── components/
-│   │   ├── widgets/          # Dashboard widgets (Weather, Flights, etc.)
+│   │   ├── widgets/          # Dashboard widgets (Weather, Alerts, etc.)
 │   │   └── ...               # Shared UI components
 │   ├── alerts/               # Alert registry, sources, and converters
 │   ├── hooks/                # Custom React hooks
