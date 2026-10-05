@@ -20,7 +20,7 @@ test('opens and closes the widget manager drawer', async ({ page }) => {
   await expect(drawer).not.toBeVisible();
 });
 
-test('lists all six widgets in the drawer with correct visibility status', async ({ page }) => {
+test('lists all five widgets in the drawer with correct visibility status', async ({ page }) => {
   await page.getByRole('button', { name: 'Open widgets menu' }).click();
   const drawer = page.getByRole('dialog', { name: /manage widgets/i });
 
@@ -30,7 +30,6 @@ test('lists all six widgets in the drawer with correct visibility status', async
   await expect(drawer.getByRole('button', { name: /LYNX Transit - Visible/i })).toBeVisible();
 
   // Default hidden widgets
-  await expect(drawer.getByRole('button', { name: /Flight Tracker - Hidden/i })).toBeVisible();
   await expect(drawer.getByRole('button', { name: /Stocks - Hidden/i })).toBeVisible();
   await expect(drawer.getByRole('button', { name: /Weather - Hidden/i })).toBeVisible();
 });

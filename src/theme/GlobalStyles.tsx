@@ -67,32 +67,4 @@ export const GlobalStyles = createGlobalStyle`
   .leaflet-tooltip-right::before {
     border-right-color: ${props => props.theme.colors.widgetBackground} !important;
   }
-
-  /* Range ring tooltips - minimal styling */
-  .range-tooltip {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-  }
-
-  .range-tooltip::before {
-    display: none !important;
-  }
-
-  /* Aircraft icon - remove default leaflet marker styling */
-  .aircraft-icon {
-    background: transparent !important;
-    border: none !important;
-  }
-
-  .airport-icon {
-    background: transparent !important;
-    border: none !important;
-  }
-
-  .range-label {
-    background: transparent !important;
-    border: none !important;
-  }
 `;

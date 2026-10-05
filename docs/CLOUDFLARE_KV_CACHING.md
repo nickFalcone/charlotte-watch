@@ -70,7 +70,6 @@ CACHE: KVNamespace;
 | `GET /api/duke-outages` | `functions/api/duke-outages.ts` | `alerts:duke` | 15 minutes (900s) | Single global key; includes detail enrichment |
 | `GET /api/here-flow` | `functions/api/here-flow.ts` | `alerts:here` | 15 minutes (900s) | Single key (params are fixed by allowlist) |
 | `GET /api/faa-status` | `functions/api/faa-status.ts` | `alerts:faa` | 15 minutes (900s) | Returns XML (`Content-Type: application/xml`) |
-| `GET /api/opensky-auth` | `functions/api/opensky-auth.ts` | `alerts:opensky-auth` | 5 minutes (300s) | Short TTL because tokens expire |
 
 ### Stock data endpoints
 
@@ -83,8 +82,6 @@ CACHE: KVNamespace;
 
 | Endpoint | File | Reason |
 |---|---|---|
-| `GET /api/opensky-states` | `functions/api/opensky-states.ts` | Real-time aircraft positions; polled every 15s by flight tracker |
-| `GET /api/aerodatabox-flights` | `functions/api/aerodatabox-flights.ts` | Uses Cloudflare CDN caching (`cf.cacheTtl`), not KV |
 | `GET /api/google-air-quality` | `functions/api/google-air-quality.ts` | Not cached |
 | `GET /api/google-pollen` | `functions/api/google-pollen.ts` | Not cached |
 
@@ -156,11 +153,10 @@ Most endpoints have **in-memory caching** in dev via `devCacheGet`/`devCachePut`
 | `catsTwitterPlugin` | `cats-twitter` | 6 hours |
 | `cmsTwitterPlugin` | `cms-twitter` | 6 hours |
 | `cfdTwitterPlugin` | `cfd-twitter` | 6 hours |
-| inline (aerodatabox-flights) | `aerodatabox-flights` | 15 minutes |
 | inline (google-air-quality) | `google-air-quality` | 15 minutes |
 | inline (google-pollen) | `google-pollen` | 1 hour |
 
-Note: `aerodatabox-flights`, `google-air-quality`, and `google-pollen` use dev in-memory caching but do **not** use KV in production (they rely on Cloudflare CDN cache or have no server-side caching). They appear in the "Not cached" KV table above for that reason.
+Note: `google-air-quality` and `google-pollen` use dev in-memory caching but do **not** use KV in production (they rely on Cloudflare CDN cache or have no server-side caching). They appear in the "Not cached" KV table above for that reason.
 
 ---
 

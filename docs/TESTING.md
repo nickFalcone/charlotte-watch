@@ -49,8 +49,8 @@ Test files are **colocated** with their source files:
 
 ```
 src/utils/
-  flightApi.ts
-  flightApi.test.ts      <-- tests live next to source
+  faaApi.ts
+  faaApi.test.ts         <-- tests live next to source
   hereApi.ts
   hereApi.test.ts
 ```

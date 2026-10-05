@@ -1,8 +1,8 @@
 import type { GenericAlert } from '../../types/alerts';
 import type { AlertSourceDefinition } from '../registry';
-import { fetchFAAStatus } from '../../utils/flightApi';
-import { convertFAAStatusToAlerts } from '../../utils/flightApi';
-import { KCLT_AIRPORT } from '../../types/flight';
+import { fetchFAAStatus } from '../../utils/faaApi';
+import { convertFAAStatusToAlerts } from '../../utils/faaApi';
+import { KCLT_AIRPORT } from '../../types/faa';
 
 export const faaSource: AlertSourceDefinition = {
   id: 'faa',

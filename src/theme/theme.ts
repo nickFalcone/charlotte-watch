@@ -42,15 +42,6 @@ export interface Theme {
     // Badge/pill (e.g. event count) - same style as Alerts count pill, blue; 7:1 on badgeBackground
     badgeBackground: string;
     badgeText: string;
-
-    // Status badges (flight schedule) - solid bg+fg for 7:1 contrast
-    statusBadge: {
-      success: { bg: string; fg: string };
-      warning: { bg: string; fg: string };
-      neutral: { bg: string; fg: string };
-      error: { bg: string; fg: string };
-      secondary: { bg: string; fg: string };
-    };
   };
   spacing: {
     xs: string;
@@ -163,14 +154,6 @@ export const lightTheme: Theme = {
     // Badge/pill - blue (like Alerts pill style: tint + text), 7:1
     badgeBackground: '#eff6ff',
     badgeText: '#1e3a8a',
-
-    statusBadge: {
-      success: { bg: '#0d4a1a', fg: '#ffffff' },
-      warning: { bg: '#5c3a00', fg: '#ffffff' },
-      neutral: { bg: '#e5e5ea', fg: '#3c3c3f' },
-      error: { bg: '#b91c1c', fg: '#ffffff' },
-      secondary: { bg: '#3730a3', fg: '#ffffff' },
-    },
   },
   spacing,
   radii,
@@ -227,14 +210,6 @@ export const darkTheme: Theme = {
     // Badge/pill - blue (like Alerts pill style), 7:1
     badgeBackground: '#0d2137',
     badgeText: '#7dc8ff',
-
-    statusBadge: {
-      success: { bg: '#0d4a1a', fg: '#90ffa8' },
-      warning: { bg: '#5c3a00', fg: '#ffdd99' },
-      neutral: { bg: '#48484a', fg: '#e5e5ea' },
-      error: { bg: '#b91c1c', fg: '#ffffff' },
-      secondary: { bg: '#3730a3', fg: '#a5b4fc' },
-    },
   },
   spacing,
   radii,

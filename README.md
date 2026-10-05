@@ -2,7 +2,7 @@
 
 **Real-time dashboard for Charlotte, NC metro area**
 
-Monitor weather, flights, traffic alerts, transit, power outages, news, and markets — all in one place.
+Monitor weather, traffic alerts, transit, power outages, news, and markets — all in one place.
 
 **Live:** [clt.watch](https://clt.watch)
 
@@ -30,7 +30,6 @@ Each widget is an independently updating panel on the dashboard. Widgets can be 
 |--------|-------------|
 | **Alerts** | Unified feed from 9 sources with AI-powered BLUF summary and interactive map |
 | **Weather** | Current conditions, NWS alerts, forecast, radar map, air quality, and pollen |
-| **Flights** | Live aircraft positions around CLT, arrivals/departures board, and FAA status |
 | **LYNX Transit** | Real-time vehicle positions on Blue and Gold Lines, service alerts |
 | **News** | Charlotte-area RSS news parsed and categorized by AI |
 | **Markets** | Real-time stock quotes for CLT-area public companies |
@@ -134,14 +133,12 @@ Environment variables are never bundled into client-side code. They are only rea
 | `OPENAI_API_KEY` | OpenAI API key | If `AI_PROVIDER=openai` |
 | `ANTHROPIC_API_KEY` | Anthropic API key | If `AI_PROVIDER=anthropic` |
 | `FINNHUB_API_KEY` | Stock quotes (Markets widget) | For Markets widget |
-| `RAPIDAPI_KEY` | CATS Twitter, CFD Twitter, CMS Twitter, AeroDataBox | For transit/alerts/flights board |
+| `RAPIDAPI_KEY` | CATS Twitter, CFD Twitter, CMS Twitter | For transit/alerts |
 | `HERE_API_KEY` | Real-time traffic flow | For HERE traffic alerts |
 | `GOOGLE_API_KEY` | Air quality and pollen data | For Weather widget extras |
 | `TRANSIT_LAND_API_KEY` | CATS Blue/Gold Line vehicle positions | For LYNX transit map |
 | `DUKE_OUTAGE_URL` | Duke Energy outage API endpoint | For Duke outage alerts |
 | `DUKE_OUTAGE_AUTH` | Duke Energy auth (Base64-encoded) | For Duke outage alerts |
-| `OPENSKY_CLIENT_ID` | OpenSky Network username | Optional — increases rate limits |
-| `OPENSKY_CLIENT_SECRET` | OpenSky Network password | Optional — increases rate limits |
 
 #### Where to Get API Keys
 
@@ -150,11 +147,10 @@ Environment variables are never bundled into client-side code. They are only rea
 | OpenAI | AI alert/weather summaries | Yes (limited) | [platform.openai.com](https://platform.openai.com) |
 | Anthropic | AI alert/weather summaries | Yes (limited) | [console.anthropic.com](https://console.anthropic.com) |
 | Finnhub | Stock quotes | Yes | [finnhub.io](https://finnhub.io) |
-| RapidAPI | CATS/CFD/CMS Twitter, AeroDataBox flights | Varies | [rapidapi.com](https://rapidapi.com) |
+| RapidAPI | CATS/CFD/CMS Twitter | Varies | [rapidapi.com](https://rapidapi.com) |
 | HERE Technologies | Traffic flow data | Yes | [developer.here.com](https://developer.here.com) |
 | Google Cloud | Air quality + pollen | Yes (limited) | [console.cloud.google.com](https://console.cloud.google.com) |
 | Transitland | CATS vehicle positions | Yes | [transit.land](https://www.transit.land) |
-| OpenSky Network | Live aircraft positions | Yes (anonymous OK) | [opensky-network.org](https://opensky-network.org) |
 
 ---
 
@@ -164,7 +160,7 @@ Environment variables are never bundled into client-side code. They are only rea
 charlotte-watch/
 ├── src/
 │   ├── components/
-│   │   ├── widgets/          # Dashboard widgets (Weather, Flights, Alerts, etc.)
+│   │   ├── widgets/          # Dashboard widgets (Weather, Alerts, etc.)
 │   │   └── common/           # Reusable UI primitives
 │   ├── services/             # API client functions
 │   ├── alerts/               # Per-source alert fetchers (NWS, FAA, NCDOT, etc.)
@@ -241,7 +237,7 @@ MIT
 ## Acknowledgments
 
 - Weather: [National Weather Service](https://weather.gov)
-- Flights: [FAA](https://faa.gov), [OpenSky Network](https://opensky-network.org), [AeroDataBox](https://rapidapi.com/aedbx-aedbx/api/aerodatabox)
+- Airport status: [FAA](https://faa.gov)
 - Traffic: [NCDOT](https://ncdot.gov), [HERE Technologies](https://here.com)
 - Transit: [CATS](https://charlottenc.gov/cats), [Transitland](https://transit.land)
 - Power outages: [Duke Energy](https://duke-energy.com)

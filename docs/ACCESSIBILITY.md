@@ -29,7 +29,7 @@ When adding or changing UI, ensure:
    Touch/click targets are at least 24×24 CSS pixels (AAA: consider 44×44 where possible). Spacing or equivalent control can satisfy this.
 
 6. **Status and live updates (4.1.3)**  
-   Dynamic content that conveys important information (e.g. radar time, aircraft count) is announced to screen readers via `aria-live` regions where appropriate.
+   Dynamic content that conveys important information (e.g. radar time, vehicle count) is announced to screen readers via `aria-live` regions where appropriate.
 
 7. **No emojis in UI**  
    Use SVG icons or plain text instead. See [AGENTS.md](../AGENTS.md) and [ICONS.md](./ICONS.md).
@@ -38,7 +38,7 @@ Do not introduce UI that relies only on color, shape, or position to convey info
 
 ## Maps
 
-Interactive maps (WeatherRadarMap, FlightTrackerWidget) follow the same WCAG 2.2 AAA intent and the rules above. In addition:
+Interactive maps (WeatherRadarMap, TransitWidget, AlertsMapTab) follow the same WCAG 2.2 AAA intent and the rules above. In addition:
 
 ### Map containers and descriptions
 
@@ -48,20 +48,20 @@ Interactive maps (WeatherRadarMap, FlightTrackerWidget) follow the same WCAG 2.2
 ### Non-text content on maps
 
 - **Base map tiles**: Tiles are decorative; they provide visual context that is redundant with the map’s accessible name and description. Mark tile images with `alt=""` and `role="presentation"` (e.g. via a `TileAccessibilityHandler` that runs on Leaflet tile load).
-- **Informative overlays** (e.g. radar image, aircraft markers): Provide a text alternative (e.g. `alt` on the radar image, `role="img"` and `aria-label` on marker icons). Essential information is also conveyed via live regions or labels as needed.
+- **Informative overlays** (e.g. radar image, vehicle markers): Provide a text alternative (e.g. `alt` on the radar image, `role="img"` and `aria-label` on marker icons). Essential information is also conveyed via live regions or labels as needed.
 
 ### Live announcements
 
-- Use `aria-live="polite"` regions to announce meaningful changes (e.g. selected radar time, number of aircraft visible). Keep announcements concise and avoid spamming (e.g. atomic updates, only on value change).
+- Use `aria-live="polite"` regions to announce meaningful changes (e.g. selected radar time, number of vehicles visible). Keep announcements concise and avoid spamming (e.g. atomic updates, only on value change).
 
 ### Controls and targets
 
 - All map-related controls (play/pause, slider, recenter, etc.) have accessible names (`aria-label` or equivalent) and are keyboard operable.
-- Touch targets (e.g. airport icon, buttons) meet minimum size (e.g. 24×24 CSS px; 28px where feasible for AAA).
+- Touch targets (e.g. map markers, buttons) meet minimum size (e.g. 24×24 CSS px; 28px where feasible for AAA).
 
 ### Implementation details
 
-- **VisuallyHidden**: Use a styled span with clip/position so content is read by screen readers but not visible (see WeatherWidget.styles.ts / FlightTrackerWidget.styles.ts).
+- **VisuallyHidden**: Use a styled span with clip/position so content is read by screen readers but not visible (see WeatherWidget.styles.ts).
 - **Tile accessibility**: A Leaflet effect that, on tile load, sets `alt=""` and `role="presentation"` on tile `<img>` elements ensures decorative tiles are ignored by assistive tech.
 
 For full implementation notes, success criteria mapping, and testing suggestions for the current map components, see the sections below (retained from the previous map-specific doc).
@@ -74,17 +74,10 @@ For full implementation notes, success criteria mapping, and testing suggestions
 - Live region: `aria-live="polite"` for time changes.
 - Play/pause and slider: `aria-label` (and Radix Slider with `aria-label="Select radar time frame"`).
 
-### FlightTrackerWidget
-
-- Visually hidden description of map, aircraft, and controls.
-- Map container: `aria-label="Flight radar map for Charlotte Douglas International Airport showing nearby aircraft"`.
-- Aircraft/airport markers: `role="img"` and `aria-label` with meaningful names.
-- Live region: `aria-live="polite"` for aircraft count changes.
-- Touch target size: airport icon at least 28px.
 
 ### Base map tiles (code reference)
 
-Both components rely on marking base map tile images as decorative. Leaflet creates tile `<img>` elements at runtime, so a handler (e.g. on `tileload`) sets `alt=""` and `role="presentation"` on those images. Geographic context is provided by the map’s `aria-label`, visually hidden description, and interactive features, so the tiles themselves are not the sole source of information.
+Map components rely on marking base map tile images as decorative. Leaflet creates tile `<img>` elements at runtime, so a handler (e.g. on `tileload`) sets `alt=""` and `role="presentation"` on those images. Geographic context is provided by the map’s `aria-label`, visually hidden description, and interactive features, so the tiles themselves are not the sole source of information.
 
 ### WCAG 2.2 criteria addressed by map work
 
@@ -97,7 +90,7 @@ Both components rely on marking base map tile images as decorative. Leaflet crea
 ### Testing
 
 - Test with screen readers (e.g. NVDA, JAWS, VoiceOver).
-- Confirm live announcements for radar time and aircraft count where implemented.
+- Confirm live announcements for radar time and vehicle count where implemented.
 - Verify all controls are keyboard accessible and focus is visible.
 - Use axe DevTools (or similar) to check ARIA and alternatives.
 - Confirm visually hidden text is exposed to assistive tech and not visible on screen.

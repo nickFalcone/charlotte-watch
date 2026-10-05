@@ -121,8 +121,6 @@ Pages Functions use **Cloudflare KV** (`CACHE` binding) to share responses acros
 | `/api/duke-outages` | `alerts:duke` | 15 minutes | Duke Energy outage data |
 | `/api/here-flow` | `alerts:here` | 15 minutes | HERE traffic flow |
 | `/api/faa-status` | `alerts:faa` | 15 minutes | FAA airport status |
-| `/api/opensky-auth` | `alerts:opensky-auth` | 5 minutes | OpenSky auth token (short TTL) |
-| `/api/opensky-states` | -- | Not cached | Real-time aircraft positions (15s polling) |
 | `/api/finnhub-quote` | `stock:quote:<SYMBOL>` | 15 minutes | Stock quotes, per symbol |
 | `/api/finnhub-profile` | `stock:profile:<SYMBOL>` | 24 hours | Company profiles, per symbol |
 
@@ -132,7 +130,7 @@ The KV namespace must be bound as `CACHE` in the Cloudflare Pages dashboard unde
 
 ### Local development
 
-Most endpoints have in-memory dev caching via `devCacheGet`/`devCachePut` in `vite.config.ts` that mirrors production TTLs — including the Twitter endpoints, `summarize-weather`, `aerodatabox-flights`, and the Google endpoints. See [CLOUDFLARE_KV_CACHING.md](./CLOUDFLARE_KV_CACHING.md#local-development-vite) for the full table. This table covers KV-cached endpoints only; `aerodatabox-flights` and the Google endpoints use CDN or dev-only caching rather than KV.
+Most endpoints have in-memory dev caching via `devCacheGet`/`devCachePut` in `vite.config.ts` that mirrors production TTLs — including the Twitter endpoints, `summarize-weather`, and the Google endpoints. See [CLOUDFLARE_KV_CACHING.md](./CLOUDFLARE_KV_CACHING.md#local-development-vite) for the full table. This table covers KV-cached endpoints only; the Google endpoints use CDN or dev-only caching rather than KV.
 
 ## Common Issues
 

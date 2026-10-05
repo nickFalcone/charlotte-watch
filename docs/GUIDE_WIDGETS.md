@@ -55,15 +55,15 @@ export function YourWidget(_props: WidgetProps) {
 
 ## Visibility-Based Loading
 
-For widgets that poll frequently (like flight tracker), pause when not visible:
+For widgets that poll frequently (like a live map), pause when not visible:
 
 ```tsx
 const containerRef = useRef<HTMLDivElement>(null);
 const isVisible = useIntersectionObserver(containerRef, { threshold: 0.1 });
 
 const { data } = useQuery({
-  queryKey: queryKeys.flight.aircraft(airport),
-  queryFn: () => fetchAircraft(airport),
+  queryKey: queryKeys.weather.current(lat, lng),
+  queryFn: () => fetchWeather(lat, lng),
   refetchInterval: isVisible ? 15000 : false, // Only poll when visible
   enabled: isVisible,
 });
