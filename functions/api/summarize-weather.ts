@@ -112,7 +112,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     let summary: string;
 
     if (provider === 'anthropic') {
-      summary = await callAnthropic(WEATHER_SYSTEM_PROMPT, userPrompt, key, 350);
+      summary = await callAnthropic(WEATHER_SYSTEM_PROMPT, userPrompt, key, 1500);
     } else {
       summary = await callOpenAIResponses({
         apiKey: key,

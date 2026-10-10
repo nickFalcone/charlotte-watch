@@ -129,22 +129,37 @@ export function createErrorResponse(
   );
 }
 
+/** What the AI helpers return when the model produced no usable text. */
+export const SUMMARY_UNAVAILABLE = 'Unable to generate summary.';
+
+/** Default Anthropic model for summarization and parsing (fast, cheap, adaptive thinking). */
+export const ANTHROPIC_MODEL = 'claude-haiku-5-5';
+
+export type AnthropicEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+
 /**
- * Anthropic API response structure
+ * Anthropic API response structure. Haiku 5.5 thinks adaptively by default, so content can
+ * start with a `thinking` block; select the answer by block type, never by position.
  */
 interface AnthropicResponse {
-  content: Array<{ text?: string }>;
+  content?: Array<{ type?: string; text?: string }>;
+  stop_reason?: string;
 }
 
 /**
- * Calls Anthropic Claude API with the given parameters
+ * Calls Anthropic Claude API with the given parameters.
+ *
+ * Haiku 5.5 notes: temperature/top_p/top_k must be omitted, and thinking tokens count against
+ * max_tokens, so leave generous headroom and steer depth with `effort` (default 'low' here).
+ * Returns SUMMARY_UNAVAILABLE when no text came back (empty, max_tokens during thinking, refusal).
  */
 export async function callAnthropic(
   systemPrompt: string,
   userPrompt: string,
   apiKey: string,
-  maxTokens: number = 150,
-  model: string = 'claude-3-5-haiku-latest'
+  maxTokens: number = 2000,
+  effort: AnthropicEffort = 'low',
+  model: string = ANTHROPIC_MODEL
 ): Promise<string> {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -157,15 +172,32 @@ export async function callAnthropic(
       model,
       max_tokens: maxTokens,
       system: systemPrompt,
+      output_config: { effort },
       messages: [{ role: 'user', content: userPrompt }],
     }),
   });
 
+  const requestId = response.headers.get('request-id');
+
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`Anthropic API error: ${response.status} - ${error}`);
+    throw new Error(
+      `Anthropic API error: ${response.status} - ${error}${requestId ? ` (request ${requestId})` : ''}`
+    );
   }
 
   const data: AnthropicResponse = await response.json();
-  return data.content[0]?.text?.trim() || 'Unable to generate summary.';
+  const text = (data.content ?? [])
+    .filter(block => block.type === 'text')
+    .map(block => block.text ?? '')
+    .join('')
+    .trim();
+
+  if (!text) {
+    console.warn(
+      `Anthropic returned no text for ${model} (stop_reason=${data.stop_reason ?? 'unknown'}, request ${requestId})`
+    );
+    return SUMMARY_UNAVAILABLE;
+  }
+  return text;
 }

@@ -9,6 +9,7 @@ import {
   createSuccessResponse,
   createErrorResponse,
   callAnthropic,
+  SUMMARY_UNAVAILABLE,
 } from '../_lib/summarizationHelpers';
 import blufPrompt from '../../src/prompts/blufSummary.json';
 import {
@@ -41,11 +42,12 @@ const OPENAI_MODEL = 'gpt-6-luna';
 const OPENAI_REASONING_EFFORT = 'low';
 const OPENAI_MAX_OUTPUT_TOKENS = 8000;
 
-// Up to 6 bullets with road details; 150 truncated busy days mid-bullet.
-const ANTHROPIC_MAX_TOKENS = 600;
+// Anthropic path (Haiku 5.5, effort 'low'). Thinking tokens count against max_tokens, so the
+// cap leaves headroom beyond the ~6 bullets of output.
+const ANTHROPIC_MAX_TOKENS = 2000;
 
-/** What callAnthropic / callOpenAIResponses return when the model produced no text. */
-const NO_SUMMARY = 'Unable to generate summary.';
+/** What callOpenAIResponses returns when the model produced no text (same as SUMMARY_UNAVAILABLE). */
+const NO_SUMMARY = SUMMARY_UNAVAILABLE;
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   // Determine which AI provider to use
