@@ -1188,9 +1188,10 @@ export default defineConfig(({ mode }) => {
       proxy: {
         // Order matters - more specific paths first
         '/proxy/ncdot': {
-          target: 'https://eapps.ncdot.gov',
+          target: 'https://www.drivenc.gov',
           changeOrigin: true,
-          rewrite: path => path.replace(/^\/proxy\/ncdot/, ''),
+          rewrite: () =>
+            `/api/v2/get/event?key=${encodeURIComponent(env.DRIVENC_API_KEY ?? '')}&format=json`,
         },
         '/proxy/faa': {
           target: 'https://nasstatus.faa.gov',

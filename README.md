@@ -136,6 +136,7 @@ Environment variables are never bundled into client-side code. They are only rea
 | `RAPIDAPI_KEY` | CATS Twitter, CFD Twitter, CMS Twitter | For transit/alerts |
 | `HERE_API_KEY` | Real-time traffic flow | For HERE traffic alerts |
 | `GOOGLE_API_KEY` | Air quality and pollen data | For Weather widget extras |
+| `DRIVENC_API_KEY` | NCDOT traffic incidents (DriveNC) | For NCDOT alerts |
 | `TRANSIT_LAND_API_KEY` | CATS Blue/Gold Line vehicle positions | For LYNX transit map |
 | `DUKE_OUTAGE_URL` | Duke Energy outage API endpoint | For Duke outage alerts |
 | `DUKE_OUTAGE_AUTH` | Duke Energy auth (Base64-encoded) | For Duke outage alerts |

@@ -12,6 +12,9 @@ export interface Env {
   DUKE_OUTAGE_URL?: string;
   DUKE_OUTAGE_AUTH?: string;
 
+  // DriveNC (NCDOT) traffic events API
+  DRIVENC_API_KEY?: string;
+
   // Transit.land API for CATS alerts
   TRANSIT_LAND_API_KEY?: string;
 

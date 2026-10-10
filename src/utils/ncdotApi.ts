@@ -1,11 +1,13 @@
 import type { NCDOTIncident } from '../types/ncdot';
-import { MECKLENBURG_COUNTY_ID, CHARLOTTE_ROADS } from '../types/ncdot';
+import { CHARLOTTE_ROADS } from '../types/ncdot';
+import type { DriveNCEvent } from '../types/drivenc';
+import { MECKLENBURG_COUNTY_NAME } from '../types/drivenc';
+import { driveNCEventToIncident } from './driveNcAdapter';
 import { dedupeBy } from './dedupe';
 
-// NC DOT sends no CORS headers: use proxy path in dev, Pages Function in production
-const NCDOT_INCIDENTS_URL = import.meta.env.DEV
-  ? `/proxy/ncdot/services/traffic-prod/v1/counties/${MECKLENBURG_COUNTY_ID}/incidents?verbose=true&recent=true`
-  : '/api/ncdot-incidents';
+// DriveNC requires an API key and sends no CORS headers: use the Vite proxy in dev and
+// the Pages Function in production (both attach the key server-side).
+const NCDOT_INCIDENTS_URL = import.meta.env.DEV ? '/proxy/ncdot' : '/api/ncdot-incidents';
 
 /**
  * Checks if a road name matches any Charlotte area major road
@@ -204,7 +206,10 @@ export async function fetchNCDOTIncidents(signal?: AbortSignal): Promise<NCDOTIn
       throw new Error(`NC DOT API returned ${response.status}: ${response.statusText}`);
     }
 
-    const incidents: NCDOTIncident[] = await response.json();
+    const events: DriveNCEvent[] = await response.json();
+    const incidents: NCDOTIncident[] = events
+      .filter(e => e.County?.trim().toLowerCase() === MECKLENBURG_COUNTY_NAME.toLowerCase())
+      .map(driveNCEventToIncident);
     const charlotteIncidents = filterCharlotteRoadIncidents(incidents);
     const filteredIncidents = filterIgnoredConditions(charlotteIncidents);
     const dedupedIncidents = dedupeBy(filteredIncidents, incident => incident.id.toString());
