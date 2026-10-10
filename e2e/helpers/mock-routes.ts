@@ -109,7 +109,8 @@ export async function mockApiRoutes(page: Page, overrides: MockOverrides = {}): 
 
   // ── NCDOT traffic incidents ──
   // Returns a plain JSON array of incident objects
-  await page.route('**/eapps.ncdot.gov/**', route => route.fulfill({ json: [] }));
+  await page.route('**/proxy/ncdot/**', route => route.fulfill({ json: [] }));
+  await page.route('**/api/ncdot-incidents', route => route.fulfill({ json: [] }));
 
   // ── FAA airport status (XML response) ──
   await page.route('**/proxy/faa/**', route =>

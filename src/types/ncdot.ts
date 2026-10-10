@@ -1,5 +1,5 @@
-// NC DOT TIMS API types
-// Based on https://tims.ncdot.gov/tims/V2/webservices
+// NC DOT incident shape used by the alert pipeline.
+// DriveNC events (src/types/drivenc.ts) are adapted into this shape by driveNcAdapter.ts.
 
 export interface NCDOTIncident {
   id: number;
@@ -56,9 +56,6 @@ export interface NCDOTIncident {
   consolidatedCount?: number;
   consolidatedIncidents?: NCDOTIncident[];
 }
-
-// Mecklenburg County ID from NC DOT API
-export const MECKLENBURG_COUNTY_ID = 60;
 
 // Charlotte area major roads to track
 export const CHARLOTTE_ROADS = [
