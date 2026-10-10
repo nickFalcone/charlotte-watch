@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { computeAlertsHash, filterAlertsForSummary } from './alertSummaryApi';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import {
+  combinePowerAlerts,
+  computeAlertsHash,
+  fetchAlertSummary,
+  filterAlertsForSummary,
+  NO_SIGNIFICANT_ALERTS_SUMMARY,
+} from './alertSummaryApi';
 import type { GenericAlert } from '../types/alerts';
 
 function makeAlert(overrides: Partial<GenericAlert> = {}): GenericAlert {
@@ -182,5 +188,163 @@ describe('filterAlertsForSummary', () => {
     expect(result.map(a => a.id)).toContain('ncdot-recent');
     expect(result.map(a => a.id)).toContain('ncdot-456');
     expect(result.map(a => a.id)).not.toContain('ncdot-stale');
+  });
+});
+
+describe('filterAlertsForSummary thresholds', () => {
+  it('drops minor FAA delays but keeps ground stops and closures', () => {
+    const minorDelay = makeAlert({ id: 'faa-1', source: 'faa', category: 'aviation' });
+    const minor = { ...minorDelay, severity: 'minor' as const };
+    const moderate = { ...minorDelay, id: 'faa-2', severity: 'moderate' as const };
+    const groundStop = { ...minorDelay, id: 'faa-3', severity: 'critical' as const };
+    const ids = filterAlertsForSummary([minor, moderate, groundStop]).map(a => a.id);
+    expect(ids).toEqual(['faa-2', 'faa-3']);
+  });
+
+  it('keeps only critical CMPD incidents', () => {
+    const base = makeAlert({ source: 'cmpd', category: 'traffic' });
+    const ids = filterAlertsForSummary([
+      { ...base, id: 'c-minor', severity: 'minor' },
+      { ...base, id: 'c-moderate', severity: 'moderate' },
+      { ...base, id: 'c-critical', severity: 'critical' },
+    ]).map(a => a.id);
+    expect(ids).toEqual(['c-critical']);
+  });
+
+  it('keeps only critical and high CFD incidents', () => {
+    const base = makeAlert({ source: 'cfd', category: 'other' });
+    const ids = filterAlertsForSummary([
+      { ...base, id: 'f-minor', severity: 'minor' },
+      { ...base, id: 'f-moderate', severity: 'moderate' },
+      { ...base, id: 'f-high', severity: 'high' },
+      { ...base, id: 'f-critical', severity: 'critical' },
+    ]).map(a => a.id);
+    expect(ids).toEqual(['f-high', 'f-critical']);
+  });
+
+  it('drops CATS single-station elevator posts but keeps service disruptions', () => {
+    const base = makeAlert({ source: 'cats', category: 'transit' });
+    const ids = filterAlertsForSummary([
+      {
+        ...base,
+        id: 'cats-elevator',
+        title: 'The elevator at Archdale station is out of service',
+        summary: 'The elevator at Archdale station is out of service; shuttle from Arrowood',
+      },
+      {
+        ...base,
+        id: 'cats-suspended',
+        title: 'Blue Line suspended',
+        summary: 'Blue Line service suspended; elevator outages at several stations',
+      },
+      { ...base, id: 'cats-other', title: 'Bus detour', summary: 'Route 11 on detour' },
+    ]).map(a => a.id);
+    expect(ids).toEqual(['cats-suspended', 'cats-other']);
+  });
+});
+
+function makeDukeAlert(
+  customersAffected: number,
+  operationCenter: string | undefined,
+  planned = false,
+  overrides: Partial<GenericAlert> = {}
+): GenericAlert {
+  return makeAlert({
+    id: `duke-${customersAffected}-${operationCenter ?? 'none'}`,
+    source: 'duke',
+    category: 'power',
+    severity: 'minor',
+    metadata: {
+      source: 'duke',
+      customersAffected,
+      cause: planned ? 'planned' : 'unplanned',
+      planned,
+      eventId: 'e1',
+      operationCenter,
+    },
+    ...overrides,
+  });
+}
+
+describe('combinePowerAlerts', () => {
+  it('returns null when there are no Duke alerts', () => {
+    expect(combinePowerAlerts([])).toBeNull();
+  });
+
+  it('names the area for a single outage group', () => {
+    const result = combinePowerAlerts([makeDukeAlert(150, 'Kannapolis')]);
+    expect(result?.summary).toBe('150 Duke Energy customers without power in Kannapolis');
+    expect(result?.title).toBe('Power Outages');
+  });
+
+  it('adds up customers across areas and lists each area', () => {
+    const result = combinePowerAlerts([
+      makeDukeAlert(1200, 'Charlotte'),
+      makeDukeAlert(650, 'Huntersville'),
+    ]);
+    expect(result?.summary).toBe(
+      '1,850 Duke Energy customers without power (Charlotte 1,200, Huntersville 650)'
+    );
+  });
+
+  it('does not invent a location when none is provided', () => {
+    const result = combinePowerAlerts([makeDukeAlert(300, undefined)]);
+    expect(result?.summary).toBe('300 Duke Energy customers without power');
+  });
+
+  it('marks planned maintenance only when every outage is planned', () => {
+    const allPlanned = combinePowerAlerts([makeDukeAlert(120, 'Matthews', true)]);
+    expect(allPlanned?.summary).toContain('planned maintenance');
+    expect(allPlanned?.title).toBe('Planned Power Outage');
+
+    const mixed = combinePowerAlerts([
+      makeDukeAlert(120, 'Matthews', true),
+      makeDukeAlert(200, 'Pineville', false),
+    ]);
+    expect(mixed?.summary).not.toContain('planned');
+  });
+
+  it('uses the highest severity and the latest update time', () => {
+    const result = combinePowerAlerts([
+      makeDukeAlert(300, 'Charlotte', false, {
+        severity: 'moderate',
+        updatedAt: new Date('2024-01-15T10:00:00Z'),
+      }),
+      makeDukeAlert(2500, 'Huntersville', false, {
+        severity: 'critical',
+        updatedAt: new Date('2024-01-15T14:00:00Z'),
+      }),
+    ]);
+    expect(result?.severity).toBe('critical');
+    expect(result?.updatedAt).toBe('2024-01-15T14:00:00.000Z');
+  });
+});
+
+describe('fetchAlertSummary', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns the fixed no-alerts summary without calling the API when nothing is summary-worthy', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchAlertSummary([], 'empty');
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.summary).toBe(NO_SIGNIFICANT_ALERTS_SUMMARY);
+    expect(result.hash).toBe('empty');
+    expect(result.generatedAt).toBeTruthy();
+  });
+
+  it('posts alerts to the summarize endpoint otherwise', async () => {
+    const body = { summary: '- Test', hash: 'abc', generatedAt: '2026-02-04T17:00:00.000Z' };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => body });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await fetchAlertSummary([makeAlert()], 'abc');
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/summarize-alerts', expect.any(Object));
+    expect(result).toEqual(body);
   });
 });

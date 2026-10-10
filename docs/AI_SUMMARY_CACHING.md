@@ -26,7 +26,7 @@ const hash2 = computeAlertsHash(alerts); // "1gexrnh" (same hash)
 
 The hash appears in two places:
 - **React Query key:** `['alerts', 'summary', hash]` -- controls client-side cache invalidation
-- **KV cache key:** `summary:<hash>` -- controls server-side cache sharing
+- **KV cache key:** `summary:<model>:<hash>` for OpenAI (`summary:<hash>` for Anthropic) -- controls server-side cache sharing
 
 Since raw alert data is itself KV-cached (15min TTL), all clients within that window receive the same alerts, compute the same hash, and share the same summary.
 
@@ -50,7 +50,7 @@ return useQuery({
 1. Alerts change --> new hash computed client-side
 2. React Query checks in-memory cache for ['alerts', 'summary', newHash]
 3. Cache miss --> POST /api/summarize-alerts { alerts, hash }
-4. Pages Function checks KV for summary:<hash>
+4. Pages Function checks KV for the summary key
 5a. KV hit --> return cached summary (no AI call)
 5b. KV miss --> call AI, store in KV (15min TTL), return summary
 6. React Query caches response in memory under the new query key

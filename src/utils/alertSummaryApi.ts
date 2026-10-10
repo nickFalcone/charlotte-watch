@@ -1,7 +1,22 @@
-import type { GenericAlert } from '../types/alerts';
+import type { AlertSeverity, GenericAlert } from '../types/alerts';
 
 /** Construction/lane-closure alerts older than this are excluded from the summary. */
 const CONSTRUCTION_SUMMARY_MAX_AGE_MS = 48 * 60 * 60 * 1000;
+
+/** Shown when every alert was filtered out as not summary-worthy; no AI call needed. */
+export const NO_SIGNIFICANT_ALERTS_SUMMARY = '- No significant alerts affecting Charlotte.';
+
+/** CATS posts about a single elevator or escalator are not summary-worthy. */
+const SINGLE_STATION_AMENITY_PATTERN = /\b(elevator|escalator)s?\b/i;
+/** ...unless the post also describes a service-level disruption. */
+const SERVICE_DISRUPTION_PATTERN = /suspend|no service|detour|delay|resum/i;
+
+const SEVERITY_RANK: Record<AlertSeverity, number> = {
+  critical: 0,
+  high: 1,
+  moderate: 2,
+  minor: 3,
+};
 
 interface AlertForSummary {
   title: string;
@@ -39,12 +54,33 @@ function isConstructionAlert(alert: GenericAlert): boolean {
 }
 
 /**
- * Alerts to send to the summarizer. Excludes construction alerts whose
- * last updated date is older than 48 hours (they are not newsworthy).
+ * Alerts to send to the summarizer. Thresholds that used to live in the prompt are
+ * applied here so the model only sees alerts worth mentioning:
+ * - construction not updated in the last 48 hours
+ * - FAA delays under 30 minutes (minor); ground stops and closures are critical
+ * - CMPD incidents below critical (fatal, serious, major or multi-vehicle)
+ * - CFD incidents below high (structure fires and road closures are critical/high)
+ * - CATS single elevator/escalator outages
  */
 export function filterAlertsForSummary(alerts: GenericAlert[]): GenericAlert[] {
   const cutoff = Date.now() - CONSTRUCTION_SUMMARY_MAX_AGE_MS;
   return alerts.filter(alert => {
+    switch (alert.source) {
+      case 'faa':
+        return alert.severity !== 'minor';
+      case 'cmpd':
+        return alert.severity === 'critical';
+      case 'cfd':
+        return alert.severity === 'critical' || alert.severity === 'high';
+      case 'cats': {
+        const text = `${alert.title} ${alert.summary}`;
+        return !(
+          SINGLE_STATION_AMENITY_PATTERN.test(text) && !SERVICE_DISRUPTION_PATTERN.test(text)
+        );
+      }
+      default:
+        break;
+    }
     if (!isConstructionAlert(alert)) return true;
     const updatedMs =
       alert.updatedAt instanceof Date
@@ -88,20 +124,69 @@ export function computeAlertsHash(alerts: GenericAlert[]): string {
  * can mention major interstate congestion and accidents when present.
  */
 function prepareAlertsForSummary(alerts: GenericAlert[]): AlertForSummary[] {
-  return alerts.map(alert => {
-    const updatedAt =
-      alert.updatedAt instanceof Date
-        ? alert.updatedAt.toISOString()
-        : new Date(alert.updatedAt).toISOString();
-    return {
-      title: alert.title,
-      summary: alert.summary,
-      severity: alert.severity,
-      source: alert.source,
-      category: alert.category,
-      updatedAt,
-    };
-  });
+  const powerAlerts = alerts.filter(alert => alert.metadata?.source === 'duke');
+  const others = alerts.filter(alert => alert.metadata?.source !== 'duke');
+  const combinedPower = combinePowerAlerts(powerAlerts);
+  return [...others.map(toAlertForSummary), ...(combinedPower ? [combinedPower] : [])];
+}
+
+function toIsoString(date: Date | string): string {
+  return date instanceof Date ? date.toISOString() : new Date(date).toISOString();
+}
+
+function toAlertForSummary(alert: GenericAlert): AlertForSummary {
+  return {
+    title: alert.title,
+    summary: alert.summary,
+    severity: alert.severity,
+    source: alert.source,
+    category: alert.category,
+    updatedAt: toIsoString(alert.updatedAt),
+  };
+}
+
+/**
+ * Collapse all Duke outages into one line with the total computed here, so the model
+ * does not have to add up customer counts. Only named operation centers are listed
+ * as locations; nothing is inferred for outages without one.
+ */
+export function combinePowerAlerts(alerts: GenericAlert[]): AlertForSummary | null {
+  if (alerts.length === 0) return null;
+
+  let total = 0;
+  let allPlanned = true;
+  let severity: AlertSeverity = 'minor';
+  let latest = 0;
+  const byArea = new Map<string, number>();
+
+  for (const alert of alerts) {
+    if (alert.metadata?.source !== 'duke') continue;
+    const customers = alert.metadata.customersAffected;
+    total += customers;
+    allPlanned = allPlanned && alert.metadata.planned;
+    if (SEVERITY_RANK[alert.severity] < SEVERITY_RANK[severity]) severity = alert.severity;
+    latest = Math.max(latest, new Date(alert.updatedAt).getTime());
+    const area = alert.metadata.operationCenter?.trim();
+    if (area) byArea.set(area, (byArea.get(area) ?? 0) + customers);
+  }
+
+  const areas = [...byArea.entries()];
+  let locationPart = '';
+  if (areas.length === 1) {
+    locationPart = ` in ${areas[0][0]}`;
+  } else if (areas.length > 1) {
+    locationPart = ` (${areas.map(([name, n]) => `${name} ${n.toLocaleString('en-US')}`).join(', ')})`;
+  }
+  const planPart = allPlanned ? '; planned maintenance' : '';
+
+  return {
+    title: allPlanned ? 'Planned Power Outage' : 'Power Outages',
+    summary: `${total.toLocaleString('en-US')} Duke Energy customers without power${locationPart}${planPart}`,
+    severity,
+    source: 'duke',
+    category: 'power',
+    updatedAt: new Date(latest || Date.now()).toISOString(),
+  };
 }
 
 /**
@@ -114,6 +199,14 @@ export async function fetchAlertSummary(
   hash: string,
   signal?: AbortSignal
 ): Promise<SummarizeResponse> {
+  if (alerts.length === 0) {
+    return {
+      summary: NO_SIGNIFICANT_ALERTS_SUMMARY,
+      hash,
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
   const API_URL = '/api/summarize-alerts';
 
   const response = await fetch(API_URL, {

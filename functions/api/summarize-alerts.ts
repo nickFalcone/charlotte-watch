@@ -9,20 +9,18 @@ import {
   createSuccessResponse,
   createErrorResponse,
   callAnthropic,
+  SUMMARY_UNAVAILABLE,
 } from '../_lib/summarizationHelpers';
+import { AI_MAX_OUTPUT_TOKENS, OPENAI_MODEL, OPENAI_REASONING_EFFORT } from '../_lib/aiModels';
 import blufPrompt from '../../src/prompts/blufSummary.json';
+import {
+  buildAlertsUserPrompt,
+  getSortTimestamp,
+  normalizeBullets,
+  type AlertInput,
+} from '../../src/utils/alertSummaryPrompt';
 
 const BLUF_SYSTEM_PROMPT: string = blufPrompt.systemPrompt;
-
-interface AlertInput {
-  title: string;
-  summary: string;
-  severity: string;
-  source: string;
-  category: string;
-  /** ISO 8601; prefer alerts with later updatedAt when same service has conflicting status */
-  updatedAt?: string;
-}
 
 interface SummarizeRequest {
   alerts: AlertInput[];
@@ -37,33 +35,8 @@ interface SummarizeResponse {
 
 const MAX_ALERTS = 50;
 
-/** Returns ms since epoch, or 0 if missing/invalid (sorts as oldest). */
-function getSortTimestamp(updatedAt?: string): number {
-  if (!updatedAt) return 0;
-  const ts = Date.parse(updatedAt);
-  return isNaN(ts) ? 0 : ts;
-}
-
-function buildUserPrompt(alerts: AlertInput[]): string {
-  if (alerts.length === 0) {
-    return 'No active alerts.';
-  }
-
-  // Sort by updatedAt descending so the most recent updates appear first.
-  // When the same service has conflicting status (e.g. suspended vs resumed),
-  // the model sees the resolution before the initial alert.
-  const sorted = [...alerts].sort(
-    (a, b) => getSortTimestamp(b.updatedAt) - getSortTimestamp(a.updatedAt)
-  );
-
-  const alertLines = sorted.map((alert, i) => {
-    const timePart = alert.updatedAt ? ` [updated ${alert.updatedAt}]` : '';
-    return `${i + 1}. [${alert.severity.toUpperCase()}] ${alert.source.toUpperCase()}: ${alert.title} - ${alert.summary}${timePart}`;
-  });
-
-  return `Current alerts (${sorted.length} total), ordered by most recent first. Each alert may include [updated <ISO timestamp>].
-When the same service has conflicting status (e.g. "police activity, expect delays" vs "resumed normal service" or "Final Update"), the CURRENT state is the one with the later timestamp. State only the current status—e.g. "Blue Line has resumed normal service" not "police activity affecting Blue Line; expect delays" when a later alert says it resumed.\n\n${alertLines.join('\n')}`;
-}
+/** What callOpenAIResponses / callAnthropic return when the model produced no text. */
+const NO_SUMMARY = SUMMARY_UNAVAILABLE;
 
 export const onRequestPost: PagesFunction<Env> = async context => {
   // Determine which AI provider to use
@@ -92,8 +65,11 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     });
   }
 
-  // Check KV cache (15min TTL, keyed by alert set hash)
-  const cacheKey = `summary:${request.hash}`;
+  // Check KV cache (15min TTL, keyed by alert set hash). The OpenAI key includes the
+  // model so deploys on different models sharing one KV namespace never serve each
+  // other's summaries.
+  const cacheKey =
+    provider === 'openai' ? `summary:${OPENAI_MODEL}:${request.hash}` : `summary:${request.hash}`;
   const cachedResponse = await checkCache(context.env.CACHE, cacheKey);
   if (cachedResponse) return cachedResponse;
 
@@ -105,33 +81,43 @@ export const onRequestPost: PagesFunction<Env> = async context => {
   const alerts = sorted.slice(0, MAX_ALERTS);
 
   try {
-    const userPrompt = buildUserPrompt(alerts);
+    const userPrompt = buildAlertsUserPrompt(alerts);
     let summary: string;
 
     if (provider === 'anthropic') {
-      summary = await callAnthropic(BLUF_SYSTEM_PROMPT, userPrompt, key, 150);
+      summary = await callAnthropic(
+        BLUF_SYSTEM_PROMPT,
+        userPrompt,
+        key,
+        AI_MAX_OUTPUT_TOKENS.alerts.anthropic
+      );
     } else {
       // Use OpenAI Responses API
       summary = await callOpenAIResponses({
         apiKey: key,
-        model: 'gpt-4o-mini',
+        model: OPENAI_MODEL,
         instructions: BLUF_SYSTEM_PROMPT,
         input: userPrompt,
-        maxOutputTokens: 150,
-        temperature: 0.3,
+        maxOutputTokens: AI_MAX_OUTPUT_TOKENS.alerts.openai,
+        reasoningEffort: OPENAI_REASONING_EFFORT,
       });
     }
 
+    // The prompt asks for bullets; this guarantees the format whatever the model returned.
+    const bullets = summary === NO_SUMMARY ? summary : normalizeBullets(summary);
+
     const response: SummarizeResponse = {
-      summary,
+      summary: bullets,
       hash: request.hash,
       generatedAt: new Date().toISOString(),
     };
 
     const responseBody = JSON.stringify(response);
 
-    // Store in KV cache (15min TTL); failures are non-fatal
-    await storeInCache(context.env.CACHE, cacheKey, responseBody);
+    // Store in KV cache (15min TTL); failures are non-fatal. Don't cache an empty result.
+    if (summary !== NO_SUMMARY) {
+      await storeInCache(context.env.CACHE, cacheKey, responseBody);
+    }
 
     return createSuccessResponse(responseBody);
   } catch (error) {

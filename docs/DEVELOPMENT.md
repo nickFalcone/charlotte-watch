@@ -112,7 +112,7 @@ Pages Functions use **Cloudflare KV** (`CACHE` binding) to share responses acros
 | Endpoint | Cache key | TTL | Notes |
 |---|---|---|---|
 | `/api/news-charlotte-parsed` | `news:parsed` | 12 hours | Parsed news events (AI pipeline) |
-| `/api/summarize-alerts` | `summary:<hash>` | 15 minutes | Alert BLUF summary, keyed by alert set hash |
+| `/api/summarize-alerts` | `summary:<model>:<hash>` (OpenAI), `summary:<hash>` (Anthropic) | 15 minutes | Alert BLUF summary, keyed by alert set hash; the OpenAI key includes the model |
 | `/api/summarize-weather` | `weather-summary:<hash>` | 15 minutes | AI weather summary, keyed by hash |
 | `/api/cats-transit` | `transit:vehicle-positions` | 60 seconds | CATS live vehicle positions |
 | `/api/cats-twitter` | `alerts:cats-twitter` | 6 hours | CATS Twitter/X posts |

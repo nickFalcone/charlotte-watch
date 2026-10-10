@@ -11,6 +11,12 @@
 
 import { XMLParser } from 'fast-xml-parser';
 import { callOpenAIResponses } from '../functions/_lib/openaiResponses';
+import { callAnthropic, SUMMARY_UNAVAILABLE } from '../functions/_lib/summarizationHelpers';
+import {
+  AI_MAX_OUTPUT_TOKENS,
+  OPENAI_MODEL,
+  OPENAI_REASONING_EFFORT,
+} from '../functions/_lib/aiModels';
 import newsParsingPrompt from '../src/prompts/newsParsing.json';
 import { sortNewsEvents } from '../src/utils/newsApi';
 
@@ -240,35 +246,26 @@ async function warmNewsCache(
   let rawOutput: string;
 
   if (provider === 'anthropic') {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-haiku-latest',
-        max_tokens: 4096,
-        system: NEWS_PARSING_SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userPrompt }],
-      }),
-    });
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`Anthropic API error: ${response.status} - ${err.slice(0, 200)}`);
-    }
-    const data = (await response.json()) as { content?: Array<{ text?: string }> };
-    rawOutput = data.content?.[0]?.text?.trim() ?? '[]';
+    // Haiku 5.5: thinking tokens count against max_tokens, so leave headroom for the JSON.
+    rawOutput = await callAnthropic(
+      NEWS_PARSING_SYSTEM_PROMPT,
+      userPrompt,
+      apiKey,
+      AI_MAX_OUTPUT_TOKENS.news.anthropic
+    );
   } else {
+    // GPT-6 Luna is a reasoning model: temperature is dropped and the cap covers reasoning too.
     rawOutput = await callOpenAIResponses({
       apiKey,
-      model: 'gpt-4o-mini',
+      model: OPENAI_MODEL,
       instructions: NEWS_PARSING_SYSTEM_PROMPT,
       input: userPrompt,
-      maxOutputTokens: 4096,
-      temperature: 0.2,
+      maxOutputTokens: AI_MAX_OUTPUT_TOKENS.news.openai,
+      reasoningEffort: OPENAI_REASONING_EFFORT,
     });
+  }
+  if (rawOutput === SUMMARY_UNAVAILABLE) {
+    throw new Error(`${provider} returned no text for news parsing`);
   }
 
   // 3. Parse LLM response
