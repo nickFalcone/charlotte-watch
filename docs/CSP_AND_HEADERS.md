@@ -11,6 +11,7 @@ All security headers are set statically via **`public/_headers`** (Cloudflare Pa
 | `style-src` | `'self' 'unsafe-inline'` | CSS files + styled-components runtime styles |
 | `img-src` | `'self' data: https://*.basemaps.cartocdn.com https://mesonet.agron.iastate.edu` | Local images, data URIs, CARTO map tiles, IEM NEXRAD radar overlay |
 | `connect-src` | `'self' https://api.weather.gov https://api.open-meteo.com https://air-quality-api.open-meteo.com https://cmpdinfo.charlottenc.gov https://cloudflareinsights.com https://a.nel.cloudflare.com` | Same-origin API routes + direct client fetches |
+| `frame-src` | `https://www.drivenc.gov` | NCDOT DriveNC embedded map (NCDOT Map tab) |
 | `frame-ancestors` | `'none'` | Prevent embedding in iframes |
 | `base-uri` | `'self'` | Prevent base tag injection |
 | `object-src` | `'none'` | Block plugins (Flash, Java) |
@@ -24,6 +25,7 @@ When adding a **new external origin** that the client loads or fetches from, upd
 | New API the client fetches    | `connect-src`          |
 | New image or tile host        | `img-src`              |
 | New external script           | `script-src`           |
+| New embedded iframe           | `frame-src`            |
 
 **For AI agents:** **Ask the user before editing `public/_headers`** to add or change origins.
 
