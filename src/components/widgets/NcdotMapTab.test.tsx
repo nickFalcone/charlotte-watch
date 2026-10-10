@@ -16,7 +16,7 @@ describe('NcdotMapTab', () => {
 
     const frame = screen.getByTitle('NCDOT DriveNC traffic map for the Charlotte region');
     expect(frame).toHaveAttribute('src', NCDOT_EMBED_URL);
-    expect(NCDOT_EMBED_URL).toContain('region=NC_Charlotte');
+    expect(NCDOT_EMBED_URL).toContain('lat=35.2271&lng=-80.8431&zoom=11');
     expect(NCDOT_EMBED_URL).toContain('Cameras');
   });
 
