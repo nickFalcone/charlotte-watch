@@ -11,6 +11,7 @@ import {
   callAnthropic,
   SUMMARY_UNAVAILABLE,
 } from '../_lib/summarizationHelpers';
+import { AI_MAX_OUTPUT_TOKENS, OPENAI_MODEL, OPENAI_REASONING_EFFORT } from '../_lib/aiModels';
 import blufPrompt from '../../src/prompts/blufSummary.json';
 import {
   buildAlertsUserPrompt,
@@ -34,19 +35,7 @@ interface SummarizeResponse {
 
 const MAX_ALERTS = 50;
 
-// OpenAI path. Luna is a reasoning model: effort 'low' leaves some room to resolve
-// conflicting alert timestamps. The cap covers reasoning plus visible tokens and is
-// only a ceiling (an incomplete response can end before any text is written), so keep
-// it generous; the summary itself is ~150 tokens. Tune from the logged reasoning counts.
-const OPENAI_MODEL = 'gpt-6-luna';
-const OPENAI_REASONING_EFFORT = 'low';
-const OPENAI_MAX_OUTPUT_TOKENS = 8000;
-
-// Anthropic path (Haiku 5.5, effort 'low'). Thinking tokens count against max_tokens, so the
-// cap leaves headroom beyond the ~6 bullets of output.
-const ANTHROPIC_MAX_TOKENS = 2000;
-
-/** What callOpenAIResponses returns when the model produced no text (same as SUMMARY_UNAVAILABLE). */
+/** What callOpenAIResponses / callAnthropic return when the model produced no text. */
 const NO_SUMMARY = SUMMARY_UNAVAILABLE;
 
 export const onRequestPost: PagesFunction<Env> = async context => {
@@ -96,7 +85,12 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     let summary: string;
 
     if (provider === 'anthropic') {
-      summary = await callAnthropic(BLUF_SYSTEM_PROMPT, userPrompt, key, ANTHROPIC_MAX_TOKENS);
+      summary = await callAnthropic(
+        BLUF_SYSTEM_PROMPT,
+        userPrompt,
+        key,
+        AI_MAX_OUTPUT_TOKENS.alerts.anthropic
+      );
     } else {
       // Use OpenAI Responses API
       summary = await callOpenAIResponses({
@@ -104,7 +98,7 @@ export const onRequestPost: PagesFunction<Env> = async context => {
         model: OPENAI_MODEL,
         instructions: BLUF_SYSTEM_PROMPT,
         input: userPrompt,
-        maxOutputTokens: OPENAI_MAX_OUTPUT_TOKENS,
+        maxOutputTokens: AI_MAX_OUTPUT_TOKENS.alerts.openai,
         reasoningEffort: OPENAI_REASONING_EFFORT,
       });
     }

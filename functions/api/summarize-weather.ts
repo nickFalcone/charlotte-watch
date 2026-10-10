@@ -9,7 +9,9 @@ import {
   createSuccessResponse,
   createErrorResponse,
   callAnthropic,
+  SUMMARY_UNAVAILABLE,
 } from '../_lib/summarizationHelpers';
+import { AI_MAX_OUTPUT_TOKENS, OPENAI_MODEL, OPENAI_REASONING_EFFORT } from '../_lib/aiModels';
 import weatherSummaryPrompt from '../../src/prompts/weatherSummary.json';
 
 const WEATHER_SYSTEM_PROMPT: string = weatherSummaryPrompt.systemPrompt;
@@ -101,7 +103,12 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     });
   }
 
-  const cacheKey = `weather-summary:${request.hash}`;
+  // The OpenAI key includes the model so deploys on different models sharing one KV namespace
+  // never serve each other's summaries.
+  const cacheKey =
+    provider === 'openai'
+      ? `weather-summary:${OPENAI_MODEL}:${request.hash}`
+      : `weather-summary:${request.hash}`;
   const cachedResponse = await checkCache(context.env.CACHE, cacheKey);
   if (cachedResponse) return cachedResponse;
 
@@ -112,15 +119,20 @@ export const onRequestPost: PagesFunction<Env> = async context => {
     let summary: string;
 
     if (provider === 'anthropic') {
-      summary = await callAnthropic(WEATHER_SYSTEM_PROMPT, userPrompt, key, 1500);
+      summary = await callAnthropic(
+        WEATHER_SYSTEM_PROMPT,
+        userPrompt,
+        key,
+        AI_MAX_OUTPUT_TOKENS.weather.anthropic
+      );
     } else {
       summary = await callOpenAIResponses({
         apiKey: key,
-        model: 'gpt-4o-mini',
+        model: OPENAI_MODEL,
         instructions: WEATHER_SYSTEM_PROMPT,
         input: userPrompt,
-        maxOutputTokens: 350,
-        temperature: 0.3,
+        maxOutputTokens: AI_MAX_OUTPUT_TOKENS.weather.openai,
+        reasoningEffort: OPENAI_REASONING_EFFORT,
       });
     }
 
@@ -132,7 +144,10 @@ export const onRequestPost: PagesFunction<Env> = async context => {
 
     const responseBody = JSON.stringify(response);
 
-    await storeInCache(context.env.CACHE, cacheKey, responseBody);
+    // Don't cache an empty result.
+    if (summary !== SUMMARY_UNAVAILABLE) {
+      await storeInCache(context.env.CACHE, cacheKey, responseBody);
+    }
 
     return createSuccessResponse(responseBody);
   } catch (error) {

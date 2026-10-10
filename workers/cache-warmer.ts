@@ -12,6 +12,11 @@
 import { XMLParser } from 'fast-xml-parser';
 import { callOpenAIResponses } from '../functions/_lib/openaiResponses';
 import { callAnthropic, SUMMARY_UNAVAILABLE } from '../functions/_lib/summarizationHelpers';
+import {
+  AI_MAX_OUTPUT_TOKENS,
+  OPENAI_MODEL,
+  OPENAI_REASONING_EFFORT,
+} from '../functions/_lib/aiModels';
 import newsParsingPrompt from '../src/prompts/newsParsing.json';
 import { sortNewsEvents } from '../src/utils/newsApi';
 
@@ -242,16 +247,21 @@ async function warmNewsCache(
 
   if (provider === 'anthropic') {
     // Haiku 5.5: thinking tokens count against max_tokens, so leave headroom for the JSON.
-    rawOutput = await callAnthropic(NEWS_PARSING_SYSTEM_PROMPT, userPrompt, apiKey, 8192);
+    rawOutput = await callAnthropic(
+      NEWS_PARSING_SYSTEM_PROMPT,
+      userPrompt,
+      apiKey,
+      AI_MAX_OUTPUT_TOKENS.news.anthropic
+    );
   } else {
     // GPT-6 Luna is a reasoning model: temperature is dropped and the cap covers reasoning too.
     rawOutput = await callOpenAIResponses({
       apiKey,
-      model: 'gpt-6-luna',
+      model: OPENAI_MODEL,
       instructions: NEWS_PARSING_SYSTEM_PROMPT,
       input: userPrompt,
-      maxOutputTokens: 16000,
-      reasoningEffort: 'low',
+      maxOutputTokens: AI_MAX_OUTPUT_TOKENS.news.openai,
+      reasoningEffort: OPENAI_REASONING_EFFORT,
     });
   }
   if (rawOutput === SUMMARY_UNAVAILABLE) {

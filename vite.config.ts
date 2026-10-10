@@ -9,6 +9,18 @@ import {
 } from './src/utils/aiPrompts';
 import newsParsingPrompt from './src/prompts/newsParsing.json';
 import { sortNewsEvents } from './src/utils/newsApi';
+import {
+  buildAlertsUserPrompt,
+  getSortTimestamp,
+  normalizeBullets,
+} from './src/utils/alertSummaryPrompt';
+import { callOpenAIResponses } from './functions/_lib/openaiResponses';
+import { callAnthropic, SUMMARY_UNAVAILABLE } from './functions/_lib/summarizationHelpers';
+import {
+  AI_MAX_OUTPUT_TOKENS,
+  OPENAI_MODEL,
+  OPENAI_REASONING_EFFORT,
+} from './functions/_lib/aiModels';
 import type { ParsedNewsEvent } from './src/types/news';
 import { isServiceAlertTweet } from './src/utils/catsFilters';
 import { isCMSAlertTweet } from './src/utils/cmsFilters';
@@ -361,85 +373,41 @@ function newsCharlotteParsedPlugin(env: Record<string, string>): Plugin {
 
           let rawOutput: string;
           try {
-            if (provider === 'anthropic') {
-              const response = await fetch('https://api.anthropic.com/v1/messages', {
-                method: 'POST',
-                headers: {
-                  'x-api-key': apiKey,
-                  'Content-Type': 'application/json',
-                  'anthropic-version': '2023-06-01',
-                },
-                body: JSON.stringify({
-                  model: 'claude-3-5-haiku-latest',
-                  max_tokens: 4096,
-                  system: NEWS_PARSING_SYSTEM_PROMPT,
-                  messages: [{ role: 'user', content: userPrompt }],
-                }),
-              });
-              if (!response.ok) {
-                const err = await response.text();
-                if (response.status === 429) {
-                  res.statusCode = 503;
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(
-                    JSON.stringify({
-                      error: 'AI API rate limit exceeded',
-                      detail: err.slice(0, 200),
-                      retryAfter: 'Try again in a few minutes.',
-                    })
-                  );
-                  return;
-                }
-                throw new Error(`Anthropic API error: ${response.status} - ${err}`);
-              }
-              const data = (await response.json()) as { content?: Array<{ text?: string }> };
-              rawOutput = data.content?.[0]?.text?.trim() ?? '[]';
-            } else {
-              const response = await fetch('https://api.openai.com/v1/responses', {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${apiKey}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  model: 'gpt-4o-mini',
-                  instructions: NEWS_PARSING_SYSTEM_PROMPT,
-                  input: userPrompt,
-                  max_output_tokens: 4096,
-                  temperature: 0.2,
-                  store: false,
-                }),
-              });
-              if (!response.ok) {
-                const err = await response.text();
-                if (response.status === 429) {
-                  res.statusCode = 503;
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(
-                    JSON.stringify({
-                      error: 'AI API rate limit exceeded',
-                      detail: err.slice(0, 200),
-                      retryAfter: 'Try again in a few minutes.',
-                    })
-                  );
-                  return;
-                }
-                throw new Error(`OpenAI API error: ${response.status} - ${err}`);
-              }
-              const data = (await response.json()) as {
-                output?: Array<{ type: string; content?: Array<{ type: string; text?: string }> }>;
-              };
-              const messageOutput = data.output?.find(
-                (item: { type: string }) => item.type === 'message'
-              );
-              const textContent = messageOutput?.content?.find(
-                (c: { type: string }) => c.type === 'output_text'
-              );
-              rawOutput = textContent?.text?.trim() ?? '[]';
+            // Same helpers and models as workers/cache-warmer.ts
+            rawOutput =
+              provider === 'anthropic'
+                ? await callAnthropic(
+                    NEWS_PARSING_SYSTEM_PROMPT,
+                    userPrompt,
+                    apiKey,
+                    AI_MAX_OUTPUT_TOKENS.news.anthropic
+                  )
+                : await callOpenAIResponses({
+                    apiKey,
+                    model: OPENAI_MODEL,
+                    instructions: NEWS_PARSING_SYSTEM_PROMPT,
+                    input: userPrompt,
+                    maxOutputTokens: AI_MAX_OUTPUT_TOKENS.news.openai,
+                    reasoningEffort: OPENAI_REASONING_EFFORT,
+                  });
+            if (rawOutput === SUMMARY_UNAVAILABLE) {
+              throw new Error(`${provider} returned no text for news parsing`);
             }
           } catch (aiErr) {
             const msg = aiErr instanceof Error ? aiErr.message : String(aiErr);
             console.error('[news-charlotte-parsed] AI API request failed:', aiErr);
+            if (/API error: 429 /.test(msg)) {
+              res.statusCode = 503;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(
+                JSON.stringify({
+                  error: 'AI API rate limit exceeded',
+                  detail: msg.slice(0, 200),
+                  retryAfter: 'Try again in a few minutes.',
+                })
+              );
+              return;
+            }
             res.statusCode = 502;
             res.setHeader('Content-Type', 'application/json');
             res.end(
@@ -840,7 +808,14 @@ function aiSummarizationPlugin(env: Record<string, string>): Plugin {
         }
 
         let requestData: {
-          alerts: Array<{ severity: string; source: string; title: string; summary: string }>;
+          alerts: Array<{
+            severity: string;
+            source: string;
+            category: string;
+            title: string;
+            summary: string;
+            updatedAt?: string;
+          }>;
           hash: string;
         };
         try {
@@ -853,8 +828,12 @@ function aiSummarizationPlugin(env: Record<string, string>): Plugin {
         }
 
         // In-memory cache (15min TTL, keyed by hash, mirrors KV in production)
+        const cacheKey =
+          provider === 'openai'
+            ? `summary:${OPENAI_MODEL}:${requestData.hash}`
+            : `summary:${requestData.hash}`;
         if (requestData.hash) {
-          const cached = devCacheGet(`summary:${requestData.hash}`);
+          const cached = devCacheGet(cacheKey);
           if (cached) {
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
@@ -864,43 +843,32 @@ function aiSummarizationPlugin(env: Record<string, string>): Plugin {
           }
         }
 
-        const alerts = requestData.alerts || [];
-        const userPrompt =
-          alerts.length === 0
-            ? 'No active alerts.'
-            : `Current alerts (${alerts.length} total):\n${alerts
-                .map(
-                  (a, i) =>
-                    `${i + 1}. [${a.severity.toUpperCase()}] ${a.source.toUpperCase()}: ${a.title} - ${a.summary}`
-                )
-                .join('\n')}`;
+        // Mirrors functions/api/summarize-alerts.ts: newest 50 alerts, same prompt builder, models and
+        // bullet normalization.
+        const alerts = [...(requestData.alerts || [])]
+          .sort((x, y) => getSortTimestamp(y.updatedAt) - getSortTimestamp(x.updatedAt))
+          .slice(0, 50);
+        const userPrompt = buildAlertsUserPrompt(alerts);
 
         try {
-          const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o-mini',
-              messages: [
-                { role: 'system', content: BLUF_SYSTEM_PROMPT },
-                { role: 'user', content: userPrompt },
-              ],
-              max_tokens: 150,
-              temperature: 0.3,
-            }),
-          });
-
-          if (!openAIResponse.ok) {
-            const errorText = await openAIResponse.text();
-            throw new Error(`OpenAI API error: ${openAIResponse.status} - ${errorText}`);
-          }
-
-          const openAIData = await openAIResponse.json();
+          const rawSummary =
+            provider === 'anthropic'
+              ? await callAnthropic(
+                  BLUF_SYSTEM_PROMPT,
+                  userPrompt,
+                  apiKey,
+                  AI_MAX_OUTPUT_TOKENS.alerts.anthropic
+                )
+              : await callOpenAIResponses({
+                  apiKey,
+                  model: OPENAI_MODEL,
+                  instructions: BLUF_SYSTEM_PROMPT,
+                  input: userPrompt,
+                  maxOutputTokens: AI_MAX_OUTPUT_TOKENS.alerts.openai,
+                  reasoningEffort: OPENAI_REASONING_EFFORT,
+                });
           const summary =
-            openAIData.choices?.[0]?.message?.content?.trim() || 'Unable to generate summary.';
+            rawSummary === SUMMARY_UNAVAILABLE ? rawSummary : normalizeBullets(rawSummary);
 
           const responseBody = JSON.stringify({
             summary,
@@ -908,8 +876,8 @@ function aiSummarizationPlugin(env: Record<string, string>): Plugin {
             generatedAt: new Date().toISOString(),
           });
 
-          if (requestData.hash) {
-            devCachePut(`summary:${requestData.hash}`, responseBody, 15 * 60 * 1000);
+          if (requestData.hash && summary !== SUMMARY_UNAVAILABLE) {
+            devCachePut(cacheKey, responseBody, 15 * 60 * 1000);
           }
 
           res.statusCode = 200;
@@ -943,11 +911,12 @@ function aiWeatherSummaryPlugin(env: Record<string, string>): Plugin {
           return;
         }
 
-        const apiKey = env.OPENAI_API_KEY;
+        const provider = env.AI_PROVIDER || 'openai';
+        const apiKey = provider === 'anthropic' ? env.ANTHROPIC_API_KEY : env.OPENAI_API_KEY;
         if (!apiKey) {
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'OPENAI API key not configured' }));
+          res.end(JSON.stringify({ error: `${provider.toUpperCase()} API key not configured` }));
           return;
         }
 
@@ -982,8 +951,12 @@ function aiWeatherSummaryPlugin(env: Record<string, string>): Plugin {
           return;
         }
 
+        const cacheKey =
+          provider === 'openai'
+            ? `weather-summary:${OPENAI_MODEL}:${requestData.hash}`
+            : `weather-summary:${requestData.hash}`;
         if (requestData.hash) {
-          const cached = devCacheGet(`weather-summary:${requestData.hash}`);
+          const cached = devCacheGet(cacheKey);
           if (cached) {
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
@@ -1012,31 +985,23 @@ function aiWeatherSummaryPlugin(env: Record<string, string>): Plugin {
         ].join('\n');
 
         try {
-          const openAIResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o-mini',
-              messages: [
-                { role: 'system', content: WEATHER_SYSTEM_PROMPT },
-                { role: 'user', content: userPrompt },
-              ],
-              max_tokens: 350,
-              temperature: 0.3,
-            }),
-          });
-
-          if (!openAIResponse.ok) {
-            const errorText = await openAIResponse.text();
-            throw new Error(`OpenAI API error: ${openAIResponse.status} - ${errorText}`);
-          }
-
-          const openAIData = await openAIResponse.json();
+          // Mirrors functions/api/summarize-weather.ts
           const summary =
-            openAIData.choices?.[0]?.message?.content?.trim() || 'Unable to generate summary.';
+            provider === 'anthropic'
+              ? await callAnthropic(
+                  WEATHER_SYSTEM_PROMPT,
+                  userPrompt,
+                  apiKey,
+                  AI_MAX_OUTPUT_TOKENS.weather.anthropic
+                )
+              : await callOpenAIResponses({
+                  apiKey,
+                  model: OPENAI_MODEL,
+                  instructions: WEATHER_SYSTEM_PROMPT,
+                  input: userPrompt,
+                  maxOutputTokens: AI_MAX_OUTPUT_TOKENS.weather.openai,
+                  reasoningEffort: OPENAI_REASONING_EFFORT,
+                });
 
           const responseBody = JSON.stringify({
             summary,
@@ -1044,8 +1009,8 @@ function aiWeatherSummaryPlugin(env: Record<string, string>): Plugin {
             generatedAt: new Date().toISOString(),
           });
 
-          if (requestData.hash) {
-            devCachePut(`weather-summary:${requestData.hash}`, responseBody, 15 * 60 * 1000);
+          if (requestData.hash && summary !== SUMMARY_UNAVAILABLE) {
+            devCachePut(cacheKey, responseBody, 15 * 60 * 1000);
           }
 
           res.statusCode = 200;
@@ -1059,7 +1024,7 @@ function aiWeatherSummaryPlugin(env: Record<string, string>): Plugin {
             err.message === 'fetch failed' && cause
               ? `fetch failed: ${cause}`
               : err.message === 'fetch failed'
-                ? 'Network error calling OpenAI. Check OPENAI_API_KEY and connectivity.'
+                ? 'Network error calling the AI provider. Check the API key and connectivity.'
                 : err.message;
           res.statusCode = 500;
           res.setHeader('Content-Type', 'application/json');

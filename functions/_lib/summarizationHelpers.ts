@@ -1,4 +1,5 @@
 import type { Env } from './env';
+import { ANTHROPIC_MODEL } from './aiModels';
 
 /**
  * Shared helpers for AI summarization endpoints
@@ -131,9 +132,6 @@ export function createErrorResponse(
 
 /** What the AI helpers return when the model produced no usable text. */
 export const SUMMARY_UNAVAILABLE = 'Unable to generate summary.';
-
-/** Default Anthropic model for summarization and parsing (fast, cheap, adaptive thinking). */
-export const ANTHROPIC_MODEL = 'claude-haiku-5-5';
 
 export type AnthropicEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 

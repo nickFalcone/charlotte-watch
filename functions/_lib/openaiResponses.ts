@@ -9,14 +9,14 @@ export type OpenAIReasoningEffort = 'none' | 'low' | 'medium' | 'high' | 'xhigh'
 
 export interface OpenAIResponsesOptions {
   apiKey: string;
-  model?: string;
+  model: string;
   instructions: string;
   input: string;
   /** Upper bound on visible output plus reasoning tokens. */
   maxOutputTokens?: number;
   /** Ignored when reasoningEffort is set to anything other than 'none'. */
   temperature?: number;
-  /** Only for reasoning-capable models (e.g. gpt-6-luna). Omit for models like gpt-4o-mini. */
+  /** Only for reasoning-capable models (e.g. gpt-6-luna). Omit for non-reasoning models. */
   reasoningEffort?: OpenAIReasoningEffort;
 }
 
@@ -53,7 +53,7 @@ interface OpenAIResponsesResult {
 export async function callOpenAIResponses(options: OpenAIResponsesOptions): Promise<string> {
   const {
     apiKey,
-    model = 'gpt-4o-mini',
+    model,
     instructions,
     input,
     maxOutputTokens = 150,
