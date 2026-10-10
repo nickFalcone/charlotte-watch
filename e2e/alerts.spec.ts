@@ -87,9 +87,12 @@ test.describe('AlertsWidget — with alerts', () => {
   });
 
   test('switches to the Map tab', async ({ page }) => {
-    await page.getByRole('tab', { name: 'Map' }).click();
+    await page.getByRole('tab', { name: 'Map', exact: true }).click();
     // The map tab is forceMount, so the container is always present;
     // verify the tab is now selected
-    await expect(page.getByRole('tab', { name: 'Map' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Map', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
   });
 });
