@@ -8,23 +8,6 @@ This file provides instructions for AI coding agents working on the Charlotte Mo
 
 **Important:** `CLAUDE.md` is a symlink to this file. **NEVER edit CLAUDE.md directly** — only modify `AGENTS.md` when explicitly instructed by the user. Both files show identical content, but all edits must go through `AGENTS.md`.
 
-## Quick Reference
-
-```bash
-npm run dev          # Start dev server
-npm run build        # Production build (also runs typecheck)
-npm test             # Run all tests once
-npm run test:watch   # Run tests in watch mode
-npm run check:fix    # Format, lint, and typecheck (run after every change)
-```
-
-**Most Important Rules:**
-1. Read `src/utils/queryKeys.ts` for all query keys - never use inline strings
-2. Never expose API keys in client code - use Cloudflare Functions
-3. Ask before adding dependencies or editing CSP
-4. Run `npm run check:fix` after every code change
-5. Never create git commits unless explicitly requested
-
 ## Critical Rules
 
 ### 1. Query Keys Are Centralized
@@ -103,31 +86,6 @@ Before implementing changes that:
 
 Propose a plan first so the user can approve the approach.
 
-## Project Structure
-
-```
-charlotte-monitor/
-├── src/
-│   ├── components/
-│   │   ├── widgets/          # Dashboard widgets (Weather, Alerts, etc.)
-│   │   └── ...               # Shared UI components
-│   ├── alerts/               # Alert registry, sources, and converters
-│   ├── hooks/                # Custom React hooks
-│   ├── stores/               # Zustand state stores
-│   ├── data/                 # Static reference data (transit routes, geometry)
-│   ├── types/                # TypeScript type definitions
-│   ├── theme/                # Theme tokens and styled-components theme
-│   ├── utils/
-│   │   ├── queryKeys.ts      # Centralized TanStack Query keys
-│   │   └── *Api.ts           # API client functions (catsApi, cfdApi, etc.)
-│   └── assets/
-│       └── icons/            # SVG icons (do not modify)
-├── functions/                # Cloudflare Functions (serverless API proxies)
-├── public/
-│   └── _headers              # CSP and security headers
-└── docs/                     # Documentation
-```
-
 ## Development Workflow
 
 ### Before You Code
@@ -157,11 +115,6 @@ See [Development Guide](./docs/DEVELOPMENT.md) for quality checks and testing.
 ```bash
 npm run check:fix
 ```
-
-This command:
-1. Formats code with Prettier
-2. Lints with ESLint (auto-fixes issues)
-3. Type-checks with TypeScript
 
 ```bash
 npm test
@@ -212,9 +165,6 @@ Ask the user. It's better to clarify requirements than to make assumptions.
 
 ### Handling Errors
 
-- Use TanStack Query's built-in error handling
-- Display user-friendly error messages
-- Log errors to console in development
 - Never expose API keys or sensitive data in error messages
 
 ## Known Gotchas
@@ -222,31 +172,6 @@ Ask the user. It's better to clarify requirements than to make assumptions.
 ### React Grid Layout animations
 
 Never use `transform` in CSS animations on `.react-grid-item`. RGL uses transforms for drag and resize; a competing animation transform causes layout glitches.
-
-### Radix UI + happy-dom test cleanup
-
-Radix UI components do not auto-cleanup between tests in happy-dom. Always add `afterEach(cleanup)` when testing any Radix primitive. For non-portal Radix components, scope queries with `within(container)`; for Radix portals (e.g. `Popover.Portal`), use `screen` as usual since portals render outside the container.
-
-```typescript
-import { afterEach } from 'vitest';
-import { cleanup, render, within } from '@testing-library/react';
-afterEach(cleanup);
-```
-
-## Performance Considerations
-
-- Lazy load widgets when possible
-- Use React.memo() for expensive components
-- Debounce rapid API calls
-- Keep bundle size minimal (check with `npm run build`)
-
-## Getting Help
-
-If you're unsure about:
-- Architecture decisions → Ask the user
-- Which pattern to follow → Check `docs/`
-- Whether to add a dependency → Ask the user
-- CSP requirements → Read `docs/CSP_AND_HEADERS.md` first, then ask
 
 ---
 
