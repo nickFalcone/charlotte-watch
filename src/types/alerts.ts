@@ -299,16 +299,21 @@ export function mapNCDOTSeverity(incident: {
   const condition = incident.condition.toLowerCase();
   const incidentType = incident.incidentType.toLowerCase();
 
-  // Critical: fatalities, bridge issues, road closures (not planned maintenance), accidents
+  // Critical: fatalities, bridge issues, unplanned road closures, accidents
   if (incident.fatality) return 'critical';
   if (incident.bridgeInvolved) return 'critical';
-  if (condition.includes('road closed')) return 'critical';
-  // Moving closure: critical only if not maintenance/construction (planned work)
+
+  // Planned maintenance/construction is never critical, even when the road is fully closed
   const isMaintenance =
     incidentType.includes('maintenance') ||
     incidentType.includes('construction') ||
     condition.includes('maintenance') ||
     condition.includes('construction');
+  const isClosure = condition.includes('road closed') || condition.includes('local traffic only');
+  if (isMaintenance && isClosure) return 'high';
+
+  if (condition.includes('road closed')) return 'critical';
+  // Moving closure: critical only if not maintenance/construction (planned work)
   if (condition.includes('moving closure') && !isMaintenance) return 'critical';
   if (incidentType.includes('accident') || incidentType.includes('collision')) return 'critical';
   if (condition.includes('local traffic only')) return 'critical'; // Effectively road closed
