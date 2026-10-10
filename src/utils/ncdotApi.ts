@@ -2,7 +2,10 @@ import type { NCDOTIncident } from '../types/ncdot';
 import { MECKLENBURG_COUNTY_ID, CHARLOTTE_ROADS } from '../types/ncdot';
 import { dedupeBy } from './dedupe';
 
-const NCDOT_BASE_URL = 'https://eapps.ncdot.gov/services/traffic-prod/v1';
+// NC DOT sends no CORS headers: use proxy path in dev, Pages Function in production
+const NCDOT_INCIDENTS_URL = import.meta.env.DEV
+  ? `/proxy/ncdot/services/traffic-prod/v1/counties/${MECKLENBURG_COUNTY_ID}/incidents?verbose=true&recent=true`
+  : '/api/ncdot-incidents';
 
 /**
  * Checks if a road name matches any Charlotte area major road
@@ -190,9 +193,7 @@ function consolidateSimilarIncidents(incidents: NCDOTIncident[]): NCDOTIncident[
  */
 export async function fetchNCDOTIncidents(signal?: AbortSignal): Promise<NCDOTIncident[]> {
   try {
-    const url = `${NCDOT_BASE_URL}/counties/${MECKLENBURG_COUNTY_ID}/incidents?verbose=true&recent=true`;
-
-    const response = await fetch(url, {
+    const response = await fetch(NCDOT_INCIDENTS_URL, {
       headers: {
         Accept: 'application/json',
       },

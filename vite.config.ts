@@ -1187,6 +1187,11 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         // Order matters - more specific paths first
+        '/proxy/ncdot': {
+          target: 'https://eapps.ncdot.gov',
+          changeOrigin: true,
+          rewrite: path => path.replace(/^\/proxy\/ncdot/, ''),
+        },
         '/proxy/faa': {
           target: 'https://nasstatus.faa.gov',
           changeOrigin: true,
