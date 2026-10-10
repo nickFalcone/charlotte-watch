@@ -13,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import { TabPanel, WidgetTabs } from '../common';
 import { AlertsIncidentsTab } from './AlertsIncidentsTab';
 import { AlertsMapTab } from './AlertsMapTab';
+import { NcdotMapTab } from './NcdotMapTab';
 import { AlertDetailModal } from './AlertDetailModal';
 import {
   LoadingContainer,
@@ -151,6 +152,9 @@ export function AlertsWidget(_props: WidgetProps) {
             onAlertSelect={setSelectedAlert}
             active={activeTab === 'map'}
           />
+        </TabPanel>
+        <TabPanel value="ncdot-map" label="NCDOT Map">
+          <NcdotMapTab />
         </TabPanel>
       </WidgetTabs>
 
