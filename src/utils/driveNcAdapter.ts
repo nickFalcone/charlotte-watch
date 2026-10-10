@@ -58,10 +58,18 @@ function humanize(value: string | null | undefined): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-function mapDirection(direction: string | undefined): string {
-  if (!direction) return '';
-  const unspecified = ['unknown', 'all directions', 'both directions'];
-  return unspecified.includes(direction.toLowerCase()) ? '' : direction;
+const UNSPECIFIED_DIRECTIONS = ['unknown', 'all directions', 'both directions'];
+
+/**
+ * Prefer DirectionOfTravel. When it is unspecified, fall back to a direction embedded in
+ * the roadway name ("I-77 Northbound", "I-485 Inner").
+ */
+function mapDirection(direction: string | undefined, roadwayName: string | undefined): string {
+  if (direction && !UNSPECIFIED_DIRECTIONS.includes(direction.toLowerCase())) return direction;
+  const match = roadwayName?.match(/\b(Northbound|Southbound|Eastbound|Westbound|Inner|Outer)\b/i);
+  if (!match) return '';
+  const found = match[1];
+  return found.charAt(0).toUpperCase() + found.slice(1).toLowerCase();
 }
 
 function mapIncidentType(event: DriveNCEvent): string {
@@ -82,9 +90,24 @@ function mapCondition(event: DriveNCEvent): string {
   return humanize(event.EventSubType);
 }
 
-function mapDetour(instructions: DriveNCEvent['DetourInstructions']): string {
-  if (Array.isArray(instructions)) return instructions.join('; ');
-  return instructions?.trim() ?? '';
+/**
+ * Prefer DetourInstructions. DriveNC often leaves it empty and puts the detour in the free-text
+ * Comment instead, so fall back to the Comment from the first line mentioning "detour" onward.
+ */
+function mapDetour(event: DriveNCEvent): string {
+  const instructions = event.DetourInstructions;
+  const explicit = Array.isArray(instructions)
+    ? instructions.join('; ')
+    : (instructions?.trim() ?? '');
+  if (explicit) return explicit;
+
+  const lines = (event.Comment ?? '').split(/\r?\n/).map(line => line.trim());
+  const first = lines.findIndex(line => /detour/i.test(line));
+  if (first === -1) return '';
+  return lines
+    .slice(first)
+    .filter(line => line !== '' && !/^detour:?$/i.test(line))
+    .join('; ');
 }
 
 /**
@@ -92,7 +115,7 @@ function mapDetour(instructions: DriveNCEvent['DetourInstructions']): string {
  * DriveNC has no lane counts, mile markers or city, so those fields are left empty.
  */
 export function driveNCEventToIncident(event: DriveNCEvent): NCDOTIncident {
-  const detour = mapDetour(event.DetourInstructions);
+  const detour = mapDetour(event);
   const text = `${event.Description ?? ''} ${event.Comment ?? ''}`;
   const start = unixToIso(event.StartDate ?? event.Reported);
 
@@ -105,7 +128,7 @@ export function driveNCEventToIncident(event: DriveNCEvent): NCDOTIncident {
     condition: mapCondition(event),
     incidentType: mapIncidentType(event),
     severity: 0,
-    direction: mapDirection(event.DirectionOfTravel),
+    direction: mapDirection(event.DirectionOfTravel, event.RoadwayName),
     location: '',
     countyId: 0,
     countyName: event.County ?? '',

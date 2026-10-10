@@ -96,6 +96,46 @@ describe('driveNCEventToIncident', () => {
     ).toBe('');
   });
 
+  it('falls back to a direction in the roadway name when DirectionOfTravel is unspecified', () => {
+    const from = (RoadwayName: string, DirectionOfTravel = 'Unknown') =>
+      driveNCEventToIncident({ ...baseEvent, RoadwayName, DirectionOfTravel }).direction;
+    expect(from('I-77 Northbound')).toBe('Northbound');
+    expect(from('I-485 Inner', 'Both Directions')).toBe('Inner');
+    expect(from('I-485 Outer')).toBe('Outer');
+    expect(from('I-77')).toBe('');
+  });
+
+  it('prefers DirectionOfTravel over the roadway name', () => {
+    expect(
+      driveNCEventToIncident({
+        ...baseEvent,
+        RoadwayName: 'I-77 Northbound',
+        DirectionOfTravel: 'Southbound',
+      }).direction
+    ).toBe('Southbound');
+  });
+
+  it('extracts the detour from Comment when DetourInstructions is empty', () => {
+    const lone = driveNCEventToIncident({
+      ...baseEvent,
+      DetourInstructions: '',
+      Comment: 'Complete the roundabout\nDetour\n\nCatawba to Holiday Ln',
+    });
+    expect(lone.detour).toBe('Catawba to Holiday Ln');
+    expect(lone.isDetour).toBe(true);
+
+    const labeled = driveNCEventToIncident({
+      ...baseEvent,
+      DetourInstructions: '',
+      Comment: 'Crews will close the road.\nMAIN ST DETOUR: A - B\nTRUCK DETOUR- C - D',
+    });
+    expect(labeled.detour).toBe('MAIN ST DETOUR: A - B; TRUCK DETOUR- C - D');
+  });
+
+  it('has no detour when neither field mentions one', () => {
+    expect(driveNCEventToIncident({ ...baseEvent, Comment: 'Crews working' }).detour).toBe('');
+  });
+
   it('joins detour instructions from arrays or strings', () => {
     const fromArray = driveNCEventToIncident({
       ...baseEvent,
