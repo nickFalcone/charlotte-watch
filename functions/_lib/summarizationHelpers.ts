@@ -9,6 +9,16 @@ const CACHE_TTL_SECONDS = 900; // 15 minutes
 const CACHE_CONTROL_HEADER = 'private, max-age=900';
 
 /**
+ * SHA-256 hex digest. Cache keys are derived with this from the exact content sent to the
+ * model, never from a client-supplied value, so a caller can only ever populate the cache
+ * entry for the content they actually submitted.
+ */
+export async function sha256Hex(input: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+}
+
+/**
  * Determines which AI provider to use based on environment config
  */
 export function getAIProvider(env: Env): {
@@ -108,26 +118,13 @@ export function createErrorResponse(
 ): Response {
   const err = error instanceof Error ? error : new Error('Unknown error');
   const cause = err.cause instanceof Error ? err.cause.message : String(err.cause ?? '');
+  // Upstream details (provider error bodies, request ids) stay in server logs only.
   console.error(`${message}:`, err.message, cause || '');
 
-  // Enhanced error message for network failures
-  let errorMessage = err.message;
-  if (err.message === 'fetch failed') {
-    errorMessage = cause
-      ? `fetch failed: ${cause}`
-      : 'Network error calling AI provider. Check API key and connectivity.';
-  }
-
-  return new Response(
-    JSON.stringify({
-      error: message,
-      message: errorMessage,
-    }),
-    {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    }
-  );
+  return new Response(JSON.stringify({ error: message }), {
+    status: 500,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 /** What the AI helpers return when the model produced no usable text. */
